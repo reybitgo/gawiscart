@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gawis iHerbal - Coming Soon</title>
+    <meta name="description" content="Revolutionary E-Wallet System for Gawis iHerbal - Coming Soon">
+    <link rel="icon" type="image/png" href="./public/gawis_light.png">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Gawis iHerbal E-Wallet - Coming Soon">
+    <meta property="og:description" content="Revolutionary digital wallet system for seamless transactions and herbal product management">
+    <meta property="og:image" content="https://gawisherbal.com/public/gawis_light.png">
+    <meta property="og:url" content="https://gawisherbal.com">
+    <meta property="og:type" content="website">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-container {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .logo img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #fff, #f0f8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .coming-soon {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ffd700;
+            margin: 2rem 0;
+            text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #ffd700;
+        }
+
+        .feature p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .notify-section {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .notify-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 400px;
+            margin: 1rem auto 0;
+        }
+
+        .notify-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .notify-input::placeholder {
+            color: #666;
+        }
+
+        .notify-btn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            border: none;
+            border-radius: 25px;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notify-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .social-links {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem;
+                padding: 2rem 1.5rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .coming-soon {
+                font-size: 1.5rem;
+            }
+
+            .notify-form {
+                flex-direction: column;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Hidden admin link */
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+
+        .admin-link:hover {
+            opacity: 1;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <div class="logo">
+                <img src="./public/gawis_light.png" alt="Gawis iHerbal Logo" onerror="this.style.display='none'; this.parentNode.innerHTML='🌿';">
+            </div>
+        </div>
+
+        <h1>Gawis iHerbal</h1>
+        <p class="subtitle">Revolutionary E-Wallet System</p>
+
+        <div class="coming-soon">Coming Soon</div>
+
+        <p class="description">
+            We're crafting a revolutionary digital wallet experience tailored for herbal wellness enthusiasts.
+            Seamless transactions, secure payments, and intuitive management - all in one powerful platform.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">💰</div>
+                <h3>Smart Wallet</h3>
+                <p>Secure digital wallet with instant transfers and balance management</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🛡️</div>
+                <h3>Bank-Grade Security</h3>
+                <p>Advanced encryption and multi-factor authentication for peace of mind</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3>Mobile-First</h3>
+                <p>Responsive design optimized for seamless mobile and desktop experience</p>
+            </div>
+        </div>
+
+        <div class="notify-section">
+            <h3 style="color: #ffd700; margin-bottom: 1rem;">Get Notified When We Launch</h3>
+            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                Be the first to experience the future of herbal commerce payments
+            </p>
+            <form class="notify-form" action="https://formsubmit.co/support@gawisherbal.com" method="POST">
+                <input type="email" name="email" class="notify-input" placeholder="Enter your email address" required>
+                <input type="hidden" name="_subject" value="New E-Wallet Launch Notification Request">
+                <input type="hidden" name="_captcha" value="false">
+                <input type="hidden" name="_next" value="https://gawisherbal.com">
+                <button type="submit" class="notify-btn">Notify Me</button>
+            </form>
+        </div>
+
+        <div class="social-links">
+            <a href="#" class="social-link" title="Facebook">📘</a>
+            <a href="#" class="social-link" title="Instagram">📷</a>
+            <a href="mailto:support@gawisherbal.com" class="social-link" title="Email">📧</a>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2024 Gawis iHerbal. All rights reserved.</p>
+            <p>Building the future of herbal commerce, one transaction at a time.</p>
+        </div>
+    </div>
+
+    <!-- Hidden admin access for development -->
+    <a href="./public/" class="admin-link">Admin Access</a>
+
+    <script>
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate features on scroll (simple version)
+            const features = document.querySelectorAll('.feature');
+            features.forEach((feature, index) => {
+                feature.style.animationDelay = (index * 0.2) + 's';
+            });
+
+            // Form submission feedback
+            const form = document.querySelector('.notify-form');
+            const btn = document.querySelector('.notify-btn');
+
+            form.addEventListener('submit', function() {
+                btn.innerHTML = 'Sending...';
+                btn.disabled = true;
+
+                // Re-enable after delay (in case of errors)
+                setTimeout(() => {
+                    btn.innerHTML = 'Notify Me';
+                    btn.disabled = false;
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+</html>

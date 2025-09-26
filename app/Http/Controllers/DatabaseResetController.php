@@ -1,0 +1,197 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use App\Models\SystemSetting;
+
+class DatabaseResetController extends Controller
+{
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct()
+    {
+        // Middleware is applied in routes/web.php
+    }
+
+    /**
+     * Reset the database to initial state.
+     * This action requires admin privileges and confirmation.
+     */
+    public function reset(Request $request)
+    {
+        // Check if user has admin role
+        if (!Auth::user() || !Auth::user()->hasRole('admin')) {
+            Log::warning('Unauthorized database reset attempt', [
+                'user_id' => Auth::id(),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Admin privileges required.',
+                'redirect' => route('dashboard')
+            ], 403);
+        }
+
+        // Check if confirmation parameter is provided
+        if ($request->get('confirm') !== 'yes') {
+            return $this->showConfirmationPage($request);
+        }
+
+        try {
+            // Log the reset action
+            Log::info('Database reset initiated', [
+                'user_id' => Auth::id(),
+                'user_email' => Auth::user()->email,
+                'ip' => $request->ip(),
+                'timestamp' => now()
+            ]);
+
+            // Clear all caches before reset
+            Cache::flush();
+            Artisan::call('config:clear');
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
+
+            // Run the database reset seeder
+            Artisan::call('db:seed', [
+                '--class' => 'DatabaseResetSeeder',
+                '--force' => true
+            ]);
+
+            // Get seeder output
+            $output = Artisan::output();
+
+            // Update reset count in system settings
+            $this->updateResetCount();
+
+            // Clear permission cache after reset
+            Artisan::call('permission:cache-reset');
+
+            Log::info('Database reset completed successfully', [
+                'user_id' => Auth::id(),
+                'output' => $output
+            ]);
+
+            // Log out the current user since their session may be invalidated
+            Auth::logout();
+
+            // Invalidate the session and regenerate CSRF token
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Database reset completed successfully!',
+                    'output' => nl2br(htmlspecialchars($output)),
+                    'redirect' => route('login'),
+                    'credentials' => [
+                        'admin' => [
+                            'email' => 'admin@ewallet.com',
+                            'password' => 'Admin123!@#'
+                        ],
+                        'member' => [
+                            'email' => 'member@ewallet.com',
+                            'password' => 'Member123!@#'
+                        ]
+                    ]
+                ]);
+            }
+
+            return redirect()->route('login')->with('success', 'Database reset completed! Please log in with admin credentials.');
+
+        } catch (\Exception $e) {
+            Log::error('Database reset failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Database reset failed: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->with('error', 'Database reset failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show confirmation page for database reset
+     */
+    private function showConfirmationPage(Request $request)
+    {
+        $lastReset = SystemSetting::get('last_reset_date');
+        $resetCount = SystemSetting::get('reset_count', 0);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'requires_confirmation' => true,
+                'message' => 'Database reset requires confirmation',
+                'confirmation_url' => route('database.reset') . '?confirm=yes',
+                'last_reset' => $lastReset,
+                'reset_count' => $resetCount,
+                'warning' => 'This action will permanently delete all data and restore default settings!'
+            ]);
+        }
+
+        // For web requests, return confirmation view
+        return view('admin.database-reset-confirm', [
+            'last_reset' => $lastReset,
+            'reset_count' => $resetCount
+        ]);
+    }
+
+    /**
+     * Update the reset count in system settings
+     */
+    private function updateResetCount()
+    {
+        try {
+            $currentCount = SystemSetting::get('reset_count', 0);
+            SystemSetting::set('reset_count', $currentCount + 1, 'integer', 'Number of times database has been reset');
+            SystemSetting::set('last_reset_date', now()->toISOString(), 'string', 'Last database reset timestamp');
+        } catch (\Exception $e) {
+            // If updating fails, continue anyway as reset was successful
+            Log::warning('Failed to update reset count', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get reset status information (for API or dashboard)
+     */
+    public function status(Request $request)
+    {
+        // Check admin access
+        if (!Auth::user() || !Auth::user()->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+
+        $lastReset = SystemSetting::get('last_reset_date');
+        $resetCount = SystemSetting::get('reset_count', 0);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'last_reset' => $lastReset,
+                'reset_count' => $resetCount,
+                'current_user' => Auth::user()->email,
+                'can_reset' => Auth::user()->hasRole('admin')
+            ]
+        ]);
+    }
+}
