@@ -22,7 +22,7 @@
             <!-- Username Display -->
             <li class="nav-item">
                 <span class="nav-link px-2 text-body-secondary">
-                    Welcome, <strong>{{ auth()->user()->username }}</strong>
+                    {{ auth()->user()->username }}
                 </span>
             </li>
             <!-- User Profile -->
