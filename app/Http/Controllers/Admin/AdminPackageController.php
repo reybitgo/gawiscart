@@ -1,0 +1,189 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Package;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+class AdminPackageController extends Controller
+{
+    public function index()
+    {
+        $packages = Package::withTrashed()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->paginate(10);
+
+        return view('admin.packages.index', compact('packages'));
+    }
+
+    public function create()
+    {
+        return view('admin.packages.create');
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:packages,slug',
+            'price' => 'required|numeric|min:0.01',
+            'points_awarded' => 'required|integer|min:0',
+            'quantity_available' => 'nullable|integer|min:0',
+            'short_description' => 'required|string|max:500',
+            'long_description' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+            'sort_order' => 'integer|min:0',
+            'features' => 'nullable|array',
+            'features.*' => 'nullable|string|max:255',
+            'duration' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:255'
+        ]);
+
+        if (!$validated['slug']) {
+            $validated['slug'] = Str::slug($validated['name']);
+        }
+
+        if ($request->hasFile('image')) {
+            $validated['image_path'] = $request->file('image')->store('packages', 'public');
+        }
+
+        // Build meta_data from user-friendly inputs
+        $metaData = [];
+
+        if ($request->has('features') && is_array($request->features)) {
+            $features = array_filter($request->features, function($feature) {
+                return !empty(trim($feature));
+            });
+            if (!empty($features)) {
+                $metaData['features'] = array_values($features);
+            }
+        }
+
+        if ($request->filled('duration')) {
+            $metaData['duration'] = $request->duration;
+        }
+
+        if ($request->filled('category')) {
+            $metaData['category'] = $request->category;
+        }
+
+        if (!empty($metaData)) {
+            $validated['meta_data'] = $metaData;
+        }
+
+        // Remove the temporary fields from validated data
+        unset($validated['features'], $validated['duration'], $validated['category']);
+
+        Package::create($validated);
+
+        return redirect()->route('admin.packages.index')
+            ->with('success', 'Package created successfully.');
+    }
+
+    public function show(Package $package)
+    {
+        return view('admin.packages.show', compact('package'));
+    }
+
+    public function edit(Package $package)
+    {
+        return view('admin.packages.edit', compact('package'));
+    }
+
+    public function update(Request $request, Package $package)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:packages,slug,' . $package->id,
+            'price' => 'required|numeric|min:0.01',
+            'points_awarded' => 'required|integer|min:0',
+            'quantity_available' => 'nullable|integer|min:0',
+            'short_description' => 'required|string|max:500',
+            'long_description' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+            'sort_order' => 'integer|min:0',
+            'features' => 'nullable|array',
+            'features.*' => 'nullable|string|max:255',
+            'duration' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:255'
+        ]);
+
+        if (!$validated['slug']) {
+            $validated['slug'] = Str::slug($validated['name']);
+        }
+
+        if ($request->hasFile('image')) {
+            if ($package->image_path) {
+                Storage::disk('public')->delete($package->image_path);
+            }
+            $validated['image_path'] = $request->file('image')->store('packages', 'public');
+        }
+
+        // Build meta_data from user-friendly inputs
+        $metaData = [];
+
+        if ($request->has('features') && is_array($request->features)) {
+            $features = array_filter($request->features, function($feature) {
+                return !empty(trim($feature));
+            });
+            if (!empty($features)) {
+                $metaData['features'] = array_values($features);
+            }
+        }
+
+        if ($request->filled('duration')) {
+            $metaData['duration'] = $request->duration;
+        }
+
+        if ($request->filled('category')) {
+            $metaData['category'] = $request->category;
+        }
+
+        if (!empty($metaData)) {
+            $validated['meta_data'] = $metaData;
+        } else {
+            $validated['meta_data'] = null;
+        }
+
+        // Remove the temporary fields from validated data
+        unset($validated['features'], $validated['duration'], $validated['category']);
+
+        $package->update($validated);
+
+        return redirect()->route('admin.packages.index')
+            ->with('success', 'Package updated successfully.');
+    }
+
+    public function destroy(Package $package)
+    {
+        if (!$package->canBeDeleted()) {
+            return redirect()->route('admin.packages.index')
+                ->with('error', 'Cannot delete package that has been purchased by users.');
+        }
+
+        if ($package->image_path) {
+            Storage::disk('public')->delete($package->image_path);
+        }
+
+        $package->forceDelete();
+
+        return redirect()->route('admin.packages.index')
+            ->with('success', 'Package deleted successfully.');
+    }
+
+    public function toggleStatus(Package $package)
+    {
+        $package->update(['is_active' => !$package->is_active]);
+
+        $status = $package->is_active ? 'activated' : 'deactivated';
+
+        return redirect()->route('admin.packages.index')
+            ->with('success', "Package {$status} successfully.");
+    }
+}

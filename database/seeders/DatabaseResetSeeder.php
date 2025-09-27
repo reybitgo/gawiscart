@@ -10,6 +10,7 @@ use Spatie\Permission\Models\Permission;
 use App\Models\User;
 use App\Models\SystemSetting;
 use App\Models\Wallet;
+use App\Models\Package;
 
 class DatabaseResetSeeder extends Seeder
 {
@@ -39,13 +40,17 @@ class DatabaseResetSeeder extends Seeder
         // Step 5: Create/update wallets for users
         $this->ensureUserWallets();
 
-        // Step 6: Update reset tracking
+        // Step 6: Reset and reload preloaded packages
+        $this->resetAndReloadPackages();
+
+        // Step 7: Update reset tracking
         $this->updateResetTracking();
 
         $this->command->info('✅ Database reset completed successfully!');
         $this->command->info('👤 Admin: admin@ewallet.com / Admin123!@#');
         $this->command->info('👤 Member: member@ewallet.com / Member123!@#');
         $this->command->info('⚙️  System settings preserved');
+        $this->command->info('📦 Preloaded packages restored');
     }
 
     /**
@@ -291,6 +296,28 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('✅ Default user wallets reset to initial balances');
         $this->command->info('💰 Admin wallet: $1,000.00');
         $this->command->info('💰 Member wallet: $100.00');
+    }
+
+    /**
+     * Reset and reload preloaded packages
+     */
+    private function resetAndReloadPackages(): void
+    {
+        $this->command->info('📦 Resetting and reloading preloaded packages...');
+
+        // Clear all existing packages (force delete to completely remove)
+        Package::withTrashed()->forceDelete();
+        $this->command->info('🗑️  Cleared all existing packages');
+
+        // Reset auto-increment counter
+        DB::statement('ALTER TABLE packages AUTO_INCREMENT = 1');
+
+        // Reload preloaded packages by calling the PackageSeeder
+        $this->command->info('🔄 Reloading preloaded packages...');
+        $this->call(\Database\Seeders\PackageSeeder::class);
+
+        $packageCount = Package::count();
+        $this->command->info("✅ Reloaded {$packageCount} preloaded packages");
     }
 
     /**

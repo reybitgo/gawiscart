@@ -1,0 +1,113 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+
+class Package extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'slug',
+        'price',
+        'points_awarded',
+        'quantity_available',
+        'short_description',
+        'long_description',
+        'image_path',
+        'is_active',
+        'sort_order',
+        'meta_data'
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'points_awarded' => 'integer',
+        'quantity_available' => 'integer',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
+        'meta_data' => 'array'
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($package) {
+            if (!$package->slug) {
+                $package->slug = Str::slug($package->name);
+            }
+        });
+
+        static::updating(function ($package) {
+            if ($package->isDirty('name') && !$package->isDirty('slug')) {
+                $package->slug = Str::slug($package->name);
+            }
+        });
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where(function($q) {
+            $q->whereNull('quantity_available')
+              ->orWhere('quantity_available', '>', 0);
+        });
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
+    public function getImageUrlAttribute()
+    {
+        return $this->image_path ? asset('storage/' . $this->image_path) : asset('images/package-placeholder.svg');
+    }
+
+    public function getFormattedPriceAttribute()
+    {
+        return '$' . number_format($this->price, 2);
+    }
+
+    public function isAvailable()
+    {
+        return $this->is_active &&
+               ($this->quantity_available === null || $this->quantity_available > 0);
+    }
+
+    public function canBeDeleted()
+    {
+        // For now, allow deletion since OrderItem doesn't exist yet
+        // This will be updated in Phase 4 when orders are implemented
+        return true;
+    }
+
+    public function orderItems()
+    {
+        // Placeholder relationship for Phase 4
+        // Will be implemented when OrderItem model is created
+        return $this->hasMany('App\Models\OrderItem');
+    }
+
+    public function reduceQuantity($amount = 1)
+    {
+        if ($this->quantity_available !== null) {
+            $this->quantity_available = max(0, $this->quantity_available - $amount);
+            $this->save();
+        }
+    }
+}

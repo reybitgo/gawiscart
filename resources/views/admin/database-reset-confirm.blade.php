@@ -44,19 +44,25 @@
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                             </svg>
-                            System settings will be <strong>preserved</strong>
+                            System settings will be&nbsp;<strong>preserved</strong>
                         </li>
                         <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-shield-alt') }}"></use>
                             </svg>
-                            Roles and permissions will be <strong>preserved</strong>
+                            Roles and permissions will be&nbsp;<strong>preserved</strong>
                         </li>
                         <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-user') }}"></use>
                             </svg>
                             Default admin and member accounts will be refreshed
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-success me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-gift') }}"></use>
+                            </svg>
+                            Sample packages will be&nbsp;<strong>restored</strong>
                         </li>
                     </ul>
 
@@ -135,7 +141,7 @@
             <div class="modal-body">
                 <div class="text-center mb-4">
                     <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                        <svg class="icon icon-2xl text-danger">
+                        <svg class="icon text-danger" style="width: 50px; height: 50px;">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-shield-alt') }}"></use>
                         </svg>
                     </div>
@@ -172,6 +178,7 @@
                         <li>Default member account (member@ewallet.com)</li>
                         <li><strong>Current system settings preserved</strong></li>
                         <li><strong>All roles and permissions preserved</strong></li>
+                        <li><strong>Sample packages restored to initial state</strong></li>
                         <li>Fresh wallets with initial balances ($1,000 & $100)</li>
                     </ul>
                 </div>

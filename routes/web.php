@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AdminPackageController;
 use App\Http\Controllers\Member\WalletController;
+use App\Http\Controllers\PackageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DatabaseResetController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +24,10 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->group(functi
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+    // Package Routes (Public)
+    Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
+    Route::get('/packages/{package}', [PackageController::class, 'show'])->name('packages.show');
 });
 
 // Admin Routes
@@ -90,6 +96,10 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
     Route::post('/system-settings/test-notification', [AdminController::class, 'testNotification'])
         ->middleware('ewallet.security:system_settings')
         ->name('system.settings.test-notification');
+
+    // Admin Package Management Routes
+    Route::resource('packages', AdminPackageController::class);
+    Route::post('/packages/{package}/toggle-status', [AdminPackageController::class, 'toggleStatus'])->name('packages.toggle-status');
 });
 
 // Database Reset Routes (Admin Only)
@@ -128,6 +138,17 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->prefix('wall
 
 Route::middleware(['guest'])->group(function () {
     Route::redirect('/home', '/dashboard');
+});
+
+// Debug route for session configuration - Remove in production
+Route::middleware(['auth'])->get('/debug/session-config', function () {
+    return response()->json([
+        'session_lifetime' => config('session.lifetime'),
+        'session_expire_on_close' => config('session.expire_on_close'),
+        'session_driver' => config('session.driver'),
+        'database_session_timeout_enabled' => \App\Models\SystemSetting::get('session_timeout', false),
+        'database_session_timeout_minutes' => \App\Models\SystemSetting::get('session_timeout_minutes', 15),
+    ]);
 });
 
 // Temporary routes for testing error pages - Remove in production

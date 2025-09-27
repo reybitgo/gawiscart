@@ -280,6 +280,13 @@
                                     <div class="text-body-secondary small">Sessions expire after configured time of inactivity</div>
                                 </label>
                             </div>
+                            <div class="mb-3" id="session_timeout_duration_field">
+                                <label for="session_timeout_minutes" class="form-label">Session Timeout Duration (Minutes)</label>
+                                <input type="number" id="session_timeout_minutes" name="session_timeout_minutes"
+                                       value="{{ isset($settings['session_timeout_minutes']) ? $settings['session_timeout_minutes']->value : '15' }}"
+                                       min="5" max="1440" class="form-control">
+                                <div class="form-text">Number of minutes before user is automatically logged out due to inactivity (5-1440 minutes)</div>
+                            </div>
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
@@ -745,6 +752,19 @@ document.addEventListener('DOMContentLoaded', function() {
             transferFeeConfig.style.display = this.checked ? 'block' : 'none';
         });
     }
+
+    // Show/hide session timeout duration configuration
+    const sessionTimeoutCheckbox = document.getElementById('session_timeout');
+    const sessionTimeoutDurationField = document.getElementById('session_timeout_duration_field');
+
+    if (sessionTimeoutCheckbox && sessionTimeoutDurationField) {
+        // Set initial state
+        sessionTimeoutDurationField.style.display = sessionTimeoutCheckbox.checked ? 'block' : 'none';
+
+        sessionTimeoutCheckbox.addEventListener('change', function() {
+            sessionTimeoutDurationField.style.display = this.checked ? 'block' : 'none';
+        });
+    }
 });
 
 function showSection(sectionName) {
@@ -770,6 +790,7 @@ function saveSettings(category) {
         const emailVerificationEnabled = document.getElementById('email_verification_enabled').checked;
         const require2fa = document.getElementById('require_2fa').checked;
         const sessionTimeout = document.getElementById('session_timeout').checked;
+        const sessionTimeoutMinutes = parseInt(document.getElementById('session_timeout_minutes').value) || 15;
         const maxLoginAttempts = parseInt(document.getElementById('max_login_attempts').value) || 3;
         const lockoutDuration = parseInt(document.getElementById('lockout_duration').value) || 15;
 
@@ -784,6 +805,7 @@ function saveSettings(category) {
                 email_verification_enabled: emailVerificationEnabled,
                 require_2fa: require2fa,
                 session_timeout: sessionTimeout,
+                session_timeout_minutes: sessionTimeoutMinutes,
                 max_login_attempts: maxLoginAttempts,
                 lockout_duration: lockoutDuration
             })

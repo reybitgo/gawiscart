@@ -48,7 +48,7 @@ class ApplyDatabaseConfig
             'language' => 'app.locale',
             'fallback_language' => 'app.fallback_locale',
             // Security settings
-            'session_timeout' => 'session.lifetime',
+            'session_timeout_minutes' => 'session.lifetime',
             'max_login_attempts' => 'auth.max_attempts',
             'lockout_duration' => 'auth.lockout_duration',
         ];
@@ -67,6 +67,22 @@ class ApplyDatabaseConfig
 
                 // Override runtime config
                 config([$configKey => $value]);
+            }
+        }
+
+        // Special handling for session timeout
+        $sessionTimeoutEnabled = SystemSetting::where('key', 'session_timeout')->first();
+        $sessionTimeoutMinutes = SystemSetting::where('key', 'session_timeout_minutes')->first();
+
+        if ($sessionTimeoutEnabled && $sessionTimeoutMinutes) {
+            if ($sessionTimeoutEnabled->value) {
+                // Session timeout is enabled, use the configured minutes
+                config(['session.lifetime' => (int) $sessionTimeoutMinutes->value]);
+                config(['session.expire_on_close' => false]);
+            } else {
+                // Session timeout is disabled, use a very long lifetime
+                config(['session.lifetime' => 43200]); // 720 hours (30 days)
+                config(['session.expire_on_close' => false]);
             }
         }
     }

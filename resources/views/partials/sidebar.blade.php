@@ -70,6 +70,14 @@
                             User Management
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link{{ Request::routeIs('admin.packages.*') ? ' active' : '' }}" href="{{ route('admin.packages.index') }}">
+                            <span class="nav-icon">
+                                <span class="nav-icon-bullet"></span>
+                            </span>
+                            Package Management
+                        </a>
+                    </li>
                     @can('system_settings')
                     <li class="nav-item">
                         <a class="nav-link{{ Request::routeIs('admin.reports*') ? ' active' : '' }}" href="{{ route('admin.reports') }}">
@@ -153,23 +161,22 @@
             </ul>
         </li>
 
-        <!-- Future E-commerce Section -->
+        <!-- E-commerce Section -->
         <li class="nav-title">E-commerce</li>
         <li class="nav-group">
-            <a class="nav-link nav-group-toggle" href="#">
+            <a class="nav-link nav-group-toggle{{ Request::routeIs('packages.*') ? ' active' : '' }}" href="#">
                 <svg class="nav-icon">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
                 </svg>
-                <span>Commerce</span>
+                <span>Shopping</span>
             </a>
             <ul class="nav-group-items compact">
                 <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="return false;">
+                    <a class="nav-link{{ Request::routeIs('packages.index') ? ' active' : '' }}" href="{{ route('packages.index') }}">
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
-                        Products
-                        <span class="badge bg-danger-gradient ms-auto">Coming Soon</span>
+                        Browse Packages
                     </a>
                 </li>
                 <li class="nav-item">
@@ -177,8 +184,8 @@
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
-                        Orders
-                        <span class="badge bg-danger-gradient ms-auto">Coming Soon</span>
+                        Shopping Cart
+                        <span class="badge bg-warning ms-auto">Phase 2</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -186,8 +193,8 @@
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
-                        Checkout
-                        <span class="badge bg-danger-gradient ms-auto">Coming Soon</span>
+                        Order History
+                        <span class="badge bg-warning ms-auto">Phase 2</span>
                     </a>
                 </li>
             </ul>

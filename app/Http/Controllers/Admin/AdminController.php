@@ -921,6 +921,7 @@ class AdminController extends Controller
             'require_2fa' => 'boolean',
             'maintenance_mode' => 'boolean',
             'session_timeout' => 'boolean',
+            'session_timeout_minutes' => 'integer|min:5|max:1440',
             'max_login_attempts' => 'integer|min:1|max:10',
             'lockout_duration' => 'integer|min:1|max:1440',
             // Notification settings validation
@@ -999,6 +1000,9 @@ class AdminController extends Controller
         }
         if ($request->has('session_timeout')) {
             \App\Models\SystemSetting::set('session_timeout', $request->boolean('session_timeout'), 'boolean', 'Enable automatic session timeout');
+        }
+        if ($request->has('session_timeout_minutes')) {
+            \App\Models\SystemSetting::set('session_timeout_minutes', $request->input('session_timeout_minutes', 15), 'integer', 'Session timeout duration in minutes');
         }
         if ($request->has('max_login_attempts')) {
             \App\Models\SystemSetting::set('max_login_attempts', $request->input('max_login_attempts', 3), 'integer', 'Maximum login attempts before lockout');
