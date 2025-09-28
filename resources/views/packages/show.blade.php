@@ -81,12 +81,27 @@
 
                             <div class="d-grid gap-2 mt-4">
                                 @if($package->isAvailable())
-                                    <button class="btn btn-primary btn-lg add-to-cart-btn" data-package-id="{{ $package->id }}">
-                                        <svg class="icon me-2">
-                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
-                                        </svg>
-                                        Add to Cart
-                                    </button>
+                                    @if($isInCart)
+                                        <button class="btn btn-success btn-lg" disabled>
+                                            <svg class="icon me-2">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                            </svg>
+                                            Already in Cart
+                                        </button>
+                                        <a href="{{ route('cart.index') }}" class="btn btn-outline-primary">
+                                            <svg class="icon me-2">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
+                                            </svg>
+                                            View Cart
+                                        </a>
+                                    @else
+                                        <button class="btn btn-primary btn-lg add-to-cart-btn" data-package-id="{{ $package->id }}">
+                                            <svg class="icon me-2">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
+                                            </svg>
+                                            Add to Cart
+                                        </button>
+                                    @endif
                                 @else
                                     <button class="btn btn-secondary btn-lg" disabled>
                                         Unavailable

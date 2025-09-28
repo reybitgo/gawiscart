@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DatabaseResetController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,16 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->group(functi
         Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
         Route::get('/count', [CartController::class, 'getCount'])->name('count');
         Route::get('/summary', [CartController::class, 'getSummary'])->name('summary');
+    });
+
+    // Checkout Routes
+    Route::prefix('checkout')->name('checkout.')->group(function () {
+        Route::get('/', [CheckoutController::class, 'index'])->name('index');
+        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
+        Route::get('/order/{order}', [CheckoutController::class, 'orderDetails'])->name('order-details');
+        Route::post('/order/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('cancel-order');
+        Route::get('/summary', [CheckoutController::class, 'getSummary'])->name('summary');
     });
 });
 

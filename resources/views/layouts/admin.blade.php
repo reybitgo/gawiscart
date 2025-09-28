@@ -321,12 +321,12 @@
                                     </svg>
                                     View Cart
                                 </a>
-                                <button class="btn btn-outline-primary btn-sm" disabled>
+                                <a href="{{ route('checkout.index') }}" class="btn btn-outline-primary btn-sm">
                                     <svg class="icon me-2">
                                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
                                     </svg>
-                                    Checkout (Phase 3)
-                                </button>
+                                    Checkout
+                                </a>
                             </div>
                         </div>
                     `;
@@ -410,8 +410,30 @@
 
                             const success = await this.addToCart(packageId, quantity);
 
-                            button.disabled = false;
-                            button.innerHTML = '<svg class="icon me-2"><use xlink:href="{{ asset("coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart") }}"></use></svg>Add to Cart';
+                            if (success) {
+                                // Update button to show "In Cart" state
+                                const isLargeButton = button.classList.contains('btn-lg');
+                                const buttonSize = isLargeButton ? 'btn-lg' : 'btn-sm';
+                                const iconStyle = isLargeButton ? '' : 'style="width: 14px; height: 14px;"';
+
+                                button.className = `btn btn-success ${buttonSize}`;
+                                button.disabled = true;
+                                button.innerHTML = `<svg class="icon me-${isLargeButton ? '2' : '1'}" ${iconStyle}><use xlink:href="{{ asset("coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check") }}"></use></svg>${isLargeButton ? 'Already in Cart' : 'In Cart'}`;
+
+                                // If on package detail page, also add View Cart button
+                                if (isLargeButton && !button.parentElement.querySelector('.view-cart-btn')) {
+                                    const viewCartBtn = document.createElement('a');
+                                    viewCartBtn.href = window.cartRoutes ? window.cartRoutes.index : '/cart';
+                                    viewCartBtn.className = 'btn btn-outline-primary view-cart-btn';
+                                    viewCartBtn.innerHTML = '<svg class="icon me-2"><use xlink:href="{{ asset("coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart") }}"></use></svg>View Cart';
+                                    button.parentElement.insertBefore(viewCartBtn, button.nextSibling);
+                                }
+                            } else {
+                                // Restore original button state on failure
+                                const isLargeButton = button.classList.contains('btn-lg');
+                                button.disabled = false;
+                                button.innerHTML = `<svg class="icon me-2"><use xlink:href="{{ asset("coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart") }}"></use></svg>Add to Cart`;
+                            }
                         }
                     }
                 });

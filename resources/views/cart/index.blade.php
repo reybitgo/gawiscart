@@ -197,7 +197,7 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card sticky-top">
+                <div class="card sticky-top sticky-order-summary">
                     <div class="card-header">
                         <h5 class="mb-0">Order Summary</h5>
                     </div>
@@ -224,15 +224,12 @@
                             You will earn <strong>{{ number_format($cartSummary['total_points']) }} points</strong> from this order!
                         </div>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg" disabled>
+                            <a href="{{ route('checkout.index') }}" class="btn btn-primary btn-lg">
                                 <svg class="icon me-2">
                                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
                                 </svg>
                                 Proceed to Checkout
-                            </button>
-                            <small class="text-muted text-center">
-                                Checkout will be available in Phase 3
-                            </small>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -345,6 +342,10 @@
     .quantity-btn .spinner-border-sm {
         width: 0.75rem;
         height: 0.75rem;
+    }
+
+    .sticky-order-summary {
+        z-index: 100 !important;
     }
 </style>
 @endpush

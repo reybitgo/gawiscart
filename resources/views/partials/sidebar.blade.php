@@ -202,12 +202,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="return false;">
+                    <a class="nav-link{{ Request::routeIs('orders.*') ? ' active' : '' }}" href="#" onclick="return false;">
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
                         Order History
-                        <span class="badge bg-warning ms-auto">Phase 2</span>
+                        <span class="badge bg-info ms-auto">Phase 4</span>
                     </a>
                 </li>
             </ul>

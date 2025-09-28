@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -91,16 +92,13 @@ class Package extends Model
 
     public function canBeDeleted()
     {
-        // For now, allow deletion since OrderItem doesn't exist yet
-        // This will be updated in Phase 4 when orders are implemented
-        return true;
+        // Check if package has any order items (Phase 3 implementation)
+        return $this->orderItems()->count() === 0;
     }
 
-    public function orderItems()
+    public function orderItems(): HasMany
     {
-        // Placeholder relationship for Phase 4
-        // Will be implemented when OrderItem model is created
-        return $this->hasMany('App\Models\OrderItem');
+        return $this->hasMany(OrderItem::class);
     }
 
     public function reduceQuantity($amount = 1)

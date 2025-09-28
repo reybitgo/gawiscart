@@ -65,12 +65,12 @@
                                         </svg>
                                         View Cart
                                     </a>
-                                    <button class="btn btn-outline-primary btn-sm" disabled>
+                                    <a href="{{ route('checkout.index') }}" class="btn btn-outline-primary btn-sm">
                                         <svg class="icon me-2">
                                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
                                         </svg>
-                                        Checkout (Phase 3)
-                                    </button>
+                                        Checkout
+                                    </a>
                                 </div>
                             </div>
                         @else

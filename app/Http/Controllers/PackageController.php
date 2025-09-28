@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Package;
+use App\Services\CartService;
 use Illuminate\Http\Request;
 
 class PackageController extends Controller
@@ -38,7 +39,12 @@ class PackageController extends Controller
 
         $packages = $query->paginate(12);
 
-        return view('packages.index', compact('packages'));
+        // Get cart items to check which packages are already in cart
+        $cartService = app(CartService::class);
+        $cartItems = $cartService->getItems();
+        $cartPackageIds = array_keys($cartItems);
+
+        return view('packages.index', compact('packages', 'cartPackageIds'));
     }
 
     public function show(Package $package)
@@ -47,6 +53,11 @@ class PackageController extends Controller
             abort(404);
         }
 
-        return view('packages.show', compact('package'));
+        // Get cart items to check if this package is already in cart
+        $cartService = app(CartService::class);
+        $cartItems = $cartService->getItems();
+        $isInCart = array_key_exists($package->id, $cartItems);
+
+        return view('packages.show', compact('package', 'isInCart'));
     }
 }

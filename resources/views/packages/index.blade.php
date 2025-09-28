@@ -118,12 +118,21 @@
                                         View Details
                                     </a>
                                     @if($package->isAvailable())
-                                        <button class="btn btn-primary btn-sm add-to-cart-btn" data-package-id="{{ $package->id }}">
-                                            <svg class="icon me-1" style="width: 14px; height: 14px;">
-                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
-                                            </svg>
-                                            Add to Cart
-                                        </button>
+                                        @if(in_array($package->id, $cartPackageIds))
+                                            <button class="btn btn-success btn-sm" disabled>
+                                                <svg class="icon me-1" style="width: 14px; height: 14px;">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                                </svg>
+                                                In Cart
+                                            </button>
+                                        @else
+                                            <button class="btn btn-primary btn-sm add-to-cart-btn" data-package-id="{{ $package->id }}">
+                                                <svg class="icon me-1" style="width: 14px; height: 14px;">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
+                                                </svg>
+                                                Add to Cart
+                                            </button>
+                                        @endif
                                     @else
                                         <button class="btn btn-secondary btn-sm" disabled>
                                             Unavailable

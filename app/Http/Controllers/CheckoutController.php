@@ -1,0 +1,224 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Services\CartService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
+class CheckoutController extends Controller
+{
+    protected CartService $cartService;
+
+    public function __construct(CartService $cartService)
+    {
+        $this->cartService = $cartService;
+    }
+
+    /**
+     * Show the checkout page
+     */
+    public function index()
+    {
+        $cartSummary = $this->cartService->getSummary();
+
+        // Redirect if cart is empty
+        if ($cartSummary['is_empty']) {
+            return redirect()->route('packages.index')
+                ->with('error', 'Your cart is empty. Please add some packages before checkout.');
+        }
+
+        // Validate cart items are still available
+        $validationErrors = $this->cartService->validateCart();
+        if (!empty($validationErrors)) {
+            return redirect()->route('cart.index')
+                ->with('error', 'Some items in your cart are no longer available. Please review your cart.');
+        }
+
+        return view('checkout.index', compact('cartSummary'));
+    }
+
+    /**
+     * Process the checkout and create an order
+     */
+    public function process(Request $request)
+    {
+        $request->validate([
+            'customer_notes' => 'nullable|string|max:1000',
+            'terms_accepted' => 'required|accepted',
+        ]);
+
+        $cartSummary = $this->cartService->getSummary();
+
+        // Check if cart is empty
+        if ($cartSummary['is_empty']) {
+            return redirect()->route('packages.index')
+                ->with('error', 'Your cart is empty. Please add some packages before checkout.');
+        }
+
+        // Validate cart items one more time
+        $validationErrors = $this->cartService->validateCart();
+        if (!empty($validationErrors)) {
+            return redirect()->route('cart.index')
+                ->with('error', 'Some items in your cart are no longer available. Please review your cart.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Create the order
+            $order = Order::createFromCart(
+                Auth::user(),
+                $cartSummary,
+                [
+                    'checkout_timestamp' => now(),
+                    'user_ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]
+            );
+
+            // Add customer notes if provided
+            if ($request->filled('customer_notes')) {
+                $order->update(['customer_notes' => $request->customer_notes]);
+            }
+
+            // Create order items from cart
+            foreach ($cartSummary['items'] as $cartItem) {
+                OrderItem::createFromCartItem($order, $cartItem);
+            }
+
+            // Reduce package quantities
+            foreach ($cartSummary['items'] as $cartItem) {
+                $package = \App\Models\Package::find($cartItem['package_id']);
+                if ($package && $package->quantity_available !== null) {
+                    $package->reduceQuantity($cartItem['quantity']);
+                }
+            }
+
+            DB::commit();
+
+            // Clear the cart
+            $this->cartService->clear();
+
+            // Redirect to order confirmation
+            return redirect()->route('checkout.confirmation', $order)
+                ->with('success', 'Your order has been placed successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log the error
+            \Log::error('Checkout failed: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'cart_summary' => $cartSummary,
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('cart.index')
+                ->with('error', 'There was an error processing your order. Please try again.');
+        }
+    }
+
+    /**
+     * Show order confirmation page
+     */
+    public function confirmation(Order $order)
+    {
+        // Ensure the order belongs to the current user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'This order does not belong to you.');
+        }
+
+        // Load order items with package data
+        $order->load(['orderItems.package']);
+
+        return view('checkout.confirmation', compact('order'));
+    }
+
+    /**
+     * Show order details page
+     */
+    public function orderDetails(Order $order)
+    {
+        // Ensure the order belongs to the current user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'This order does not belong to you.');
+        }
+
+        // Load order items with package data
+        $order->load(['orderItems.package']);
+
+        return view('checkout.order-details', compact('order'));
+    }
+
+    /**
+     * Cancel an order (if allowed)
+     */
+    public function cancelOrder(Request $request, Order $order)
+    {
+        // Ensure the order belongs to the current user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'This order does not belong to you.');
+        }
+
+        // Check if order can be cancelled
+        if (!$order->canBeCancelled()) {
+            return redirect()->route('checkout.order-details', $order)
+                ->with('error', 'This order cannot be cancelled at this time.');
+        }
+
+        $request->validate([
+            'cancellation_reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Cancel the order
+            $order->cancel($request->cancellation_reason);
+
+            // Restore package quantities
+            foreach ($order->orderItems as $orderItem) {
+                $package = $orderItem->package;
+                if ($package && $package->quantity_available !== null) {
+                    $package->quantity_available += $orderItem->quantity;
+                    $package->save();
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('checkout.order-details', $order)
+                ->with('success', 'Your order has been cancelled successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Order cancellation failed: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'order_id' => $order->id,
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('checkout.order-details', $order)
+                ->with('error', 'There was an error cancelling your order. Please contact support.');
+        }
+    }
+
+    /**
+     * Get checkout summary for AJAX requests
+     */
+    public function getSummary()
+    {
+        $cartSummary = $this->cartService->getSummary();
+
+        return response()->json([
+            'success' => true,
+            'summary' => $cartSummary,
+            'validation_errors' => $this->cartService->validateCart(),
+        ]);
+    }
+}

@@ -23,7 +23,26 @@ class CartService
      */
     public function getItems(): array
     {
-        return Session::get(self::CART_SESSION_KEY, []);
+        $items = Session::get(self::CART_SESSION_KEY, []);
+
+        // Migrate old cart items that don't have short_description
+        $needsUpdate = false;
+        foreach ($items as $packageId => &$item) {
+            if (!isset($item['short_description'])) {
+                $package = Package::find($packageId);
+                if ($package) {
+                    $item['short_description'] = $package->short_description;
+                    $needsUpdate = true;
+                }
+            }
+        }
+
+        // Update session if any items were migrated
+        if ($needsUpdate) {
+            Session::put(self::CART_SESSION_KEY, $items);
+        }
+
+        return $items;
     }
 
     /**
@@ -60,6 +79,7 @@ class CartService
                 'price' => $package->price,
                 'points_awarded' => $package->points_awarded,
                 'image_url' => $package->image_url,
+                'short_description' => $package->short_description,
                 'quantity' => $quantity,
                 'added_at' => now()->toISOString()
             ];
