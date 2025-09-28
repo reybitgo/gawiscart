@@ -65,7 +65,7 @@ php artisan make:migration create_table_name
 ### Authentication & Authorization
 - **Laravel Fortify**: Handles authentication including two-factor authentication, password resets, email verification, and profile updates
 - **Spatie Laravel Permission**: Role and permission management with caching enabled
-- **Email Verification**: Configurable via SystemSetting model
+- **Email Verification**: Dual-level configurable via SystemSetting model (registration + ongoing verification)
 - **Custom User Actions**: Located in `app/Actions/Fortify/` for user creation, profile updates, and password management
 - Custom User model with wallet relationship and enhanced email verification logic
 
@@ -115,10 +115,11 @@ php artisan make:migration create_table_name
 - **AJAX Operations**: Add, update, remove cart items without page reload
 - **Cart UI**: Header dropdown, full cart page with professional design
 - **Validation**: Inventory checking and quantity validation
-- **Tax Calculation**: Configurable tax system (7% rate)
+- **Tax Calculation**: Fully configurable tax system via admin settings (auto-hides when 0%)
 
 #### Available URLs
 - **Admin Package Management**: `/admin/packages` (full CRUD)
+- **Admin Application Settings**: `/admin/application-settings` (tax rate, email verification)
 - **Public Package Browsing**: `/packages` (listing with search/sort)
 - **Individual Package Pages**: `/packages/{slug}` (SEO-friendly)
 - **Shopping Cart**: `/cart` (full cart management)
@@ -161,6 +162,18 @@ php artisan queue:retry all
 
 ### E-Commerce Development Tasks
 
+#### Application Settings Management
+```bash
+# Seed application settings
+php artisan db:seed --class=SystemSettingSeeder
+
+# Access application settings
+# Navigate to: /admin/application-settings
+
+# Configure tax rate and email verification
+# Settings take effect immediately
+```
+
 #### Package Management
 ```bash
 # Create new packages via seeder
@@ -182,11 +195,38 @@ php artisan tinker
 
 #### Development URLs for Testing
 - **Admin Package CRUD**: `http://localhost:8000/admin/packages`
+- **Admin Application Settings**: `http://localhost:8000/admin/application-settings`
 - **Public Package Catalog**: `http://localhost:8000/packages`
 - **Shopping Cart**: `http://localhost:8000/cart`
 - **Package Details**: `http://localhost:8000/packages/{slug}`
 
 ## Important Configuration Details
+
+### Application Settings System
+**Location**: `/admin/application-settings`
+**Controller**: `app/Http/Controllers/Admin/AdminSettingsController.php`
+
+#### Configurable Settings:
+- **Tax Rate**: E-commerce tax rate (0.0 to 1.0 decimal)
+  - When set to 0: Tax calculation and display are completely hidden
+  - Dynamic percentage display with real-time updates
+  - Affects all cart calculations immediately
+
+- **Email Verification After Registration**: Controls new user verification requirements
+  - When enabled: New users must verify email before first login
+  - When disabled: Users can login immediately after registration (auto-verified)
+  - Separate from ongoing login verification in System Settings
+
+#### Email Verification System (Dual-Level):
+1. **Registration Verification** (`email_verification_required`):
+   - Controlled via Application Settings
+   - Affects new user registration workflow
+   - Handled by `CreateNewUser` action and `ConditionalEmailVerification` middleware
+
+2. **Ongoing Login Verification** (`email_verification_enabled`):
+   - Controlled via System Settings (`/admin/system-settings#security`)
+   - Affects existing users during login sessions
+   - Independent from registration verification
 
 ### Fortify Configuration (`config/fortify.php`)
 - Home redirect path: `/dashboard`
@@ -217,7 +257,12 @@ php artisan tinker
 
 #### Cart System
 - **Storage**: Session-based (upgradeable to database later)
-- **Tax Rate**: Configurable at 7% (defined in CartService)
+- **Tax System**: Fully configurable via Application Settings
+  - Dynamic tax rate (0% to 100%)
+  - Auto-hides tax display when rate is 0%
+  - Real-time calculations with `show_tax` flag
+- **UI Improvements**: Enhanced desktop layout with aligned remove buttons
+- **Mobile Optimization**: Proper spacing between cart cards
 - **Validation**: Real-time inventory checking and quantity limits
 - **Global Access**: Cart data available in all views via middleware
 - **AJAX API**: RESTful endpoints for all cart operations
@@ -229,6 +274,7 @@ php artisan tinker
 
 **Controllers:**
 - `app/Http/Controllers/Admin/AdminPackageController.php` - Admin package CRUD
+- `app/Http/Controllers/Admin/AdminSettingsController.php` - Application settings management
 - `app/Http/Controllers/PackageController.php` - Public package browsing
 - `app/Http/Controllers/CartController.php` - Cart operations and API
 
@@ -238,9 +284,11 @@ php artisan tinker
 **Database:**
 - `database/migrations/*_create_packages_table.php` - Package database structure
 - `database/seeders/PackageSeeder.php` - Sample package data
+- `database/seeders/SystemSettingSeeder.php` - Application settings seeder
 
 **Views:**
 - `resources/views/admin/packages/` - Complete admin interface
+- `resources/views/admin/settings/index.blade.php` - Application settings interface
 - `resources/views/packages/` - Public package browsing
 - `resources/views/cart/index.blade.php` - Full cart management page
 
