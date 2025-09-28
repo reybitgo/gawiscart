@@ -21,6 +21,7 @@ class SystemSetting extends Model
         return match($this->type) {
             'boolean' => (bool) $value,
             'integer' => (int) $value,
+            'decimal' => (float) $value,
             'array' => json_decode($value, true),
             default => $value
         };
@@ -34,6 +35,7 @@ class SystemSetting extends Model
         $this->attributes['value'] = match($this->type) {
             'boolean' => $value ? '1' : '0',
             'integer' => (string) $value,
+            'decimal' => (string) $value,
             'array' => json_encode($value),
             default => $value
         };

@@ -17,15 +17,18 @@ class ConditionalEmailVerification
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if email verification is enabled in system settings
-        $emailVerificationEnabled = SystemSetting::get('email_verification_enabled', true);
+        // Check if email verification after registration is required
+        $registrationVerificationRequired = SystemSetting::get('email_verification_required', true);
 
-        // If email verification is disabled globally, skip verification
-        if (!$emailVerificationEnabled) {
+        // Check if ongoing email verification is enabled (from system settings)
+        $ongoingVerificationEnabled = SystemSetting::get('email_verification_enabled', true);
+
+        // If both verification settings are disabled, skip verification entirely
+        if (!$registrationVerificationRequired && !$ongoingVerificationEnabled) {
             return $next($request);
         }
 
-        // If email verification is enabled, use Laravel's default verification middleware
+        // If either verification setting is enabled, use Laravel's default verification middleware
         $emailVerificationMiddleware = new EnsureEmailIsVerified();
         return $emailVerificationMiddleware->handle($request, $next);
     }

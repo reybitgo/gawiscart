@@ -206,10 +206,12 @@
                             <span>Subtotal ({{ $cartSummary['item_count'] }} items)</span>
                             <span>${{ number_format($cartSummary['subtotal'], 2) }}</span>
                         </div>
+                        @if($cartSummary['show_tax'])
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Tax</span>
+                            <span>Tax ({{ number_format($cartSummary['tax_rate'] * 100, 1) }}%)</span>
                             <span>${{ number_format($cartSummary['tax_amount'], 2) }}</span>
                         </div>
+                        @endif
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
                             <strong>Total</strong>

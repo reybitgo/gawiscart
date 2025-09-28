@@ -3,12 +3,20 @@
 namespace App\Services;
 
 use App\Models\Package;
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Session;
 
 class CartService
 {
     const CART_SESSION_KEY = 'shopping_cart';
-    const TAX_RATE = 0.08; // 8% tax rate - configurable
+
+    /**
+     * Get the current tax rate from system settings
+     */
+    private function getTaxRate(): float
+    {
+        return SystemSetting::get('tax_rate', 0.07); // Default to 7% if not set
+    }
 
     /**
      * Get all cart items
@@ -145,7 +153,7 @@ class CartService
      */
     public function getTaxAmount(): float
     {
-        return round($this->getSubtotal() * self::TAX_RATE, 2);
+        return round($this->getSubtotal() * $this->getTaxRate(), 2);
     }
 
     /**
@@ -184,11 +192,16 @@ class CartService
      */
     public function getSummary(): array
     {
+        $taxAmount = $this->getTaxAmount();
+        $taxRate = $this->getTaxRate();
+
         return [
             'items' => $this->getItems(),
             'item_count' => $this->getItemCount(),
             'subtotal' => $this->getSubtotal(),
-            'tax_amount' => $this->getTaxAmount(),
+            'tax_amount' => $taxAmount,
+            'tax_rate' => $taxRate,
+            'show_tax' => $taxRate > 0, // Only show tax if rate is greater than 0
             'total' => $this->getTotal(),
             'total_points' => $this->getTotalPoints(),
             'is_empty' => $this->isEmpty()

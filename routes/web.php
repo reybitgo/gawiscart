@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminPackageController;
+use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\CartController;
@@ -112,6 +113,10 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
     // Admin Package Management Routes
     Route::resource('packages', AdminPackageController::class);
     Route::post('/packages/{package}/toggle-status', [AdminPackageController::class, 'toggleStatus'])->name('packages.toggle-status');
+
+    // Admin Settings Routes
+    Route::get('/application-settings', [AdminSettingsController::class, 'index'])->name('settings.index');
+    Route::put('/application-settings', [AdminSettingsController::class, 'update'])->name('settings.update');
 });
 
 // Database Reset Routes (Admin Only)

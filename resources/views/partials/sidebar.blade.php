@@ -78,6 +78,14 @@
                             Package Management
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link{{ Request::routeIs('admin.settings.*') ? ' active' : '' }}" href="{{ route('admin.settings.index') }}">
+                            <span class="nav-icon">
+                                <span class="nav-icon-bullet"></span>
+                            </span>
+                            Application Settings
+                        </a>
+                    </li>
                     @can('system_settings')
                     <li class="nav-item">
                         <a class="nav-link{{ Request::routeIs('admin.reports*') ? ' active' : '' }}" href="{{ route('admin.reports') }}">

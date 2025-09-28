@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -45,12 +46,20 @@ class CreateNewUser implements CreatesNewUsers
             'username.regex' => 'Username can only contain letters, numbers, and underscores.',
         ])->validate();
 
-        $user = User::create([
+        $userData = [
             'fullname' => $input['fullname'],
             'username' => strtolower($input['username']),
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
-        ]);
+        ];
+
+        // If email verification is disabled, mark email as verified
+        $emailVerificationRequired = SystemSetting::get('email_verification_required', true);
+        if (!$emailVerificationRequired) {
+            $userData['email_verified_at'] = now();
+        }
+
+        $user = User::create($userData);
 
         // Assign default member role
         $user->assignRole('member');
