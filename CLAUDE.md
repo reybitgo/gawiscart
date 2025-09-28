@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Laravel 12 application with authentication, user management, wallet system, transaction tracking features, and a comprehensive e-commerce system. The application uses Laravel Fortify for authentication (including two-factor authentication), Spatie Laravel Permission for role-based access control, and includes a comprehensive wallet/transaction system with fee management.
 
-**E-Commerce Status**: Phase 2 Complete ✅ (Package Management + Shopping Cart System)
+**E-Commerce Status**: Phase 3 Complete ✅ (Package Management + Shopping Cart + Checkout Process)
 
 ## Development Commands
 
@@ -75,6 +75,8 @@ php artisan make:migration create_table_name
 - **Transaction**: Belongs to User, tracks financial transactions
 - **SystemSetting**: Key-value configuration storage
 - **Package**: E-commerce packages with pricing, points, inventory, and media management
+- **Order**: Complete order management with status tracking and package snapshots
+- **OrderItem**: Individual order items with package snapshot preservation
 
 ### Key Directories
 - `app/Actions/Fortify/`: Custom Fortify action classes
@@ -99,7 +101,7 @@ php artisan make:migration create_table_name
 - Test suites: Unit and Feature tests in `tests/` directory
 
 ### E-Commerce System
-**Current Status**: Phase 2 Complete ✅ (Package Management + Shopping Cart)
+**Current Status**: Phase 3 Complete ✅ (Package Management + Shopping Cart + Checkout Process)
 
 #### Package Management System ✅
 - **Admin Interface**: Full CRUD operations for packages via `/admin/packages`
@@ -108,14 +110,26 @@ php artisan make:migration create_table_name
 - **SEO-Friendly URLs**: Slug-based routing for individual packages
 - **Image Management**: Upload handling with fallback placeholder system
 - **Inventory Tracking**: Quantity management with availability checking
+- **Cart Status Indicators**: Real-time visual feedback showing when items are already in cart
 
 #### Shopping Cart System ✅
 - **Session-Based Cart**: Persistent cart with real-time updates
 - **CartService**: Comprehensive service class for all cart operations
-- **AJAX Operations**: Add, update, remove cart items without page reload
+- **AJAX Operations**: Add, update, remove cart items without page reload with real-time button updates
 - **Cart UI**: Header dropdown, full cart page with professional design
 - **Validation**: Inventory checking and quantity validation
 - **Tax Calculation**: Fully configurable tax system via admin settings (auto-hides when 0%)
+- **Real-time Updates**: Instant button state changes from "Add to Cart" to "In Cart"
+
+#### Checkout Process System ✅
+- **Complete Checkout Flow**: Multi-step checkout with order review and confirmation
+- **Order Management**: Full order lifecycle with status tracking (pending, confirmed, cancelled)
+- **Package Snapshots**: Order items preserve package details at time of purchase
+- **Order Numbers**: Auto-generated order numbers with date-based format (ORD-YYYY-MM-DD-XXXX)
+- **Customer Notes**: Optional order notes and special instructions
+- **Terms & Conditions**: Modal-based legal document acceptance
+- **Order Confirmation**: Professional confirmation page with order details
+- **Order Cancellation**: Ability to cancel pending orders
 
 #### Available URLs
 - **Admin Package Management**: `/admin/packages` (full CRUD)
@@ -123,11 +137,13 @@ php artisan make:migration create_table_name
 - **Public Package Browsing**: `/packages` (listing with search/sort)
 - **Individual Package Pages**: `/packages/{slug}` (SEO-friendly)
 - **Shopping Cart**: `/cart` (full cart management)
+- **Checkout Process**: `/checkout` (order review and placement)
+- **Order Confirmation**: `/checkout/confirmation/{order}` (order details and management)
 - **Cart API**: AJAX endpoints for cart operations
 
 #### Next Phase
-- **Phase 3**: Checkout process with order management system
 - **Phase 4**: Wallet payment integration with existing transaction system
+- **Phase 5**: Member dashboard with order history
 
 ## Common Development Tasks
 
@@ -197,8 +213,10 @@ php artisan tinker
 - **Admin Package CRUD**: `http://localhost:8000/admin/packages`
 - **Admin Application Settings**: `http://localhost:8000/admin/application-settings`
 - **Public Package Catalog**: `http://localhost:8000/packages`
-- **Shopping Cart**: `http://localhost:8000/cart`
 - **Package Details**: `http://localhost:8000/packages/{slug}`
+- **Shopping Cart**: `http://localhost:8000/cart`
+- **Checkout Process**: `http://localhost:8000/checkout`
+- **Order Confirmation**: `http://localhost:8000/checkout/confirmation/{order-id}`
 
 ## Important Configuration Details
 
@@ -270,27 +288,35 @@ php artisan tinker
 #### Key Files Created
 **Models & Services:**
 - `app/Models/Package.php` - Package model with business logic
+- `app/Models/Order.php` - Order model with comprehensive business logic and status management
+- `app/Models/OrderItem.php` - Order item model with package snapshot functionality
 - `app/Services/CartService.php` - Comprehensive cart management service
 
 **Controllers:**
 - `app/Http/Controllers/Admin/AdminPackageController.php` - Admin package CRUD
 - `app/Http/Controllers/Admin/AdminSettingsController.php` - Application settings management
-- `app/Http/Controllers/PackageController.php` - Public package browsing
+- `app/Http/Controllers/PackageController.php` - Public package browsing with cart status indicators
 - `app/Http/Controllers/CartController.php` - Cart operations and API
+- `app/Http/Controllers/CheckoutController.php` - Complete checkout process and order management
 
 **Middleware:**
 - `app/Http/Middleware/CartMiddleware.php` - Global cart data injection
 
 **Database:**
 - `database/migrations/*_create_packages_table.php` - Package database structure
+- `database/migrations/*_create_orders_table.php` - Order management structure
+- `database/migrations/*_create_order_items_table.php` - Order items with package snapshots
 - `database/seeders/PackageSeeder.php` - Sample package data
 - `database/seeders/SystemSettingSeeder.php` - Application settings seeder
 
 **Views:**
 - `resources/views/admin/packages/` - Complete admin interface
 - `resources/views/admin/settings/index.blade.php` - Application settings interface
-- `resources/views/packages/` - Public package browsing
+- `resources/views/packages/` - Public package browsing with cart status indicators
 - `resources/views/cart/index.blade.php` - Full cart management page
+- `resources/views/checkout/index.blade.php` - Checkout process with order review
+- `resources/views/checkout/confirmation.blade.php` - Order confirmation and management
+- `resources/views/legal/` - Terms of service and privacy policy modals
 
 #### Next Development Steps
-For continuing e-commerce development, refer to `ecommerce_roadmap.md` for detailed Phase 3-8 implementation plans including checkout process, wallet payment integration, and order management system.
+For continuing e-commerce development, refer to `ECOMMERCE_ROADMAP.md` for detailed Phase 4-8 implementation plans including wallet payment integration, member dashboard, admin order management, and advanced features.
