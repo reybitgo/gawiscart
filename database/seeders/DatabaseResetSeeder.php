@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\SystemSetting;
 use App\Models\Wallet;
 use App\Models\Package;
+use App\Models\Order;
+use App\Models\OrderItem;
 
 class DatabaseResetSeeder extends Seeder
 {
@@ -51,14 +53,15 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('👤 Member: member@ewallet.com / Member123!@#');
         $this->command->info('⚙️  System settings preserved');
         $this->command->info('📦 Preloaded packages restored');
+        $this->command->info('🛒 Order history cleared (ready for new orders)');
     }
 
     /**
-     * Clear only user transactions (preserve system settings, default users, roles, and permissions)
+     * Clear user transactions and orders (preserve system settings, default users, roles, and permissions)
      */
     private function clearUserData(): void
     {
-        $this->command->info('🗑️  Clearing user transactions (preserving system settings, users, roles, and permissions)...');
+        $this->command->info('🗑️  Clearing user transactions and orders (preserving system settings, users, roles, and permissions)...');
 
         // Get default user IDs to preserve
         $defaultUserEmails = ['admin@ewallet.com', 'member@ewallet.com'];
@@ -66,6 +69,14 @@ class DatabaseResetSeeder extends Seeder
             ->whereIn('email', $defaultUserEmails)
             ->pluck('id')
             ->toArray();
+
+        // Clear order items first (foreign key dependency)
+        DB::table('order_items')->delete();
+        $this->command->info('✅ Cleared all order items');
+
+        // Clear orders
+        DB::table('orders')->delete();
+        $this->command->info('✅ Cleared all orders');
 
         // Clear transactions (all of them)
         DB::table('transactions')->delete();
@@ -112,6 +123,8 @@ class DatabaseResetSeeder extends Seeder
         // - role_has_permissions table (role-permission relationships)
 
         // Reset auto-increment counters for fully cleared tables only
+        DB::statement('ALTER TABLE order_items AUTO_INCREMENT = 1');
+        DB::statement('ALTER TABLE orders AUTO_INCREMENT = 1');
         DB::statement('ALTER TABLE transactions AUTO_INCREMENT = 1');
     }
 

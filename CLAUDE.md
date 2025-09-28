@@ -50,7 +50,7 @@ vendor/bin/pint                      # PHP code style fixer (Laravel Pint)
 # Run migrations
 php artisan migrate
 
-# Fresh migration with seeding
+# Fresh migration with seeding (includes orders and order_items tables)
 php artisan migrate:fresh --seed
 
 # Rollback migrations
@@ -217,6 +217,15 @@ php artisan tinker
 - **Shopping Cart**: `http://localhost:8000/cart`
 - **Checkout Process**: `http://localhost:8000/checkout`
 - **Order Confirmation**: `http://localhost:8000/checkout/confirmation/{order-id}`
+
+#### Database Reset Commands
+```bash
+# Quick reset (preserves settings, clears transactions/orders, resets packages)
+php artisan db:seed --class=DatabaseResetSeeder
+
+# Full fresh migration (rebuilds entire database)
+php artisan migrate:fresh --seed
+```
 
 ## Important Configuration Details
 

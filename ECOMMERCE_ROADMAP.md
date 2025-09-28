@@ -329,6 +329,15 @@ Production-ready e-commerce system
 - **Order Confirmation:** `/checkout/confirmation/{order}`
 - **Cart API Endpoints:** `/cart/add/{packageId}`, `/cart/update/{packageId}`, `/cart/remove/{packageId}`, `/cart/clear`, `/cart/count`, `/cart/summary`
 
+### Database Reset Commands
+```bash
+# Quick reset - preserves settings, clears orders/transactions, resets packages
+php artisan db:seed --class=DatabaseResetSeeder
+
+# Full reset - rebuilds entire database with all tables including orders
+php artisan migrate:fresh --seed
+```
+
 ---
 
 ## Notes & Decisions

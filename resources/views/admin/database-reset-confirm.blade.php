@@ -41,6 +41,12 @@
                             All transactions will be cleared (wallet balances reset to initial amounts)
                         </li>
                         <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-danger me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
+                            </svg>
+                            All orders and order history will be cleared
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                             </svg>
@@ -62,7 +68,7 @@
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-gift') }}"></use>
                             </svg>
-                            Sample packages will be&nbsp;<strong>restored</strong>
+                            Sample packages will be&nbsp;<strong>restored</strong>&nbsp;(5 preloaded packages)
                         </li>
                     </ul>
 
@@ -162,6 +168,7 @@
                     <ul class="mb-0">
                         <li>Non-default user accounts and profiles (admin & member preserved)</li>
                         <li>All transaction history and records</li>
+                        <li>All orders and order items (complete order history)</li>
                         <li>Non-default wallet balances (default wallets reset to initial amounts)</li>
                     </ul>
                 </div>
@@ -178,8 +185,9 @@
                         <li>Default member account (member@ewallet.com)</li>
                         <li><strong>Current system settings preserved</strong></li>
                         <li><strong>All roles and permissions preserved</strong></li>
-                        <li><strong>Sample packages restored to initial state</strong></li>
+                        <li><strong>Sample packages restored to initial state</strong> (5 packages)</li>
                         <li>Fresh wallets with initial balances ($1,000 & $100)</li>
+                        <li>Clean e-commerce system ready for new orders</li>
                     </ul>
                 </div>
 
