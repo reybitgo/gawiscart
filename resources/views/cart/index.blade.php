@@ -61,7 +61,7 @@
     @else
         <div class="row">
             <div class="col-lg-8">
-                <div class="card">
+                <div class="card mb-4 mb-lg-0">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Cart Items ({{ $cartSummary['item_count'] }} items)</h5>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearCart()">
@@ -97,7 +97,6 @@
                                     <!-- Unit Price -->
                                     <div class="text-center me-4" style="min-width: 80px;">
                                         <div class="fw-semibold">${{ number_format($item['price'], 2) }}</div>
-                                        <small class="text-muted">each</small>
                                     </div>
 
                                     <!-- Quantity Controls -->
@@ -119,9 +118,13 @@
                                         </div>
                                     </div>
 
-                                    <!-- Total Price & Delete -->
-                                    <div class="d-flex align-items-center" style="min-width: 140px;">
-                                        <div class="fw-bold text-end me-3">${{ number_format($item['price'] * $item['quantity'], 2) }}</div>
+                                    <!-- Total Price -->
+                                    <div class="text-center me-auto">
+                                        <div class="fw-bold">${{ number_format($item['price'] * $item['quantity'], 2) }}</div>
+                                    </div>
+
+                                    <!-- Remove Button - Isolated on far right -->
+                                    <div class="ms-3">
                                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem({{ $item['package_id'] }})" title="Remove item">
                                             <svg class="icon">
                                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-trash') }}"></use>
