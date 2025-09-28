@@ -180,12 +180,17 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="return false;">
+                    <a class="nav-link{{ Request::routeIs('cart.*') ? ' active' : '' }}" href="{{ route('cart.index') }}">
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
                         Shopping Cart
-                        <span class="badge bg-warning ms-auto">Phase 2</span>
+                        @php
+                            $cartCount = app('App\Services\CartService')->getItemCount();
+                        @endphp
+                        @if($cartCount > 0)
+                            <span class="badge bg-primary ms-auto">{{ $cartCount }}</span>
+                        @endif
                     </a>
                 </li>
                 <li class="nav-item">

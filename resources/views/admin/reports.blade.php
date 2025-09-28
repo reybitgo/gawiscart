@@ -90,7 +90,7 @@
                 <div>
                     <div class="fs-4 fw-semibold">{{ $stats['rejected_transactions'] }}</div>
                     <div>Rejected Transactions</div>
-                    <div class="small mt-1">{{ number_format(($stats['rejected_transactions']/$stats['total_transactions'])*100, 1) }}% rejection rate</div>
+                    <div class="small mt-1">{{ $stats['total_transactions'] > 0 ? number_format(($stats['rejected_transactions']/$stats['total_transactions'])*100, 1) : 0 }}% rejection rate</div>
                 </div>
                 <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>

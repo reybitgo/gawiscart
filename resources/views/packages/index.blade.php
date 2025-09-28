@@ -187,42 +187,4 @@
 }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Add to cart functionality (placeholder for Phase 2)
-    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const packageId = this.dataset.packageId;
-
-            // Placeholder for cart functionality
-            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-            this.disabled = true;
-
-            setTimeout(() => {
-                this.innerHTML = `
-                    <svg class="icon me-2">
-                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
-                    </svg>
-                    Added to Cart
-                `;
-                this.classList.remove('btn-primary');
-                this.classList.add('btn-success');
-
-                // Reset after 2 seconds
-                setTimeout(() => {
-                    this.innerHTML = `
-                        <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
-                        </svg>
-                        Add to Cart
-                    `;
-                    this.classList.remove('btn-success');
-                    this.classList.add('btn-primary');
-                    this.disabled = false;
-                }, 2000);
-            }, 1000);
-        });
-    });
-});
-</script>
 @endsection

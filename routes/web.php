@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminPackageController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DatabaseResetController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,17 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->group(functi
     // Package Routes (Public)
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('/packages/{package}', [PackageController::class, 'show'])->name('packages.show');
+
+    // Cart Routes
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'index'])->name('index');
+        Route::post('/add/{packageId}', [CartController::class, 'add'])->name('add');
+        Route::patch('/update/{packageId}', [CartController::class, 'update'])->name('update');
+        Route::delete('/remove/{packageId}', [CartController::class, 'remove'])->name('remove');
+        Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+        Route::get('/count', [CartController::class, 'getCount'])->name('count');
+        Route::get('/summary', [CartController::class, 'getSummary'])->name('summary');
+    });
 });
 
 // Admin Routes

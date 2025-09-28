@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ApplyDatabaseConfig::class,
         ]);
 
+        // Add cart middleware to web group
+        $middleware->web(append: [
+            \App\Http\Middleware\CartMiddleware::class,
+        ]);
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
@@ -23,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ewallet.security' => \App\Http\Middleware\EWalletSecurityMiddleware::class,
             'conditional.verified' => \App\Http\Middleware\ConditionalEmailVerification::class,
             'enforce.2fa' => \App\Http\Middleware\Enforce2FA::class,
+            'cart' => \App\Http\Middleware\CartMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

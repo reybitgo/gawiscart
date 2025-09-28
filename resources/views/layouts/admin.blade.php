@@ -39,6 +39,18 @@
 
     <!-- Additional CSS -->
     @stack('styles')
+
+    <!-- Cart JavaScript -->
+    <script>
+        window.cartRoutes = {
+            count: '{{ route("cart.count") }}',
+            summary: '{{ route("cart.summary") }}',
+            add: '/cart/add/{packageId}',
+            update: '/cart/update/{packageId}',
+            remove: '/cart/remove/{packageId}',
+            clear: '{{ route("cart.clear") }}'
+        };
+    </script>
 </head>
 <body>
     @include('partials.sidebar')
@@ -206,6 +218,210 @@
                 sidebar.classList.remove('sidebar-narrow-unfoldable');
                 console.log('Sidebar initialized in full width mode for CoreUI unfoldable toggle');
             }
+        });
+    </script>
+
+    <!-- Cart JavaScript -->
+    <script>
+        // Cart management functionality
+        class CartManager {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.updateCartCount();
+                this.bindEvents();
+            }
+
+            async updateCartCount() {
+                try {
+                    const response = await fetch(window.cartRoutes.count);
+                    const data = await response.json();
+                    this.setCartCount(data.count);
+                } catch (error) {
+                    console.error('Error updating cart count:', error);
+                }
+            }
+
+            setCartCount(count) {
+                const cartBadge = document.getElementById('cart-count');
+                if (cartBadge) {
+                    cartBadge.textContent = count;
+                    cartBadge.style.display = count > 0 ? 'inline' : 'none';
+                }
+            }
+
+            async refreshCartDropdown() {
+                try {
+                    const response = await fetch(window.cartRoutes.summary);
+                    const data = await response.json();
+
+                    if (data.summary) {
+                        this.updateCartDropdownContent(data.summary);
+                    }
+                } catch (error) {
+                    console.error('Error refreshing cart dropdown:', error);
+                }
+            }
+
+            updateCartDropdownContent(cartSummary) {
+                const dropdownContent = document.getElementById('cart-dropdown-content');
+                if (!dropdownContent) return;
+
+                if (cartSummary.is_empty) {
+                    dropdownContent.innerHTML = `
+                        <div class="dropdown-item-text text-center p-4">
+                            <svg class="icon icon-xl text-muted mb-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-basket') }}"></use>
+                            </svg>
+                            <div class="text-muted small mb-3">Your cart is empty</div>
+                            <a href="{{ route('packages.index') }}" class="btn btn-primary btn-sm">
+                                Browse Packages
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    let itemsHtml = '';
+                    Object.values(cartSummary.items).forEach(item => {
+                        itemsHtml += `
+                            <div class="dropdown-item-text border-bottom p-3">
+                                <div class="d-flex align-items-center">
+                                    <img src="${item.image_url}" alt="${item.name}" class="rounded me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold small">${item.name.length > 25 ? item.name.substring(0, 25) + '...' : item.name}</div>
+                                        <div class="text-muted small">
+                                            ${item.quantity} × $${parseFloat(item.price).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-semibold small">$${(item.price * item.quantity).toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    dropdownContent.innerHTML = `
+                        <div class="dropdown-header bg-light fw-semibold text-dark border-bottom">
+                            Cart (${cartSummary.item_count} items)
+                        </div>
+                        ${itemsHtml}
+                        <div class="dropdown-header bg-light border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <span>Total:</span>
+                                <span class="fw-bold">$${cartSummary.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="dropdown-item-text p-3">
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('cart.index') }}" class="btn btn-primary btn-sm">
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-basket') }}"></use>
+                                    </svg>
+                                    View Cart
+                                </a>
+                                <button class="btn btn-outline-primary btn-sm" disabled>
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
+                                    </svg>
+                                    Checkout (Phase 3)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            async addToCart(packageId, quantity = 1) {
+                try {
+                    const url = window.cartRoutes.add.replace('{packageId}', packageId);
+                    console.log('Adding to cart:', { packageId, quantity, url });
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ quantity: quantity })
+                    });
+
+                    console.log('Response status:', response.status);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('HTTP error response:', errorText);
+                        this.showMessage('Server error: ' + response.status, 'error');
+                        return false;
+                    }
+
+                    const data = await response.json();
+                    console.log('Response data:', data);
+
+                    if (data.success) {
+                        this.setCartCount(data.cart_count);
+                        this.refreshCartDropdown();
+                        this.showMessage(data.message, 'success');
+                        return true;
+                    } else {
+                        this.showMessage(data.message, 'error');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Error adding to cart:', error);
+                    this.showMessage('Error adding item to cart: ' + error.message, 'error');
+                    return false;
+                }
+            }
+
+            showMessage(message, type = 'info') {
+                // Create toast notification
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-coreui-dismiss="alert"></button>
+                `;
+
+                document.body.appendChild(toast);
+
+                // Auto remove after 3 seconds
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 3000);
+            }
+
+            bindEvents() {
+                // Bind add to cart buttons
+                document.addEventListener('click', async (e) => {
+                    if (e.target.matches('.add-to-cart-btn') || e.target.closest('.add-to-cart-btn')) {
+                        e.preventDefault();
+                        const button = e.target.matches('.add-to-cart-btn') ? e.target : e.target.closest('.add-to-cart-btn');
+                        const packageId = button.dataset.packageId;
+                        const quantity = button.dataset.quantity || 1;
+
+                        if (packageId) {
+                            button.disabled = true;
+                            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+                            const success = await this.addToCart(packageId, quantity);
+
+                            button.disabled = false;
+                            button.innerHTML = '<svg class="icon me-2"><use xlink:href="{{ asset("coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart") }}"></use></svg>Add to Cart';
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize cart manager when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Cart routes initialized:', window.cartRoutes);
+            window.cartManager = new CartManager();
         });
     </script>
 
