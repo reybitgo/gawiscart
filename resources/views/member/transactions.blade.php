@@ -6,7 +6,7 @@
 <!-- Page Header -->
 <div class="card mb-4">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
                 <h4 class="card-title mb-0">
                     <svg class="icon me-2">
@@ -16,18 +16,18 @@
                 </h4>
                 <p class="text-body-secondary mb-0">View your e-wallet transactions and activity</p>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 w-100 w-md-auto">
                 <a href="{{ route('wallet.deposit') }}" class="btn btn-success">
                     <svg class="icon me-2">
                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-plus') }}"></use>
                     </svg>
-                    Deposit
+                    <span class="d-none d-sm-inline">Deposit</span>
                 </a>
                 <a href="{{ route('dashboard') }}" class="btn btn-secondary">
                     <svg class="icon me-2">
                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-left') }}"></use>
                     </svg>
-                    Back to Dashboard
+                    <span class="d-none d-sm-inline">Back to Dashboard</span>
                 </a>
             </div>
         </div>
@@ -428,5 +428,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 
 @endsection

@@ -515,4 +515,7 @@
 }
 </style>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @endsection

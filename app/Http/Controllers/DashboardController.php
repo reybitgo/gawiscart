@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,18 @@ class DashboardController extends Controller
 
         $totalTransactions = $user->transactions()->count();
 
+        // Get points statistics
+        $totalPointsEarned = $user->orders()
+            ->where('payment_status', 'paid')
+            ->sum('points_awarded');
+
+        $totalPointsCredited = $user->orders()
+            ->where('payment_status', 'paid')
+            ->where('points_credited', true)
+            ->sum('points_awarded');
+
+        $pendingPoints = $totalPointsEarned - $totalPointsCredited;
+
         // Get monthly transaction data for chart
         $monthlyTransactions = $user->transactions()
             ->select(
@@ -63,6 +76,9 @@ class DashboardController extends Controller
             'totalWithdrawals',
             'pendingTransactions',
             'totalTransactions',
+            'totalPointsEarned',
+            'totalPointsCredited',
+            'pendingPoints',
             'monthlyTransactions'
         ));
     }

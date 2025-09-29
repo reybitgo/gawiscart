@@ -73,16 +73,19 @@
         </div>
     </div>
 
-    <!-- Pending Transactions -->
+    <!-- Points Earned -->
     <div class="col-sm-6 col-xl-3">
-        <div class="card text-white bg-danger-gradient h-100">
+        <div class="card text-white bg-purple-gradient h-100">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ $pendingTransactions }}</div>
-                    <div>Pending Transactions</div>
+                    <div class="fs-4 fw-semibold">{{ number_format($totalPointsEarned) }}</div>
+                    <div>Points Earned</div>
+                    @if($pendingPoints > 0)
+                        <small class="opacity-75">{{ number_format($pendingPoints) }} pending</small>
+                    @endif
                 </div>
                 <svg class="icon icon-2xl">
-                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-clock') }}"></use>
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-star') }}"></use>
                 </svg>
             </div>
         </div>
@@ -181,6 +184,14 @@
                     </a>
                 </div>
                 @endcan
+                <div class="col-md-3 col-sm-6">
+                    <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary btn-block">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
+                        </svg>
+                        Order History
+                    </a>
+                </div>
             @endif
         </div>
     </div>

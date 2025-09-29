@@ -174,7 +174,7 @@ class OrderHistoryController extends Controller
                     $quantityToAdd = min($orderItem->quantity, $availableQuantity);
 
                     if ($quantityToAdd > 0) {
-                        $cartService->add($package->id, $quantityToAdd);
+                        $cartService->addItem($package, $quantityToAdd);
                         $addedItems++;
                     }
 

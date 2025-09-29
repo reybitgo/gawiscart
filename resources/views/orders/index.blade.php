@@ -21,7 +21,7 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4">
+    <div class="row mb-4 g-3">
         <div class="col-sm-6 col-lg-3">
             <div class="card text-white bg-primary">
                 <div class="card-body">
@@ -225,6 +225,9 @@
         </div>
     @endif
 </div>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 
 @push('scripts')
 <script>

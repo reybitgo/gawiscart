@@ -261,4 +261,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @endsection

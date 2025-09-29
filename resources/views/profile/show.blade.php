@@ -3,7 +3,7 @@
 @section('title', 'Profile')
 
 @section('content')
-<div class="row">
+<div class="row g-4">
     <div class="col-lg-8">
         <!-- Profile Information Card -->
         <div class="card mb-4">
@@ -232,4 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
     showPasswordsCheckbox.addEventListener('change', togglePasswordVisibility);
 });
 </script>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @endsection
