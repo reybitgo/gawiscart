@@ -198,7 +198,11 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-outline-primary">View</button>
+                                    <button class="btn btn-sm btn-outline-primary" title="View">
+                                        <svg class="icon">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-magnifying-glass') }}"></use>
+                                        </svg>
+                                    </button>
                                     @if($user->wallet)
                                         @if($user->wallet->is_active)
                                             <button class="btn btn-sm btn-outline-warning">Freeze</button>

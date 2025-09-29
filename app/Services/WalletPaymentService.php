@@ -1,0 +1,284 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Order;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Wallet;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class WalletPaymentService
+{
+    /**
+     * Check if user has sufficient wallet balance for order
+     */
+    public function hasInsufficientBalance(User $user, float $amount): bool
+    {
+        $wallet = $user->wallet;
+
+        if (!$wallet || !$wallet->is_active) {
+            return true;
+        }
+
+        return $wallet->balance < $amount;
+    }
+
+    /**
+     * Get user's current wallet balance
+     */
+    public function getBalance(User $user): float
+    {
+        $wallet = $user->wallet;
+        return $wallet ? $wallet->balance : 0.00;
+    }
+
+    /**
+     * Process wallet payment for an order
+     */
+    public function processPayment(Order $order): array
+    {
+        try {
+            DB::beginTransaction();
+
+            $user = $order->user;
+            $wallet = $user->getOrCreateWallet();
+
+            // Validate wallet state
+            if (!$wallet->is_active) {
+                throw new \Exception('Wallet is not active');
+            }
+
+            // Check sufficient balance
+            if ($this->hasInsufficientBalance($user, $order->total_amount)) {
+                throw new \Exception('Insufficient wallet balance');
+            }
+
+            // Create transaction record
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'payment',
+                'amount' => $order->total_amount,
+                'status' => 'completed',
+                'payment_method' => 'wallet',
+                'description' => "Payment for order {$order->order_number}",
+                'metadata' => [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'payment_type' => 'order_payment',
+                    'wallet_balance_before' => $wallet->balance,
+                ],
+            ]);
+
+            // Deduct amount from wallet
+            $wallet->subtractBalance($order->total_amount);
+
+            // Update transaction metadata with final balance
+            $transaction->update([
+                'metadata' => array_merge($transaction->metadata, [
+                    'wallet_balance_after' => $wallet->balance,
+                ])
+            ]);
+
+            // Mark order as paid
+            $order->markAsPaid();
+
+            // Update order metadata with payment info
+            $orderMetadata = $order->metadata ?? [];
+            $orderMetadata['payment'] = [
+                'method' => 'wallet',
+                'transaction_id' => $transaction->id,
+                'transaction_reference' => $transaction->reference_number,
+                'paid_at' => now()->toISOString(),
+                'amount_paid' => $order->total_amount,
+            ];
+            $order->update(['metadata' => $orderMetadata]);
+
+            // Credit points if configured
+            $order->creditPoints();
+
+            DB::commit();
+
+            Log::info('Wallet payment processed successfully', [
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'transaction_id' => $transaction->id,
+                'amount' => $order->total_amount,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Payment processed successfully',
+                'transaction' => $transaction,
+                'remaining_balance' => $wallet->balance,
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Wallet payment failed', [
+                'user_id' => $order->user_id,
+                'order_id' => $order->id,
+                'amount' => $order->total_amount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+            ];
+        }
+    }
+
+    /**
+     * Validate if wallet payment is possible for given amount
+     */
+    public function validatePayment(User $user, float $amount): array
+    {
+        $wallet = $user->wallet;
+
+        if (!$wallet) {
+            return [
+                'valid' => false,
+                'message' => 'Wallet not found. Please contact support.',
+                'code' => 'NO_WALLET',
+            ];
+        }
+
+        if (!$wallet->is_active) {
+            return [
+                'valid' => false,
+                'message' => 'Wallet is not active. Please contact support.',
+                'code' => 'WALLET_INACTIVE',
+            ];
+        }
+
+        if ($wallet->balance < $amount) {
+            return [
+                'valid' => false,
+                'message' => sprintf(
+                    'Insufficient balance. Required: $%s, Available: $%s',
+                    number_format($amount, 2),
+                    number_format($wallet->balance, 2)
+                ),
+                'code' => 'INSUFFICIENT_BALANCE',
+                'required_amount' => $amount,
+                'available_balance' => $wallet->balance,
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'message' => 'Payment validation successful',
+            'available_balance' => $wallet->balance,
+            'remaining_after_payment' => $wallet->balance - $amount,
+        ];
+    }
+
+    /**
+     * Get payment summary for checkout display
+     */
+    public function getPaymentSummary(User $user, float $orderAmount): array
+    {
+        $wallet = $user->wallet;
+        $currentBalance = $wallet ? $wallet->balance : 0;
+        $validation = $this->validatePayment($user, $orderAmount);
+
+        return [
+            'current_balance' => $currentBalance,
+            'formatted_balance' => '$' . number_format($currentBalance, 2),
+            'order_amount' => $orderAmount,
+            'formatted_order_amount' => '$' . number_format($orderAmount, 2),
+            'remaining_balance' => $validation['valid'] ? $validation['remaining_after_payment'] : 0,
+            'formatted_remaining_balance' => '$' . number_format(
+                $validation['valid'] ? $validation['remaining_after_payment'] : 0,
+                2
+            ),
+            'can_pay' => $validation['valid'],
+            'validation_message' => $validation['message'],
+            'wallet_active' => $wallet ? $wallet->is_active : false,
+        ];
+    }
+
+    /**
+     * Refund payment to wallet (for order cancellations)
+     */
+    public function refundPayment(Order $order): array
+    {
+        try {
+            DB::beginTransaction();
+
+            $user = $order->user;
+            $wallet = $user->getOrCreateWallet();
+
+            // Validate order is paid and can be refunded
+            if (!$order->isPaid()) {
+                throw new \Exception('Order is not in paid status');
+            }
+
+            // Create refund transaction
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'refund',
+                'amount' => $order->total_amount,
+                'status' => 'completed',
+                'payment_method' => 'wallet',
+                'description' => "Refund for cancelled order {$order->order_number}",
+                'metadata' => [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'refund_type' => 'order_cancellation',
+                    'wallet_balance_before' => $wallet->balance,
+                ],
+            ]);
+
+            // Add amount back to wallet
+            $wallet->addBalance($order->total_amount);
+
+            // Update transaction metadata with final balance
+            $transaction->update([
+                'metadata' => array_merge($transaction->metadata, [
+                    'wallet_balance_after' => $wallet->balance,
+                ])
+            ]);
+
+            // Update order payment status
+            $order->update(['payment_status' => Order::PAYMENT_STATUS_REFUNDED]);
+
+            DB::commit();
+
+            Log::info('Wallet refund processed successfully', [
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'transaction_id' => $transaction->id,
+                'amount' => $order->total_amount,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Refund processed successfully',
+                'transaction' => $transaction,
+                'new_balance' => $wallet->balance,
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Wallet refund failed', [
+                'user_id' => $order->user_id,
+                'order_id' => $order->id,
+                'amount' => $order->total_amount,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+            ];
+        }
+    }
+}

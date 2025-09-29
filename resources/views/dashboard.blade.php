@@ -483,6 +483,9 @@
 </div>
 @endif
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 <style>
 /* Gradient backgrounds */
 .bg-success-gradient {

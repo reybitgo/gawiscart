@@ -61,21 +61,90 @@
                 </div>
             </div>
 
-            <!-- Customer Notes -->
+            <!-- Payment Method -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-comment-square') }}"></use>
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
                         </svg>
-                        Order Notes (Optional)
+                        Payment Method
                     </h5>
                 </div>
                 <div class="card-body">
                     <form id="checkout-form" action="{{ route('checkout.process') }}" method="POST">
                         @csrf
+
+                        <!-- Wallet Payment Option -->
+                        <div class="form-check border rounded p-3 mb-3 {{ $walletSummary['can_pay'] ? 'border-success' : 'border-danger' }}">
+                            <input class="form-check-input @error('payment_method') is-invalid @enderror"
+                                   type="radio"
+                                   name="payment_method"
+                                   id="wallet_payment"
+                                   value="wallet"
+                                   {{ $walletSummary['can_pay'] ? 'checked' : 'disabled' }}
+                                   {{ old('payment_method') === 'wallet' ? 'checked' : '' }}>
+                            <label class="form-check-label w-100" for="wallet_payment">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Pay with E-Wallet</strong>
+                                        <div class="text-muted small">Use your wallet balance to complete this purchase</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="badge {{ $walletSummary['wallet_active'] ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ $walletSummary['wallet_active'] ? 'Active' : 'Inactive' }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Wallet Balance Information -->
+                                <div class="mt-2">
+                                    <div class="row text-sm">
+                                        <div class="col-md-6">
+                                            <span class="text-muted">Current Balance:</span>
+                                            <strong class="{{ $walletSummary['can_pay'] ? 'text-success' : 'text-danger' }}">
+                                                {{ $walletSummary['formatted_balance'] }}
+                                            </strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span class="text-muted">Order Total:</span>
+                                            <strong>{{ $walletSummary['formatted_order_amount'] }}</strong>
+                                        </div>
+                                    </div>
+                                    @if($walletSummary['can_pay'])
+                                        <div class="mt-2">
+                                            <span class="text-muted">Remaining Balance:</span>
+                                            <strong class="text-info">{{ $walletSummary['formatted_remaining_balance'] }}</strong>
+                                        </div>
+                                    @else
+                                        <div class="mt-2">
+                                            <div class="alert alert-danger small mb-0">
+                                                <svg class="icon me-1">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+                                                </svg>
+                                                {{ $walletSummary['validation_message'] }}
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </label>
+                            @error('payment_method')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        @if(!$walletSummary['can_pay'])
+                            <div class="alert alert-warning">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                                </svg>
+                                <strong>Insufficient Balance:</strong> You need to add funds to your wallet before you can complete this purchase. Please contact support to add funds to your wallet.
+                            </div>
+                        @endif
+
+                        <!-- Customer Notes -->
                         <div class="mb-3">
-                            <label for="customer_notes" class="form-label">Special Instructions or Notes</label>
+                            <label for="customer_notes" class="form-label">Special Instructions or Notes (Optional)</label>
                             <textarea class="form-control @error('customer_notes') is-invalid @enderror"
                                       id="customer_notes"
                                       name="customer_notes"
@@ -143,21 +212,35 @@
                         You will earn <strong>{{ number_format($cartSummary['total_points']) }} points</strong> from this order!
                     </div>
 
-                    <!-- Payment Method Notice -->
-                    <div class="alert alert-warning">
-                        <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
-                        </svg>
-                        <strong>Phase 3 Notice:</strong> This will create a pending order. Payment integration will be added in Phase 4.
-                    </div>
+                    <!-- Wallet Payment Summary -->
+                    @if($walletSummary['can_pay'])
+                        <div class="alert alert-success">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
+                            </svg>
+                            <strong>Payment Method:</strong> E-Wallet<br>
+                            <small>Your order will be paid immediately using your wallet balance.</small>
+                        </div>
+                    @else
+                        <div class="alert alert-warning">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+                            </svg>
+                            <strong>Payment Required:</strong> Please ensure you have sufficient wallet balance to complete this purchase.
+                        </div>
+                    @endif
 
                     <!-- Place Order Button -->
                     <div class="d-grid">
-                        <button type="submit" form="checkout-form" class="btn btn-primary btn-lg" id="place-order-btn">
+                        <button type="submit"
+                                form="checkout-form"
+                                class="btn btn-primary btn-lg"
+                                id="place-order-btn"
+                                {{ !$walletSummary['can_pay'] ? 'disabled' : '' }}>
                             <svg class="icon me-2">
-                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
                             </svg>
-                            Place Order
+                            {{ $walletSummary['can_pay'] ? 'Pay Now' : 'Insufficient Balance' }}
                         </button>
                     </div>
 
@@ -175,6 +258,9 @@
     </div>
 </div>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @push('styles')
 <style>
 .sticky-order-summary {
@@ -189,17 +275,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('checkout-form');
     const submitBtn = document.getElementById('place-order-btn');
     const termsCheckbox = document.getElementById('terms_accepted');
+    const paymentMethodRadio = document.getElementById('wallet_payment');
+    const canPay = {{ $walletSummary['can_pay'] ? 'true' : 'false' }};
 
-    // Enable/disable submit button based on terms acceptance
+    // Enable/disable submit button based on validation
     function updateSubmitButton() {
-        submitBtn.disabled = !termsCheckbox.checked;
+        const termsAccepted = termsCheckbox.checked;
+        const paymentSelected = paymentMethodRadio && paymentMethodRadio.checked;
+        const hasValidPayment = canPay && paymentSelected;
+
+        submitBtn.disabled = !(termsAccepted && hasValidPayment);
     }
 
     // Initial check
     updateSubmitButton();
 
     // Listen for checkbox changes
-    termsCheckbox.addEventListener('change', updateSubmitButton);
+    if (termsCheckbox) {
+        termsCheckbox.addEventListener('change', updateSubmitButton);
+    }
+
+    if (paymentMethodRadio) {
+        paymentMethodRadio.addEventListener('change', updateSubmitButton);
+    }
 
     // Handle form submission
     form.addEventListener('submit', function(e) {
@@ -209,13 +307,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        if (!paymentMethodRadio || !paymentMethodRadio.checked) {
+            e.preventDefault();
+            alert('Please select a payment method to continue.');
+            return;
+        }
+
+        if (!canPay) {
+            e.preventDefault();
+            alert('Insufficient wallet balance. Please add funds to your wallet.');
+            return;
+        }
+
         // Show loading state
         submitBtn.disabled = true;
         submitBtn.innerHTML = `
             <span class="spinner-border spinner-border-sm me-2" role="status">
                 <span class="visually-hidden">Loading...</span>
             </span>
-            Processing Order...
+            Processing Payment...
         `;
     });
 });

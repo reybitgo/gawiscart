@@ -58,6 +58,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- Bottom spacing for empty cart -->
+        <div class="pb-5"></div>
     @else
         <div class="row">
             <div class="col-lg-8">
@@ -237,6 +240,9 @@
         </div>
     @endif
 </div>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 
 <!-- Clear Cart Confirmation Modal -->
 <div class="modal fade" id="clearCartModal" tabindex="-1" aria-labelledby="clearCartModalLabel" aria-hidden="true">

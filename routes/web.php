@@ -8,6 +8,7 @@ use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DatabaseResetController;
 use Illuminate\Support\Facades\Route;
@@ -51,6 +52,16 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->group(functi
         Route::get('/order/{order}', [CheckoutController::class, 'orderDetails'])->name('order-details');
         Route::post('/order/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('cancel-order');
         Route::get('/summary', [CheckoutController::class, 'getSummary'])->name('summary');
+    });
+
+    // Order History Routes
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [OrderHistoryController::class, 'index'])->name('index');
+        Route::get('/{order}', [OrderHistoryController::class, 'show'])->name('show');
+        Route::post('/{order}/cancel', [OrderHistoryController::class, 'cancel'])->name('cancel');
+        Route::post('/{order}/reorder', [OrderHistoryController::class, 'reorder'])->name('reorder');
+        Route::get('/{order}/invoice', [OrderHistoryController::class, 'invoice'])->name('invoice');
+        Route::get('/ajax/list', [OrderHistoryController::class, 'ajax'])->name('ajax');
     });
 });
 

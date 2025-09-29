@@ -216,6 +216,9 @@
     </div>
 </div>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 <style>
 .add-to-cart-btn {
     transition: all 0.2s ease-in-out;

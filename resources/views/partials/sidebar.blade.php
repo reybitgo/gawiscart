@@ -202,12 +202,17 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{{ Request::routeIs('orders.*') ? ' active' : '' }}" href="#" onclick="return false;">
+                    <a class="nav-link{{ Request::routeIs('orders.*') ? ' active' : '' }}" href="{{ route('orders.index') }}">
                         <span class="nav-icon">
                             <span class="nav-icon-bullet"></span>
                         </span>
                         Order History
-                        <span class="badge bg-info ms-auto">Phase 4</span>
+                        @php
+                            $userOrdersCount = auth()->user() ? App\Models\Order::where('user_id', auth()->id())->count() : 0;
+                        @endphp
+                        @if($userOrdersCount > 0)
+                            <span class="badge bg-success ms-auto">{{ $userOrdersCount }}</span>
+                        @endif
                     </a>
                 </li>
             </ul>

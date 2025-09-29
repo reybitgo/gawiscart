@@ -173,6 +173,9 @@
     @endif
 </div>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 <style>
 .package-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;

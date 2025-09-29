@@ -13,7 +13,7 @@
                         <div class="btn-group">
                             <a href="{{ route('admin.packages.show', $package) }}" class="btn btn-outline-info">
                                 <svg class="icon me-2">
-                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-eye') }}"></use>
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-magnifying-glass') }}"></use>
                                 </svg>
                                 View
                             </a>

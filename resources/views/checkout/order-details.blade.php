@@ -1,20 +1,25 @@
 @extends('layouts.admin')
 
-@section('title', 'Order Confirmation')
+@section('title', 'Order Details')
 
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- Success Message -->
-            <div class="text-center mb-5">
-                <div class="mb-4">
-                    <svg class="icon icon-3xl text-success">
-                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
-                    </svg>
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h2 mb-2">Order Details</h1>
+                    <p class="text-muted">View and manage your order information</p>
                 </div>
-                <h1 class="h2 mb-3">Order Placed Successfully!</h1>
-                <p class="lead text-muted">Thank you for your order. We've received your request and it's being processed.</p>
+                <div>
+                    <a href="{{ route('packages.index') }}" class="btn btn-outline-secondary">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-left') }}"></use>
+                        </svg>
+                        Back to Packages
+                    </a>
+                </div>
             </div>
 
             <!-- Order Details Card -->
@@ -137,14 +142,14 @@
                 </div>
             </div>
 
-            <!-- Next Steps -->
+            <!-- Order Actions -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                         </svg>
-                        What's Next?
+                        Order Actions
                     </h5>
                 </div>
                 <div class="card-body">
@@ -154,9 +159,9 @@
                                 <svg class="icon me-2">
                                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
                                 </svg>
-                                Payment Successful
+                                Payment Confirmed
                             </h6>
-                            <p class="mb-2">Your payment has been processed successfully and your order is now confirmed.</p>
+                            <p class="mb-2">Your payment has been processed successfully and your order is confirmed.</p>
                             <ul class="mb-0">
                                 <li>Payment has been deducted from your wallet</li>
                                 <li>Your order is being processed</li>
@@ -164,7 +169,7 @@
                                 <li>You will receive email updates on your order status</li>
                             </ul>
                         </div>
-                    @else
+                    @elseif($order->isPending())
                         <div class="alert alert-warning">
                             <h6 class="alert-heading">
                                 <svg class="icon me-2">
@@ -180,12 +185,25 @@
                                 <li>Points will be credited once payment is completed</li>
                             </ul>
                         </div>
+                    @elseif($order->isCancelled())
+                        <div class="alert alert-secondary">
+                            <h6 class="alert-heading">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x-circle') }}"></use>
+                                </svg>
+                                Order Cancelled
+                            </h6>
+                            <p class="mb-2">This order has been cancelled.</p>
+                            @if($order->payment_status === 'refunded')
+                                <p class="mb-0">The payment has been refunded to your wallet.</p>
+                            @endif
+                        </div>
                     @endif
 
                     @if($order->canBeCancelled())
                     <div class="alert alert-warning">
                         <h6 class="alert-heading">Order Cancellation</h6>
-                        <p class="mb-2">You can cancel this order while it's in pending status.</p>
+                        <p class="mb-2">You can cancel this order while it's in {{ $order->status }} status.</p>
                         <button type="button" class="btn btn-sm btn-outline-danger" data-coreui-toggle="modal" data-coreui-target="#cancelOrderModal">
                             <svg class="icon me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>
@@ -208,12 +226,7 @@
                     </a>
                 </div>
                 <div>
-                    <a href="{{ route('checkout.order-details', $order) }}" class="btn btn-primary">
-                        <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list-numbered') }}"></use>
-                        </svg>
-                        View Order Details
-                    </a>
+                    <!-- Additional action buttons can be added here in the future -->
                 </div>
             </div>
         </div>

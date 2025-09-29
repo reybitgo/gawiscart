@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CartService;
+use App\Services\WalletPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Auth;
 class CheckoutController extends Controller
 {
     protected CartService $cartService;
+    protected WalletPaymentService $walletPaymentService;
 
-    public function __construct(CartService $cartService)
+    public function __construct(CartService $cartService, WalletPaymentService $walletPaymentService)
     {
         $this->cartService = $cartService;
+        $this->walletPaymentService = $walletPaymentService;
     }
 
     /**
@@ -38,7 +41,13 @@ class CheckoutController extends Controller
                 ->with('error', 'Some items in your cart are no longer available. Please review your cart.');
         }
 
-        return view('checkout.index', compact('cartSummary'));
+        // Get wallet payment summary
+        $walletSummary = $this->walletPaymentService->getPaymentSummary(
+            Auth::user(),
+            $cartSummary['total']
+        );
+
+        return view('checkout.index', compact('cartSummary', 'walletSummary'));
     }
 
     /**
@@ -49,6 +58,7 @@ class CheckoutController extends Controller
         $request->validate([
             'customer_notes' => 'nullable|string|max:1000',
             'terms_accepted' => 'required|accepted',
+            'payment_method' => 'required|in:wallet',
         ]);
 
         $cartSummary = $this->cartService->getSummary();
@@ -66,6 +76,17 @@ class CheckoutController extends Controller
                 ->with('error', 'Some items in your cart are no longer available. Please review your cart.');
         }
 
+        // Validate wallet payment
+        $paymentValidation = $this->walletPaymentService->validatePayment(
+            Auth::user(),
+            $cartSummary['total']
+        );
+
+        if (!$paymentValidation['valid']) {
+            return redirect()->route('checkout.index')
+                ->with('error', $paymentValidation['message']);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -77,6 +98,7 @@ class CheckoutController extends Controller
                     'checkout_timestamp' => now(),
                     'user_ip' => $request->ip(),
                     'user_agent' => $request->userAgent(),
+                    'payment_method' => $request->payment_method,
                 ]
             );
 
@@ -100,12 +122,31 @@ class CheckoutController extends Controller
 
             DB::commit();
 
+            // Process wallet payment
+            $paymentResult = $this->walletPaymentService->processPayment($order);
+
+            if (!$paymentResult['success']) {
+                // Rollback quantity changes if payment fails
+                DB::beginTransaction();
+                foreach ($cartSummary['items'] as $cartItem) {
+                    $package = \App\Models\Package::find($cartItem['package_id']);
+                    if ($package && $package->quantity_available !== null) {
+                        $package->quantity_available += $cartItem['quantity'];
+                        $package->save();
+                    }
+                }
+                DB::commit();
+
+                return redirect()->route('checkout.index')
+                    ->with('error', 'Payment failed: ' . $paymentResult['message']);
+            }
+
             // Clear the cart
             $this->cartService->clear();
 
             // Redirect to order confirmation
             return redirect()->route('checkout.confirmation', $order)
-                ->with('success', 'Your order has been placed successfully!');
+                ->with('success', 'Your order has been placed and paid successfully!');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -177,6 +218,17 @@ class CheckoutController extends Controller
         try {
             DB::beginTransaction();
 
+            // Process refund if order was paid
+            $refundMessage = '';
+            if ($order->isPaid()) {
+                $refundResult = $this->walletPaymentService->refundPayment($order);
+                if ($refundResult['success']) {
+                    $refundMessage = ' Your wallet has been refunded.';
+                } else {
+                    throw new \Exception('Refund failed: ' . $refundResult['message']);
+                }
+            }
+
             // Cancel the order
             $order->cancel($request->cancellation_reason);
 
@@ -192,7 +244,7 @@ class CheckoutController extends Controller
             DB::commit();
 
             return redirect()->route('checkout.order-details', $order)
-                ->with('success', 'Your order has been cancelled successfully.');
+                ->with('success', 'Your order has been cancelled successfully.' . $refundMessage);
 
         } catch (\Exception $e) {
             DB::rollBack();

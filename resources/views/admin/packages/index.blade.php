@@ -79,7 +79,7 @@
                                                         <a href="{{ route('admin.packages.show', $package) }}"
                                                            class="btn btn-sm btn-outline-info" title="View">
                                                             <svg class="icon">
-                                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-short-text') }}"></use>
+                                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-magnifying-glass') }}"></use>
                                                             </svg>
                                                         </a>
                                                         <a href="{{ route('admin.packages.edit', $package) }}"

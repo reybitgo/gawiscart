@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Laravel 12 application with authentication, user management, wallet system, transaction tracking features, and a comprehensive e-commerce system. The application uses Laravel Fortify for authentication (including two-factor authentication), Spatie Laravel Permission for role-based access control, and includes a comprehensive wallet/transaction system with fee management.
 
-**E-Commerce Status**: Phase 3 Complete ✅ (Package Management + Shopping Cart + Checkout Process)
+**E-Commerce Status**: Phase 4 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration)
 
 ## Development Commands
 
@@ -101,7 +101,7 @@ php artisan make:migration create_table_name
 - Test suites: Unit and Feature tests in `tests/` directory
 
 ### E-Commerce System
-**Current Status**: Phase 3 Complete ✅ (Package Management + Shopping Cart + Checkout Process)
+**Current Status**: Phase 4 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration)
 
 #### Package Management System ✅
 - **Admin Interface**: Full CRUD operations for packages via `/admin/packages`
@@ -131,6 +131,16 @@ php artisan make:migration create_table_name
 - **Order Confirmation**: Professional confirmation page with order details
 - **Order Cancellation**: Ability to cancel pending orders
 
+#### Wallet Payment Integration System ✅
+- **WalletPaymentService**: Comprehensive service for all wallet payment operations
+- **Real-time Balance Validation**: Live balance checking and payment validation
+- **Secure Payment Processing**: Transaction-safe payments with automatic rollback on failure
+- **Payment Status Tracking**: Full integration with order status and payment confirmation
+- **Automatic Refunds**: Wallet refund processing for cancelled orders
+- **Transaction History**: Complete audit trail for all wallet payments and refunds
+- **Payment UI**: Enhanced checkout interface with wallet balance display and validation
+- **Order Integration**: Seamless integration with existing order management system
+
 #### Available URLs
 - **Admin Package Management**: `/admin/packages` (full CRUD)
 - **Admin Application Settings**: `/admin/application-settings` (tax rate, email verification)
@@ -142,8 +152,8 @@ php artisan make:migration create_table_name
 - **Cart API**: AJAX endpoints for cart operations
 
 #### Next Phase
-- **Phase 4**: Wallet payment integration with existing transaction system
-- **Phase 5**: Member dashboard with order history
+- **Phase 5**: Member dashboard with order history and wallet management
+- **Phase 6**: Admin order management and reporting
 
 ## Common Development Tasks
 
@@ -300,6 +310,7 @@ php artisan migrate:fresh --seed
 - `app/Models/Order.php` - Order model with comprehensive business logic and status management
 - `app/Models/OrderItem.php` - Order item model with package snapshot functionality
 - `app/Services/CartService.php` - Comprehensive cart management service
+- `app/Services/WalletPaymentService.php` - Complete wallet payment processing service
 
 **Controllers:**
 - `app/Http/Controllers/Admin/AdminPackageController.php` - Admin package CRUD
@@ -315,6 +326,8 @@ php artisan migrate:fresh --seed
 - `database/migrations/*_create_packages_table.php` - Package database structure
 - `database/migrations/*_create_orders_table.php` - Order management structure
 - `database/migrations/*_create_order_items_table.php` - Order items with package snapshots
+- `database/migrations/*_add_payment_and_refund_to_transaction_types.php` - Payment transaction types
+- `database/migrations/*_add_completed_status_to_transactions.php` - Transaction status enhancement
 - `database/seeders/PackageSeeder.php` - Sample package data
 - `database/seeders/SystemSettingSeeder.php` - Application settings seeder
 
@@ -328,4 +341,4 @@ php artisan migrate:fresh --seed
 - `resources/views/legal/` - Terms of service and privacy policy modals
 
 #### Next Development Steps
-For continuing e-commerce development, refer to `ECOMMERCE_ROADMAP.md` for detailed Phase 4-8 implementation plans including wallet payment integration, member dashboard, admin order management, and advanced features.
+For continuing e-commerce development, refer to `ECOMMERCE_ROADMAP.md` for detailed Phase 5-8 implementation plans including member dashboard, admin order management, reporting features, and advanced e-commerce functionality.
