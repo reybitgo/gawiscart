@@ -10,6 +10,7 @@ use App\Mail\OrderPaymentConfirmed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Http\Request;
 
 class WalletPaymentService
 {
@@ -135,6 +136,15 @@ class WalletPaymentService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
+            // Record failed payment for fraud detection
+            if (app()->bound(FraudDetectionService::class)) {
+                $fraudService = app(FraudDetectionService::class);
+                $request = request();
+                if ($request) {
+                    $fraudService->recordFailedPayment($order->user_id, $request->ip());
+                }
+            }
 
             return [
                 'success' => false,

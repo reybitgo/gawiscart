@@ -4,19 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\WalletPaymentService;
+use App\Services\InputSanitizationService;
 use App\Mail\OrderCancelled;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class OrderHistoryController extends Controller
 {
     protected WalletPaymentService $walletPaymentService;
+    protected InputSanitizationService $sanitizationService;
 
-    public function __construct(WalletPaymentService $walletPaymentService)
-    {
+    public function __construct(
+        WalletPaymentService $walletPaymentService,
+        InputSanitizationService $sanitizationService
+    ) {
         $this->walletPaymentService = $walletPaymentService;
+        $this->sanitizationService = $sanitizationService;
     }
 
     /**
@@ -101,9 +107,19 @@ class OrderHistoryController extends Controller
                 ->with('error', 'This order cannot be cancelled at this time.');
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'cancellation_reason' => 'required|string|max:500',
         ]);
+
+        // Sanitize cancellation reason
+        if ($this->sanitizationService->containsSuspiciousPatterns($validated['cancellation_reason'])) {
+            Log::warning('Suspicious input detected in cancellation reason', [
+                'user_id' => Auth::id(),
+                'order_id' => $order->id,
+                'ip' => $request->ip()
+            ]);
+        }
+        $cancellationReason = $this->sanitizationService->sanitizeNotes($validated['cancellation_reason']);
 
         try {
             DB::beginTransaction();
@@ -119,8 +135,8 @@ class OrderHistoryController extends Controller
                 }
             }
 
-            // Cancel the order
-            $order->cancel($request->cancellation_reason);
+            // Cancel the order with sanitized reason
+            $order->cancel($cancellationReason);
 
             // Restore package quantities
             foreach ($order->orderItems as $orderItem) {
@@ -134,7 +150,7 @@ class OrderHistoryController extends Controller
             DB::commit();
 
             // Send cancellation email notification
-            $this->sendCancellationEmail($order, $request->cancellation_reason, $refundProcessed);
+            $this->sendCancellationEmail($order, $cancellationReason, $refundProcessed);
 
             return redirect()->route('orders.show', $order)
                 ->with('success', 'Your order has been cancelled successfully.' . $refundMessage);

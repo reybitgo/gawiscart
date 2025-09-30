@@ -6,19 +6,30 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CartService;
 use App\Services\WalletPaymentService;
+use App\Services\InputSanitizationService;
+use App\Services\FraudDetectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
     protected CartService $cartService;
     protected WalletPaymentService $walletPaymentService;
+    protected InputSanitizationService $sanitizationService;
+    protected FraudDetectionService $fraudDetectionService;
 
-    public function __construct(CartService $cartService, WalletPaymentService $walletPaymentService)
-    {
+    public function __construct(
+        CartService $cartService,
+        WalletPaymentService $walletPaymentService,
+        InputSanitizationService $sanitizationService,
+        FraudDetectionService $fraudDetectionService
+    ) {
         $this->cartService = $cartService;
         $this->walletPaymentService = $walletPaymentService;
+        $this->sanitizationService = $sanitizationService;
+        $this->fraudDetectionService = $fraudDetectionService;
     }
 
     /**
@@ -78,7 +89,45 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $request->validate($validationRules);
+        $validated = $request->validate($validationRules);
+
+        // Sanitize all user inputs to prevent XSS
+        if (isset($validated['customer_notes'])) {
+            // Check for suspicious patterns first
+            if ($this->sanitizationService->containsSuspiciousPatterns($validated['customer_notes'])) {
+                Log::warning('Suspicious input detected in customer notes', [
+                    'user_id' => Auth::id(),
+                    'ip' => $request->ip(),
+                    'input' => $validated['customer_notes']
+                ]);
+            }
+            $validated['customer_notes'] = $this->sanitizationService->sanitizeNotes($validated['customer_notes']);
+        }
+
+        // Sanitize delivery address fields if present
+        if ($request->delivery_method === 'home_delivery') {
+            $validated['delivery_full_name'] = $this->sanitizationService->sanitizeAddress($validated['delivery_full_name']);
+            $validated['delivery_phone'] = $this->sanitizationService->sanitizeAddress($validated['delivery_phone']);
+            $validated['delivery_address'] = $this->sanitizationService->sanitizeAddress($validated['delivery_address']);
+            $validated['delivery_address_2'] = $this->sanitizationService->sanitizeAddress($validated['delivery_address_2'] ?? null);
+            $validated['delivery_city'] = $this->sanitizationService->sanitizeAddress($validated['delivery_city']);
+            $validated['delivery_state'] = $this->sanitizationService->sanitizeAddress($validated['delivery_state']);
+            $validated['delivery_zip'] = $this->sanitizationService->sanitizeAddress($validated['delivery_zip']);
+
+            if (isset($validated['delivery_instructions'])) {
+                $validated['delivery_instructions'] = $this->sanitizationService->sanitizeNotes($validated['delivery_instructions']);
+            }
+        }
+
+        // Fraud Detection: Check if order should be blocked
+        if ($this->fraudDetectionService->shouldBlockOrder(Auth::user(), $request->ip())) {
+            Log::critical('Blocked order attempt from suspicious user/IP', [
+                'user_id' => Auth::id(),
+                'ip' => $request->ip()
+            ]);
+            return redirect()->route('dashboard')
+                ->with('error', 'Your order cannot be processed at this time. Please contact support.');
+        }
 
         $cartSummary = $this->cartService->getSummary();
 
@@ -86,6 +135,49 @@ class CheckoutController extends Controller
         if ($cartSummary['is_empty']) {
             return redirect()->route('packages.index')
                 ->with('error', 'Your cart is empty. Please add some packages before checkout.');
+        }
+
+        // Fraud Detection: Check velocity and patterns
+        $velocityCheck = $this->fraudDetectionService->checkVelocity(Auth::user(), $request->ip());
+        $ipCheck = $this->fraudDetectionService->checkIpReputation($request->ip());
+        $patternCheck = $this->fraudDetectionService->checkOrderPattern([
+            'total_amount' => $cartSummary['total']
+        ], Auth::user());
+
+        // Calculate combined risk score
+        $totalRiskScore = $velocityCheck['risk_score'] +
+                         ($ipCheck['is_suspicious'] ? 20 : 0) +
+                         ($patternCheck['is_suspicious'] ? 15 : 0);
+
+        // Block if risk score is very high
+        if ($totalRiskScore >= 70) {
+            $this->fraudDetectionService->logSuspiciousActivity(
+                Auth::user(),
+                'high_risk_checkout_attempt',
+                [
+                    'risk_score' => $totalRiskScore,
+                    'velocity_issues' => $velocityCheck['issues'],
+                    'ip_issues' => $ipCheck['issues'],
+                    'pattern_issues' => $patternCheck['issues'],
+                    'cart_total' => $cartSummary['total']
+                ]
+            );
+
+            return redirect()->route('dashboard')
+                ->with('error', 'Your order has been flagged for review. Our team will contact you shortly.');
+        }
+
+        // Log suspicious but not blocking activity
+        if ($totalRiskScore >= 40) {
+            $this->fraudDetectionService->logSuspiciousActivity(
+                Auth::user(),
+                'moderate_risk_checkout',
+                [
+                    'risk_score' => $totalRiskScore,
+                    'velocity_issues' => $velocityCheck['issues'],
+                    'ip_issues' => $ipCheck['issues']
+                ]
+            );
         }
 
         // Validate cart items one more time
@@ -121,25 +213,25 @@ class CheckoutController extends Controller
                 ]
             );
 
-            // Prepare order update data
+            // Prepare order update data (use sanitized values)
             $orderData = [
-                'delivery_method' => $request->delivery_method,
-                'customer_notes' => $request->customer_notes,
+                'delivery_method' => $validated['delivery_method'],
+                'customer_notes' => $validated['customer_notes'] ?? null,
             ];
 
             // Add delivery address information for home delivery
-            if ($request->delivery_method === 'home_delivery') {
+            if ($validated['delivery_method'] === 'home_delivery') {
                 $orderData = array_merge($orderData, [
                     'delivery_address' => json_encode([
-                        'full_name' => $request->delivery_full_name,
-                        'phone' => $request->delivery_phone,
-                        'address' => $request->delivery_address,
-                        'address_2' => $request->delivery_address_2,
-                        'city' => $request->delivery_city,
-                        'state' => $request->delivery_state,
-                        'zip' => $request->delivery_zip,
-                        'instructions' => $request->delivery_instructions,
-                        'time_preference' => $request->delivery_time_preference,
+                        'full_name' => $validated['delivery_full_name'],
+                        'phone' => $validated['delivery_phone'],
+                        'address' => $validated['delivery_address'],
+                        'address_2' => $validated['delivery_address_2'] ?? null,
+                        'city' => $validated['delivery_city'],
+                        'state' => $validated['delivery_state'],
+                        'zip' => $validated['delivery_zip'],
+                        'instructions' => $validated['delivery_instructions'] ?? null,
+                        'time_preference' => $validated['delivery_time_preference'] ?? null,
                     ])
                 ]);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderStatusService;
+use App\Services\InputSanitizationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +15,14 @@ use Illuminate\Support\Facades\Log;
 class AdminOrderController extends Controller
 {
     protected OrderStatusService $orderStatusService;
+    protected InputSanitizationService $sanitizationService;
 
-    public function __construct(OrderStatusService $orderStatusService)
-    {
+    public function __construct(
+        OrderStatusService $orderStatusService,
+        InputSanitizationService $sanitizationService
+    ) {
         $this->orderStatusService = $orderStatusService;
+        $this->sanitizationService = $sanitizationService;
     }
 
     /**
@@ -169,13 +174,16 @@ class AdminOrderController extends Controller
             'notes' => 'required|string|max:1000'
         ]);
 
+        // Sanitize admin notes
+        $sanitizedNotes = $this->sanitizationService->sanitizeNotes($validated['notes']);
+
         try {
-            $order->update(['admin_notes' => $validated['notes']]);
+            $order->update(['admin_notes' => $sanitizedNotes]);
 
             // Log in status history
             $order->statusHistory()->create([
                 'status' => $order->status,
-                'notes' => "Admin notes updated: " . $validated['notes'],
+                'notes' => "Admin notes updated: " . $sanitizedNotes,
                 'changed_by' => Auth::id(),
                 'metadata' => [
                     'action' => 'notes_updated',
