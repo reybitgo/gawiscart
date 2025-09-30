@@ -62,6 +62,9 @@
             <div class="container-lg h-auto px-4">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                        </svg>
                         {{ session('success') }}
                         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -69,6 +72,9 @@
 
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x-circle') }}"></use>
+                        </svg>
                         {{ session('error') }}
                         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                     </div>

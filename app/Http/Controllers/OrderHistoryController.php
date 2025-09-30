@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\WalletPaymentService;
+use App\Mail\OrderCancelled;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class OrderHistoryController extends Controller
 {
@@ -130,6 +132,9 @@ class OrderHistoryController extends Controller
             }
 
             DB::commit();
+
+            // Send cancellation email notification
+            $this->sendCancellationEmail($order, $request->cancellation_reason, $refundProcessed);
 
             return redirect()->route('orders.show', $order)
                 ->with('success', 'Your order has been cancelled successfully.' . $refundMessage);
@@ -294,5 +299,38 @@ class OrderHistoryController extends Controller
             'html' => view('orders.partials.order-list', compact('orders'))->render(),
             'pagination' => $orders->links()->render(),
         ]);
+    }
+
+    /**
+     * Send cancellation email notification to customer
+     */
+    private function sendCancellationEmail(Order $order, ?string $reason, bool $refundProcessed): void
+    {
+        try {
+            // Load the user relationship if not already loaded
+            if (!$order->relationLoaded('user')) {
+                $order->load('user');
+            }
+
+            // Send cancellation notification email
+            Mail::to($order->user->email)->send(
+                new OrderCancelled($order, $reason, $refundProcessed)
+            );
+
+            \Log::info('Order cancellation email sent', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'recipient' => $order->user->email,
+                'refund_processed' => $refundProcessed
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to send order cancellation email', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'recipient' => $order->user->email ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

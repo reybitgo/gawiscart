@@ -23,7 +23,10 @@
         </div>
     </div>
 
-    <div class="row">
+    <form id="checkout-form" action="{{ route('checkout.process') }}" method="POST">
+        @csrf
+
+        <div class="row">
         <!-- Order Review -->
         <div class="col-lg-8">
             <!-- Order Items -->
@@ -61,6 +64,281 @@
                 </div>
             </div>
 
+            <!-- Delivery Method -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-truck') }}"></use>
+                        </svg>
+                        Delivery Method
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check border rounded p-3 h-100 delivery-option" data-method="office_pickup">
+                                <input class="form-check-input" type="radio" name="delivery_method"
+                                       id="office_pickup" value="office_pickup" checked>
+                                <label class="form-check-label w-100" for="office_pickup">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-3">
+                                            <svg class="icon icon-xl text-primary">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-2">Office Pickup <span class="badge bg-success ms-2">Recommended</span></h6>
+                                            <p class="text-muted small mb-2">Collect your order from our office or arranged meetup point</p>
+                                            <div class="text-success small">
+                                                <svg class="icon me-1">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                                </svg>
+                                                No delivery charges
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check border rounded p-3 h-100 delivery-option" data-method="home_delivery">
+                                <input class="form-check-input" type="radio" name="delivery_method"
+                                       id="home_delivery" value="home_delivery">
+                                <label class="form-check-label w-100" for="home_delivery">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-3">
+                                            <svg class="icon icon-xl text-info">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-home') }}"></use>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-2">Home Delivery</h6>
+                                            <p class="text-muted small mb-2">Standard delivery to your address</p>
+                                            <div class="text-info small">
+                                                <svg class="icon me-1">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                                </svg>
+                                                Package tracking included
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Address Form (appears when Home Delivery is selected) -->
+                    <div id="delivery-address-form" class="card mb-3" style="display: none;">
+                        <!-- Address Source Notice -->
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex align-items-start">
+                                <svg class="icon me-2 mt-1">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                                </svg>
+                                <div>
+                                    <strong>Pre-filled from your profile</strong><br>
+                                    <small>Your delivery information is automatically loaded from your profile. You can update it here for this order or <a href="{{ route('profile.show') }}" target="_blank">edit your profile</a> to change the default address.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
+                                </svg>
+                                Delivery Address
+                                <span class="text-danger">*</span>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <!-- Full Name -->
+                                <div class="col-md-6">
+                                    <label for="delivery_full_name" class="form-label">
+                                        Full Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control delivery-required" id="delivery_full_name"
+                                           name="delivery_full_name" placeholder="Enter full name"
+                                           value="{{ old('delivery_full_name', auth()->user()->fullname) }}">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
+                                <!-- Phone Number -->
+                                <div class="col-md-6">
+                                    <label for="delivery_phone" class="form-label">
+                                        Phone Number <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="tel" class="form-control delivery-required" id="delivery_phone"
+                                           name="delivery_phone" placeholder="+1 (555) 123-4567"
+                                           value="{{ old('delivery_phone', auth()->user()->phone) }}">
+                                    <div class="invalid-feedback"></div>
+                                    <div class="form-text">Required for delivery coordination</div>
+                                </div>
+
+                                <!-- Street Address -->
+                                <div class="col-12">
+                                    <label for="delivery_address" class="form-label">
+                                        Street Address <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control delivery-required" id="delivery_address"
+                                           name="delivery_address" placeholder="1234 Main Street"
+                                           value="{{ old('delivery_address', auth()->user()->address) }}">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
+                                <!-- Address Line 2 -->
+                                <div class="col-12">
+                                    <label for="delivery_address_2" class="form-label">
+                                        Address Line 2 <span class="text-muted">(Optional)</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="delivery_address_2"
+                                           name="delivery_address_2" placeholder="Apartment, suite, unit, floor, etc."
+                                           value="{{ old('delivery_address_2', auth()->user()->address_2) }}">
+                                </div>
+
+                                <!-- City -->
+                                <div class="col-md-6">
+                                    <label for="delivery_city" class="form-label">
+                                        City <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control delivery-required" id="delivery_city"
+                                           name="delivery_city" placeholder="Enter city"
+                                           value="{{ old('delivery_city', auth()->user()->city) }}">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
+                                <!-- State/Province -->
+                                <div class="col-md-3">
+                                    <label for="delivery_state" class="form-label">
+                                        State/Province <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control delivery-required" id="delivery_state"
+                                           name="delivery_state" placeholder="State"
+                                           value="{{ old('delivery_state', auth()->user()->state) }}">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
+                                <!-- ZIP/Postal Code -->
+                                <div class="col-md-3">
+                                    <label for="delivery_zip" class="form-label">
+                                        ZIP/Postal Code <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control delivery-required" id="delivery_zip"
+                                           name="delivery_zip" placeholder="12345"
+                                           value="{{ old('delivery_zip', auth()->user()->zip) }}">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
+                                <!-- Special Instructions -->
+                                <div class="col-12">
+                                    <label for="delivery_instructions" class="form-label">
+                                        Delivery Instructions <span class="text-muted">(Optional)</span>
+                                    </label>
+                                    <textarea class="form-control" id="delivery_instructions" name="delivery_instructions"
+                                              rows="3" placeholder="Special delivery instructions (e.g., gate code, building entrance, safe place to leave package)">{{ old('delivery_instructions', auth()->user()->delivery_instructions) }}</textarea>
+                                    <div class="form-text">Help our delivery team find you easily</div>
+                                </div>
+
+                                <!-- Preferred Delivery Time -->
+                                <div class="col-12">
+                                    <label class="form-label">Preferred Delivery Time <span class="text-muted">(Optional)</span></label>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                                       id="anytime" value="anytime"
+                                                       {{ old('delivery_time_preference', auth()->user()->delivery_time_preference) === 'anytime' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="anytime">
+                                                    Anytime (9 AM - 6 PM)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                                       id="morning" value="morning"
+                                                       {{ old('delivery_time_preference', auth()->user()->delivery_time_preference) === 'morning' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="morning">
+                                                    Morning (9 AM - 12 PM)
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                                       id="afternoon" value="afternoon"
+                                                       {{ old('delivery_time_preference', auth()->user()->delivery_time_preference) === 'afternoon' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="afternoon">
+                                                    Afternoon (12 PM - 6 PM)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                                       id="weekend" value="weekend"
+                                                       {{ old('delivery_time_preference', auth()->user()->delivery_time_preference) === 'weekend' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="weekend">
+                                                    Weekend preferred
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Address Validation Status -->
+                            <div id="address-validation-status" class="mt-3" style="display: none;">
+                                <div class="alert alert-success">
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                                    </svg>
+                                    Address information is complete and valid
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pickup Information -->
+                    <div id="pickup-info" class="alert alert-info delivery-info">
+                        <h6 class="alert-heading">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            Pickup Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Location:</strong><br>
+                                Main Office, 123 Business Street<br>
+                                Business District, City 12345
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Hours:</strong><br>
+                                Monday - Friday: 9:00 AM - 5:00 PM<br>
+                                Saturday: 9:00 AM - 2:00 PM<br>
+                                Sunday: Closed
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Contact:</strong> +1 (555) 123-4567<br>
+                            <strong>Note:</strong> Please bring a valid ID when collecting your order.
+                        </div>
+                    </div>
+
+                    <!-- Delivery Information -->
+                    <div id="delivery-info" class="alert alert-info delivery-info" style="display: none;">
+                        <h6 class="alert-heading">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            Delivery Information
+                        </h6>
+                        <p class="mb-1"><strong>Delivery Time:</strong> 3-5 business days</p>
+                        <p class="mb-1"><strong>Delivery Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM</p>
+                        <p class="mb-1"><strong>Tracking:</strong> You'll receive tracking information once your order is shipped</p>
+                        <p class="mb-0"><strong>Note:</strong> Delivery charges may apply depending on your location.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Payment Method -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -72,9 +350,6 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form id="checkout-form" action="{{ route('checkout.process') }}" method="POST">
-                        @csrf
-
                         <!-- Wallet Payment Option -->
                         <div class="form-check border rounded p-3 mb-3 {{ $walletSummary['can_pay'] ? 'border-success' : 'border-danger' }}">
                             <input class="form-check-input @error('payment_method') is-invalid @enderror"
@@ -171,7 +446,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                    </form>
                 </div>
             </div>
         </div>
@@ -256,6 +530,7 @@
             </div>
         </div>
     </div>
+    </form>
 </div>
 
 <!-- Bottom spacing for better visual layout -->
@@ -278,13 +553,173 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentMethodRadio = document.getElementById('wallet_payment');
     const canPay = {{ $walletSummary['can_pay'] ? 'true' : 'false' }};
 
+    // Delivery method switching
+    const deliveryMethodRadios = document.querySelectorAll('input[name="delivery_method"]');
+    const pickupInfo = document.getElementById('pickup-info');
+    const deliveryInfo = document.getElementById('delivery-info');
+    const deliveryAddressForm = document.getElementById('delivery-address-form');
+    const deliveryOptions = document.querySelectorAll('.delivery-option');
+    const deliveryRequiredFields = document.querySelectorAll('.delivery-required');
+    const addressValidationStatus = document.getElementById('address-validation-status');
+
+    function updateDeliveryInfo() {
+        const selectedMethod = document.querySelector('input[name="delivery_method"]:checked').value;
+
+        // Update info sections
+        if (selectedMethod === 'office_pickup') {
+            pickupInfo.style.display = 'block';
+            deliveryInfo.style.display = 'none';
+            deliveryAddressForm.style.display = 'none';
+
+            // Clear delivery form validation for office pickup
+            clearDeliveryValidation();
+        } else {
+            pickupInfo.style.display = 'none';
+            deliveryInfo.style.display = 'block';
+            deliveryAddressForm.style.display = 'block';
+
+            // Animate form appearance
+            deliveryAddressForm.style.opacity = '0';
+            deliveryAddressForm.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                deliveryAddressForm.style.transition = 'all 0.3s ease';
+                deliveryAddressForm.style.opacity = '1';
+                deliveryAddressForm.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        // Update option styling
+        deliveryOptions.forEach(option => {
+            if (option.dataset.method === selectedMethod) {
+                option.classList.add('border-primary');
+                option.classList.remove('border-secondary');
+            } else {
+                option.classList.remove('border-primary');
+                option.classList.add('border-secondary');
+            }
+        });
+
+        // Update submit button validation
+        updateSubmitButton();
+    }
+
+    // Clear delivery form validation
+    function clearDeliveryValidation() {
+        deliveryRequiredFields.forEach(field => {
+            field.classList.remove('is-invalid', 'is-valid');
+            const feedback = field.nextElementSibling;
+            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                feedback.textContent = '';
+            }
+        });
+        addressValidationStatus.style.display = 'none';
+    }
+
+    // Validate delivery address fields
+    function validateDeliveryAddress() {
+        const selectedMethod = document.querySelector('input[name="delivery_method"]:checked').value;
+
+        // Only validate if home delivery is selected
+        if (selectedMethod !== 'home_delivery') {
+            return true;
+        }
+
+        let isValid = true;
+        let allFieldsFilled = true;
+
+        deliveryRequiredFields.forEach(field => {
+            const value = field.value.trim();
+            const feedback = field.nextElementSibling;
+
+            // Clear previous validation
+            field.classList.remove('is-invalid', 'is-valid');
+            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                feedback.textContent = '';
+            }
+
+            // Validate required fields
+            if (!value) {
+                allFieldsFilled = false;
+                if (field === document.activeElement || field.classList.contains('was-validated')) {
+                    field.classList.add('is-invalid');
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.textContent = 'This field is required';
+                    }
+                    isValid = false;
+                }
+            } else {
+                // Field-specific validation
+                if (field.id === 'delivery_phone' && !validatePhoneNumber(value)) {
+                    field.classList.add('is-invalid');
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.textContent = 'Please enter a valid phone number';
+                    }
+                    isValid = false;
+                } else if (field.id === 'delivery_zip' && !validateZipCode(value)) {
+                    field.classList.add('is-invalid');
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.textContent = 'Please enter a valid ZIP/postal code';
+                    }
+                    isValid = false;
+                } else {
+                    field.classList.add('is-valid');
+                }
+            }
+        });
+
+        // Show validation status
+        if (allFieldsFilled && isValid) {
+            addressValidationStatus.style.display = 'block';
+        } else {
+            addressValidationStatus.style.display = 'none';
+        }
+
+        return isValid && allFieldsFilled;
+    }
+
+    // Phone number validation
+    function validatePhoneNumber(phone) {
+        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+        const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+        return phoneRegex.test(cleanPhone) && cleanPhone.length >= 10;
+    }
+
+    // ZIP code validation
+    function validateZipCode(zip) {
+        const zipRegex = /^[A-Za-z0-9\s\-]{3,10}$/;
+        return zipRegex.test(zip);
+    }
+
+    // Initialize delivery method display
+    updateDeliveryInfo();
+
+    // Listen for delivery method changes
+    deliveryMethodRadios.forEach(radio => {
+        radio.addEventListener('change', updateDeliveryInfo);
+    });
+
     // Enable/disable submit button based on validation
     function updateSubmitButton() {
         const termsAccepted = termsCheckbox.checked;
         const paymentSelected = paymentMethodRadio && paymentMethodRadio.checked;
         const hasValidPayment = canPay && paymentSelected;
+        const deliveryAddressValid = validateDeliveryAddress();
 
-        submitBtn.disabled = !(termsAccepted && hasValidPayment);
+        const allValid = termsAccepted && hasValidPayment && deliveryAddressValid;
+
+        submitBtn.disabled = !allValid;
+
+        // Update button text to provide feedback
+        const buttonText = submitBtn.querySelector('.btn-text') || submitBtn.childNodes[2];
+        if (!termsAccepted) {
+            submitBtn.title = 'Please accept the terms and conditions';
+        } else if (!hasValidPayment) {
+            submitBtn.title = 'Payment method required';
+        } else if (!deliveryAddressValid) {
+            submitBtn.title = 'Please complete delivery address information';
+        } else {
+            submitBtn.title = 'Complete your order';
+        }
     }
 
     // Initial check
@@ -298,6 +733,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (paymentMethodRadio) {
         paymentMethodRadio.addEventListener('change', updateSubmitButton);
     }
+
+    // Add event listeners for delivery address fields
+    deliveryRequiredFields.forEach(field => {
+        // Real-time validation on input
+        field.addEventListener('input', function() {
+            const selectedMethod = document.querySelector('input[name="delivery_method"]:checked').value;
+            if (selectedMethod === 'home_delivery') {
+                // Debounce validation to avoid excessive calls
+                clearTimeout(field.validationTimeout);
+                field.validationTimeout = setTimeout(() => {
+                    updateSubmitButton();
+                }, 300);
+            }
+        });
+
+        // Validate on blur
+        field.addEventListener('blur', function() {
+            const selectedMethod = document.querySelector('input[name="delivery_method"]:checked').value;
+            if (selectedMethod === 'home_delivery') {
+                field.classList.add('was-validated');
+                updateSubmitButton();
+            }
+        });
+    });
 
     // Handle form submission
     form.addEventListener('submit', function(e) {

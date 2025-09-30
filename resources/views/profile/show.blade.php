@@ -3,6 +3,55 @@
 @section('title', 'Profile')
 
 @section('content')
+<!-- Email Status Information -->
+@if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <svg class="icon me-2">
+            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-envelope-letter') }}"></use>
+        </svg>
+        <div>
+            <strong>Email Not Verified</strong>
+            <p class="mb-0">Your email address is not verified. You can continue using the site normally, but verifying your email helps with account security and password recovery.</p>
+            <div class="mt-2">
+                <form method="POST" action="{{ route('verification.send') }}" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-info">
+                        <svg class="icon icon-sm me-1">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-send') }}"></use>
+                        </svg>
+                        Send Verification Email
+                    </button>
+                </form>
+                <small class="text-muted ms-2">(Optional)</small>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+<!-- Validation Error Messages -->
+@if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <svg class="icon me-2">
+            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+        </svg>
+        <div>
+            <strong>Please correct the following issues:</strong>
+            <div class="mt-2">
+                @foreach ($errors->all() as $error)
+                    <div class="d-flex align-items-start mb-1">
+                        <svg class="icon icon-sm me-2 mt-1 text-danger">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>
+                        </svg>
+                        <span>{{ $error }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
 <div class="row g-4">
     <div class="col-lg-8">
         <!-- Profile Information Card -->
@@ -13,7 +62,7 @@
                 </svg>
                 <strong>Profile Information</strong>
             </div>
-            <form method="PATCH" action="{{ route('profile.update') }}">
+            <form method="POST" action="{{ route('profile.update') }}">
                 @csrf
                 @method('PATCH')
                 <div class="card-body">
@@ -62,6 +111,164 @@
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-save') }}"></use>
                         </svg>
                         Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Delivery Address Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center">
+                <svg class="icon icon-lg me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
+                </svg>
+                <strong>Delivery Address</strong>
+                <small class="text-muted ms-2">Used for home delivery orders</small>
+            </div>
+            <form method="POST" action="{{ route('profile.update') }}">
+                @csrf
+                @method('PATCH')
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Full Name -->
+                        <div class="col-md-6">
+                            <label for="fullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control @error('fullname') is-invalid @enderror"
+                                   id="fullname" name="fullname" value="{{ old('fullname', $user->fullname) }}">
+                            @error('fullname')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control @error('phone') is-invalid @enderror"
+                                   id="phone" name="phone" placeholder="+1 (555) 123-4567"
+                                   value="{{ old('phone', $user->phone) }}">
+                            @error('phone')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Required for delivery coordination</div>
+                        </div>
+
+                        <!-- Street Address -->
+                        <div class="col-12">
+                            <label for="address" class="form-label">Street Address</label>
+                            <input type="text" class="form-control @error('address') is-invalid @enderror"
+                                   id="address" name="address" placeholder="1234 Main Street"
+                                   value="{{ old('address', $user->address) }}">
+                            @error('address')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Address Line 2 -->
+                        <div class="col-12">
+                            <label for="address_2" class="form-label">Address Line 2 <span class="text-muted">(Optional)</span></label>
+                            <input type="text" class="form-control @error('address_2') is-invalid @enderror"
+                                   id="address_2" name="address_2" placeholder="Apartment, suite, unit, floor, etc."
+                                   value="{{ old('address_2', $user->address_2) }}">
+                            @error('address_2')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- City, State, ZIP -->
+                        <div class="col-md-6">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control @error('city') is-invalid @enderror"
+                                   id="city" name="city" placeholder="Enter city"
+                                   value="{{ old('city', $user->city) }}">
+                            @error('city')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="state" class="form-label">State/Province</label>
+                            <input type="text" class="form-control @error('state') is-invalid @enderror"
+                                   id="state" name="state" placeholder="State"
+                                   value="{{ old('state', $user->state) }}">
+                            @error('state')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="zip" class="form-label">ZIP/Postal Code</label>
+                            <input type="text" class="form-control @error('zip') is-invalid @enderror"
+                                   id="zip" name="zip" placeholder="12345"
+                                   value="{{ old('zip', $user->zip) }}">
+                            @error('zip')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Delivery Instructions -->
+                        <div class="col-12">
+                            <label for="delivery_instructions" class="form-label">
+                                Delivery Instructions <span class="text-muted">(Optional)</span>
+                            </label>
+                            <textarea class="form-control @error('delivery_instructions') is-invalid @enderror"
+                                      id="delivery_instructions" name="delivery_instructions"
+                                      rows="3" placeholder="Special delivery instructions (e.g., gate code, building entrance, safe place to leave package)">{{ old('delivery_instructions', $user->delivery_instructions) }}</textarea>
+                            @error('delivery_instructions')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Help our delivery team find you easily</div>
+                        </div>
+
+                        <!-- Preferred Delivery Time -->
+                        <div class="col-12">
+                            <label class="form-label">Preferred Delivery Time</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                               id="profile_anytime" value="anytime"
+                                               {{ old('delivery_time_preference', $user->delivery_time_preference) === 'anytime' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="profile_anytime">
+                                            Anytime (9 AM - 6 PM)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                               id="profile_morning" value="morning"
+                                               {{ old('delivery_time_preference', $user->delivery_time_preference) === 'morning' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="profile_morning">
+                                            Morning (9 AM - 12 PM)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                               id="profile_afternoon" value="afternoon"
+                                               {{ old('delivery_time_preference', $user->delivery_time_preference) === 'afternoon' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="profile_afternoon">
+                                            Afternoon (12 PM - 6 PM)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="delivery_time_preference"
+                                               id="profile_weekend" value="weekend"
+                                               {{ old('delivery_time_preference', $user->delivery_time_preference) === 'weekend' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="profile_weekend">
+                                            Weekend preferred
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-save') }}"></use>
+                        </svg>
+                        Save Delivery Address
                     </button>
                 </div>
             </form>

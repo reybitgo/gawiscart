@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use App\Models\SystemSetting;
 
 class DatabaseResetController extends Controller
@@ -54,11 +55,9 @@ class DatabaseResetController extends Controller
                 'timestamp' => now()
             ]);
 
-            // Clear all caches before reset
-            Cache::flush();
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
+            // Clear all caches and logs before reset
+            $this->clearSystemCaches();
+            $this->clearLogs();
 
             // Run the database reset seeder
             Artisan::call('db:seed', [
@@ -193,5 +192,55 @@ class DatabaseResetController extends Controller
                 'can_reset' => Auth::user()->hasRole('admin')
             ]
         ]);
+    }
+
+    /**
+     * Clear all system caches using optimize:clear
+     */
+    private function clearSystemCaches()
+    {
+        try {
+            // Use optimize:clear to clear all caches at once
+            Artisan::call('optimize:clear');
+
+            Log::info('System caches cleared during database reset');
+        } catch (\Exception $e) {
+            Log::warning('Failed to clear some caches during reset', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Clear all log files
+     */
+    private function clearLogs()
+    {
+        try {
+            $logPath = storage_path('logs');
+
+            if (File::exists($logPath)) {
+                // Get all log files in the logs directory
+                $logFiles = File::glob($logPath . '/*.log');
+
+                $clearedFiles = [];
+                foreach ($logFiles as $logFile) {
+                    if (File::exists($logFile)) {
+                        // Clear the log file by writing empty content
+                        File::put($logFile, '');
+                        $clearedFiles[] = basename($logFile);
+                    }
+                }
+
+                Log::info('Log files cleared during database reset', [
+                    'cleared_files' => $clearedFiles,
+                    'total_files' => count($clearedFiles)
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to clear log files during reset', [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

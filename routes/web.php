@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminPackageController;
+use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
@@ -21,7 +22,7 @@ Route::get('/test-login', function () {
     return view('test-login');
 });
 
-Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->group(function () {
+Route::middleware(['auth', 'enforce.2fa'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Routes
@@ -139,6 +140,20 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
     // Admin Settings Routes
     Route::get('/application-settings', [AdminSettingsController::class, 'index'])->name('settings.index');
     Route::put('/application-settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+
+    // Admin Order Management Routes
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
+        Route::post('/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{order}/add-notes', [AdminOrderController::class, 'addNotes'])->name('add-notes');
+        Route::post('/{order}/update-tracking', [AdminOrderController::class, 'updateTracking'])->name('update-tracking');
+        Route::post('/{order}/update-pickup', [AdminOrderController::class, 'updatePickup'])->name('update-pickup');
+        Route::post('/bulk-update-status', [AdminOrderController::class, 'bulkUpdateStatus'])->name('bulk-update-status');
+        Route::get('/export', [AdminOrderController::class, 'export'])->name('export');
+        Route::get('/analytics', [AdminOrderController::class, 'analytics'])->name('analytics');
+        Route::get('/updates', [AdminOrderController::class, 'getUpdates'])->name('updates');
+    });
 });
 
 // Database Reset Routes (Admin Only)

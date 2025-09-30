@@ -86,6 +86,14 @@
                                     <td>{{ $order->cancelled_at->format('M d, Y \a\t g:i A') }}</td>
                                 </tr>
                                 @endif
+                                <tr>
+                                    <td class="fw-semibold">Delivery Method:</td>
+                                    <td>
+                                        <span class="badge bg-{{ $order->isOfficePickup() ? 'info' : 'primary' }}">
+                                            {{ $order->delivery_method_label }}
+                                        </span>
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                         <div class="col-md-6">
@@ -133,6 +141,157 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Delivery Information (for Home Delivery) -->
+            @if($order->isHomeDelivery() && $order->delivery_address)
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
+                        </svg>
+                        Delivery Address
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Delivery Information</h6>
+                            <div class="delivery-address">
+                                <div class="mb-2">
+                                    <strong>{{ $order->delivery_address['full_name'] ?? 'N/A' }}</strong>
+                                </div>
+                                <div class="mb-1">{{ $order->delivery_address['address'] ?? '' }}</div>
+                                @if(!empty($order->delivery_address['address_2']))
+                                    <div class="mb-1">{{ $order->delivery_address['address_2'] }}</div>
+                                @endif
+                                <div class="mb-1">
+                                    {{ $order->delivery_address['city'] ?? '' }}{{ !empty($order->delivery_address['state']) ? ', ' . $order->delivery_address['state'] : '' }} {{ $order->delivery_address['zip'] ?? '' }}
+                                </div>
+                                @if(!empty($order->delivery_address['phone']))
+                                    <div class="mb-2">
+                                        <svg class="icon me-1">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-phone') }}"></use>
+                                        </svg>
+                                        {{ $order->delivery_address['phone'] }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Delivery Preferences</h6>
+                            <table class="table table-sm table-borderless">
+                                @if(!empty($order->delivery_address['time_preference']))
+                                <tr>
+                                    <td class="fw-semibold">Preferred Time:</td>
+                                    <td>
+                                        @switch($order->delivery_address['time_preference'])
+                                            @case('anytime')
+                                                Anytime (9 AM - 6 PM)
+                                                @break
+                                            @case('morning')
+                                                Morning (9 AM - 12 PM)
+                                                @break
+                                            @case('afternoon')
+                                                Afternoon (12 PM - 6 PM)
+                                                @break
+                                            @case('weekend')
+                                                Weekend preferred
+                                                @break
+                                            @default
+                                                {{ ucfirst($order->delivery_address['time_preference']) }}
+                                        @endswitch
+                                    </td>
+                                </tr>
+                                @endif
+                                <tr>
+                                    <td class="fw-semibold">Delivery Window:</td>
+                                    <td>3-5 business days</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">Tracking:</td>
+                                    <td>
+                                        @if(!empty($order->tracking_number))
+                                            <code>{{ $order->tracking_number }}</code>
+                                        @else
+                                            <span class="text-muted">Will be provided when shipped</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+
+                            @if(!empty($order->delivery_address['instructions']))
+                            <div class="mt-3">
+                                <h6 class="text-muted">Special Instructions</h6>
+                                <div class="alert alert-light">
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-comment-square') }}"></use>
+                                    </svg>
+                                    {{ $order->delivery_address['instructions'] }}
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Office Pickup Information (for Office Pickup) -->
+            @if($order->isOfficePickup())
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-building') }}"></use>
+                        </svg>
+                        Office Pickup Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Pickup Location</h6>
+                            <div class="mb-2">
+                                <strong>Main Office</strong>
+                            </div>
+                            <div class="mb-1">123 Business Street</div>
+                            <div class="mb-1">Business District, City 12345</div>
+                            <div class="mb-2">
+                                <svg class="icon me-1">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-phone') }}"></use>
+                                </svg>
+                                +1 (555) 123-4567
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Pickup Hours & Information</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="fw-semibold">Monday - Friday:</td>
+                                    <td>9:00 AM - 5:00 PM</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">Saturday:</td>
+                                    <td>9:00 AM - 2:00 PM</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">Sunday:</td>
+                                    <td>Closed</td>
+                                </tr>
+                            </table>
+
+                            <div class="alert alert-warning mt-3">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+                                </svg>
+                                <strong>Important:</strong> Please bring a valid ID when collecting your order.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
 
             <!-- Order Items -->
             <div class="card mb-4">

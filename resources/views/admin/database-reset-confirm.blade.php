@@ -47,6 +47,18 @@
                             All orders and order history will be cleared
                         </li>
                         <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-info me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-file') }}"></use>
+                            </svg>
+                            All log files will be&nbsp;<strong>cleared</strong>&nbsp;(fresh logs for debugging)
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-info me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-speedometer') }}"></use>
+                            </svg>
+                            All system caches will be&nbsp;<strong>cleared</strong>&nbsp;(config, routes, views, application)
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                             </svg>
@@ -170,6 +182,8 @@
                         <li>All transaction history and records</li>
                         <li>All orders and order items (complete order history)</li>
                         <li>Non-default wallet balances (default wallets reset to initial amounts)</li>
+                        <li>All log files and debugging information</li>
+                        <li>All cached data (config, routes, views, application cache)</li>
                     </ul>
                 </div>
 
@@ -188,6 +202,8 @@
                         <li><strong>Sample packages restored to initial state</strong> (5 packages)</li>
                         <li>Fresh wallets with initial balances ($1,000 & $100)</li>
                         <li>Clean e-commerce system ready for new orders</li>
+                        <li><strong>Fresh log files for clean debugging</strong></li>
+                        <li><strong>Optimized performance with cleared caches</strong></li>
                     </ul>
                 </div>
 

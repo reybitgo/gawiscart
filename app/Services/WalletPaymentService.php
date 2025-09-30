@@ -6,8 +6,10 @@ use App\Models\Order;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Mail\OrderPaymentConfirmed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class WalletPaymentService
 {
@@ -99,6 +101,9 @@ class WalletPaymentService
             $order->creditPoints();
 
             DB::commit();
+
+            // Send payment confirmation email
+            $this->sendPaymentConfirmationEmail($order, 'wallet');
 
             Log::info('Wallet payment processed successfully', [
                 'user_id' => $user->id,
@@ -279,6 +284,40 @@ class WalletPaymentService
                 'message' => $e->getMessage(),
                 'error_code' => $e->getCode(),
             ];
+        }
+    }
+
+    /**
+     * Send payment confirmation email to customer
+     */
+    private function sendPaymentConfirmationEmail(Order $order, string $paymentMethod): void
+    {
+        try {
+            // Load the user relationship if not already loaded
+            if (!$order->relationLoaded('user')) {
+                $order->load('user');
+            }
+
+            // Send payment confirmation email
+            Mail::to($order->user->email)->send(
+                new OrderPaymentConfirmed($order, $paymentMethod)
+            );
+
+            Log::info('Payment confirmation email sent', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'recipient' => $order->user->email,
+                'payment_method' => $paymentMethod
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment confirmation email', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'recipient' => $order->user->email ?? 'unknown',
+                'payment_method' => $paymentMethod,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

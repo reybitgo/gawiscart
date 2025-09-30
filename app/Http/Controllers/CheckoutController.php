@@ -55,11 +55,30 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
-        $request->validate([
+        // Base validation rules
+        $validationRules = [
+            'delivery_method' => 'required|in:office_pickup,home_delivery',
             'customer_notes' => 'nullable|string|max:1000',
             'terms_accepted' => 'required|accepted',
             'payment_method' => 'required|in:wallet',
-        ]);
+        ];
+
+        // Add delivery address validation rules if home delivery is selected
+        if ($request->delivery_method === 'home_delivery') {
+            $validationRules = array_merge($validationRules, [
+                'delivery_full_name' => 'required|string|max:255',
+                'delivery_phone' => 'required|string|max:20',
+                'delivery_address' => 'required|string|max:255',
+                'delivery_address_2' => 'nullable|string|max:255',
+                'delivery_city' => 'required|string|max:100',
+                'delivery_state' => 'required|string|max:100',
+                'delivery_zip' => 'required|string|max:20',
+                'delivery_instructions' => 'nullable|string|max:1000',
+                'delivery_time_preference' => 'nullable|in:anytime,morning,afternoon,weekend',
+            ]);
+        }
+
+        $request->validate($validationRules);
 
         $cartSummary = $this->cartService->getSummary();
 
@@ -102,10 +121,43 @@ class CheckoutController extends Controller
                 ]
             );
 
-            // Add customer notes if provided
-            if ($request->filled('customer_notes')) {
-                $order->update(['customer_notes' => $request->customer_notes]);
+            // Prepare order update data
+            $orderData = [
+                'delivery_method' => $request->delivery_method,
+                'customer_notes' => $request->customer_notes,
+            ];
+
+            // Add delivery address information for home delivery
+            if ($request->delivery_method === 'home_delivery') {
+                $orderData = array_merge($orderData, [
+                    'delivery_address' => json_encode([
+                        'full_name' => $request->delivery_full_name,
+                        'phone' => $request->delivery_phone,
+                        'address' => $request->delivery_address,
+                        'address_2' => $request->delivery_address_2,
+                        'city' => $request->delivery_city,
+                        'state' => $request->delivery_state,
+                        'zip' => $request->delivery_zip,
+                        'instructions' => $request->delivery_instructions,
+                        'time_preference' => $request->delivery_time_preference,
+                    ])
+                ]);
+
+                // Update user's profile with delivery information for future use
+                Auth::user()->update([
+                    'fullname' => $request->delivery_full_name,
+                    'phone' => $request->delivery_phone,
+                    'address' => $request->delivery_address,
+                    'address_2' => $request->delivery_address_2,
+                    'city' => $request->delivery_city,
+                    'state' => $request->delivery_state,
+                    'zip' => $request->delivery_zip,
+                    'delivery_instructions' => $request->delivery_instructions,
+                    'delivery_time_preference' => $request->delivery_time_preference ?? 'anytime',
+                ]);
             }
+
+            $order->update($orderData);
 
             // Create order items from cart
             foreach ($cartSummary['items'] as $cartItem) {

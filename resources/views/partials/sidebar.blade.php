@@ -79,6 +79,15 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link{{ Request::routeIs('admin.orders.*') ? ' active' : '' }}" href="{{ route('admin.orders.index') }}">
+                            <span class="nav-icon">
+                                <span class="nav-icon-bullet"></span>
+                            </span>
+                            Order Management
+                            <span class="badge badge-sm bg-info ms-auto">{{ \App\Models\Order::where('status', 'paid')->count() }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link{{ Request::routeIs('admin.settings.*') ? ' active' : '' }}" href="{{ route('admin.settings.index') }}">
                             <span class="nav-icon">
                                 <span class="nav-icon-bullet"></span>

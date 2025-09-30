@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Laravel 12 application with authentication, user management, wallet system, transaction tracking features, and a comprehensive e-commerce system. The application uses Laravel Fortify for authentication (including two-factor authentication), Spatie Laravel Permission for role-based access control, and includes a comprehensive wallet/transaction system with fee management.
 
-**E-Commerce Status**: Phase 4 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration)
+**E-Commerce Status**: Phase 6 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration + Order Management & History System + Admin Order Management & Analytics)
 
 ## Development Commands
 
@@ -101,7 +101,7 @@ php artisan make:migration create_table_name
 - Test suites: Unit and Feature tests in `tests/` directory
 
 ### E-Commerce System
-**Current Status**: Phase 4 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration)
+**Current Status**: Phase 6 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration + Order Management & History System + Admin Order Management & Analytics)
 
 #### Package Management System ✅
 - **Admin Interface**: Full CRUD operations for packages via `/admin/packages`
@@ -141,19 +141,54 @@ php artisan make:migration create_table_name
 - **Payment UI**: Enhanced checkout interface with wallet balance display and validation
 - **Order Integration**: Seamless integration with existing order management system
 
+#### Order Management & History System ✅
+- **Member Order History**: Complete order history interface at `/orders`
+- **Order Details**: Comprehensive order details with delivery information
+- **Order Status Display**: Real-time status tracking and updates
+- **Invoice Generation**: Professional order invoices
+- **Order Cancellation**: Customer-initiated order cancellation with refunds
+- **Delivery Address Integration**: Profile-based delivery address management
+- **Order Timeline**: Visual order progression tracking
+
+#### Admin Order Management & Analytics System ✅
+- **Comprehensive Order Dashboard**: Advanced admin interface at `/admin/orders`
+- **17-Status Order Lifecycle**: Complete order status management system
+- **Dual Delivery Methods**: Office pickup (recommended) and home delivery support
+- **Advanced Filtering**: Status-based, date-based, and customer-based filtering
+- **Bulk Operations**: Multi-order status updates and management
+- **Order Analytics**: Revenue metrics, status distribution, fulfillment analytics
+- **Customer Management**: Integrated customer information and communication
+- **Delivery Management**: Complete address tracking and delivery coordination
+- **Status History**: Full audit trail of all order status changes
+- **Real-time Updates**: AJAX-powered interface with instant feedback
+
+#### Profile-Based Delivery System ✅
+- **Centralized Address Management**: Single point of entry in user profile
+- **Smart Pre-filling**: Automatic checkout form population from profile
+- **Inline Editing**: Update address during checkout with profile sync
+- **Dual Address Storage**: Order-specific storage with profile updates
+- **Delivery Preferences**: Time preferences and special instructions
+- **Address Validation**: Real-time validation with user feedback
+
 #### Available URLs
 - **Admin Package Management**: `/admin/packages` (full CRUD)
 - **Admin Application Settings**: `/admin/application-settings` (tax rate, email verification)
+- **Admin Order Management**: `/admin/orders` (comprehensive order management)
+- **Admin Order Details**: `/admin/orders/{order}` (detailed order management)
+- **Admin Order Analytics**: `/admin/orders/analytics` (order analytics and reporting)
 - **Public Package Browsing**: `/packages` (listing with search/sort)
 - **Individual Package Pages**: `/packages/{slug}` (SEO-friendly)
 - **Shopping Cart**: `/cart` (full cart management)
 - **Checkout Process**: `/checkout` (order review and placement)
 - **Order Confirmation**: `/checkout/confirmation/{order}` (order details and management)
+- **Member Order History**: `/orders` (customer order history)
+- **Member Order Details**: `/orders/{order}` (detailed order information)
+- **User Profile**: `/profile` (delivery address management)
 - **Cart API**: AJAX endpoints for cart operations
 
 #### Next Phase
-- **Phase 5**: Member dashboard with order history and wallet management
-- **Phase 6**: Admin order management and reporting
+- **Phase 7**: Advanced reporting and analytics dashboard
+- **Phase 8**: Inventory management and restocking system
 
 ## Common Development Tasks
 
@@ -309,15 +344,21 @@ php artisan migrate:fresh --seed
 - `app/Models/Package.php` - Package model with business logic
 - `app/Models/Order.php` - Order model with comprehensive business logic and status management
 - `app/Models/OrderItem.php` - Order item model with package snapshot functionality
+- `app/Models/OrderStatusHistory.php` - Order status history tracking
 - `app/Services/CartService.php` - Comprehensive cart management service
 - `app/Services/WalletPaymentService.php` - Complete wallet payment processing service
+- `app/Services/OrderStatusService.php` - Order status management and validation
+- `app/Services/OrderAnalyticsService.php` - Comprehensive order analytics and reporting
 
 **Controllers:**
 - `app/Http/Controllers/Admin/AdminPackageController.php` - Admin package CRUD
 - `app/Http/Controllers/Admin/AdminSettingsController.php` - Application settings management
+- `app/Http/Controllers/Admin/AdminOrderController.php` - Complete admin order management
 - `app/Http/Controllers/PackageController.php` - Public package browsing with cart status indicators
 - `app/Http/Controllers/CartController.php` - Cart operations and API
 - `app/Http/Controllers/CheckoutController.php` - Complete checkout process and order management
+- `app/Http/Controllers/OrderHistoryController.php` - Member order history and details
+- `app/Http/Controllers/ProfileController.php` - Enhanced with delivery address management
 
 **Middleware:**
 - `app/Http/Middleware/CartMiddleware.php` - Global cart data injection
@@ -326,6 +367,10 @@ php artisan migrate:fresh --seed
 - `database/migrations/*_create_packages_table.php` - Package database structure
 - `database/migrations/*_create_orders_table.php` - Order management structure
 - `database/migrations/*_create_order_items_table.php` - Order items with package snapshots
+- `database/migrations/*_enhance_orders_table_for_delivery_system.php` - Enhanced order status system
+- `database/migrations/*_create_order_status_histories_table.php` - Order status history tracking
+- `database/migrations/*_add_delivery_address_to_users_table.php` - User delivery address fields
+- `database/migrations/*_add_delivery_address_json_to_orders_table.php` - Order delivery address storage
 - `database/migrations/*_add_payment_and_refund_to_transaction_types.php` - Payment transaction types
 - `database/migrations/*_add_completed_status_to_transactions.php` - Transaction status enhancement
 - `database/seeders/PackageSeeder.php` - Sample package data
@@ -334,11 +379,17 @@ php artisan migrate:fresh --seed
 **Views:**
 - `resources/views/admin/packages/` - Complete admin interface
 - `resources/views/admin/settings/index.blade.php` - Application settings interface
+- `resources/views/admin/orders/index.blade.php` - Advanced admin order management interface
+- `resources/views/admin/orders/show.blade.php` - Comprehensive admin order details
 - `resources/views/packages/` - Public package browsing with cart status indicators
 - `resources/views/cart/index.blade.php` - Full cart management page
-- `resources/views/checkout/index.blade.php` - Checkout process with order review
+- `resources/views/checkout/index.blade.php` - Enhanced checkout with delivery address
 - `resources/views/checkout/confirmation.blade.php` - Order confirmation and management
+- `resources/views/orders/index.blade.php` - Member order history interface
+- `resources/views/orders/show.blade.php` - Detailed member order view with delivery info
+- `resources/views/orders/partials/order-list.blade.php` - Order listing components
+- `resources/views/profile/show.blade.php` - Enhanced profile with delivery address
 - `resources/views/legal/` - Terms of service and privacy policy modals
 
 #### Next Development Steps
-For continuing e-commerce development, refer to `ECOMMERCE_ROADMAP.md` for detailed Phase 5-8 implementation plans including member dashboard, admin order management, reporting features, and advanced e-commerce functionality.
+For continuing e-commerce development, refer to `ECOMMERCE_ROADMAP.md` for detailed Phase 7-8 implementation plans including advanced reporting and analytics dashboard, inventory management, and additional e-commerce functionality.

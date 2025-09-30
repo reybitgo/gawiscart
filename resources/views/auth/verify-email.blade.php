@@ -1,46 +1,84 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Email Verification')
 
 @section('content')
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Verify your email
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                A verification link has been sent to your email address
-            </p>
-        </div>
-
-        @if (session('status') == 'verification-link-sent')
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                A new verification link has been sent to the email address you provided during registration.
+<div class="d-flex justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <svg class="icon icon-2xl text-warning mb-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-envelope-letter') }}"></use>
+                </svg>
+                <h4 class="card-title">Verify Your Email Address</h4>
             </div>
-        @endif
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <p class="text-body-secondary">
+                        A verification link has been sent to your email address. You can continue using the site normally, but verifying your email helps with account security.
+                    </p>
+                </div>
 
-        <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-            <p class="text-sm">
-                Before proceeding, please check your email for a verification link.
-                If you didn't receive the email, we can send you another.
-            </p>
-        </div>
+                @if (session('status') == 'verification-link-sent')
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                        </svg>
+                        A new verification link has been sent to your email address.
+                        <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
 
-        <div class="flex items-center justify-center space-x-4">
-            <form method="POST" action="{{ route('verification.send') }}">
-                @csrf
-                <button type="submit"
-                        class="inline-flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Resend Verification Email
-                </button>
-            </form>
+                <div class="alert alert-info" role="alert">
+                    <svg class="icon me-2">
+                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info") }}"></use>
+                    </svg>
+                    <strong>Optional verification:</strong> Email verification is completely optional. You can skip this and continue using the site normally, or verify for enhanced security.
+                </div>
 
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                        class="inline-flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Log Out
-                </button>
-            </form>
+                <div class="d-grid gap-2">
+                    <form method="POST" action="{{ route('verification.send') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-reload') }}"></use>
+                            </svg>
+                            Resend Verification Email (Optional)
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="row g-2">
+                    <div class="col-4">
+                        <a href="{{ route('dashboard') }}" class="btn btn-success w-100">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                            </svg>
+                            Skip & Continue
+                        </a>
+                    </div>
+                    <div class="col-4">
+                        <a href="{{ route('profile.show') }}" class="btn btn-outline-secondary w-100">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-left') }}"></use>
+                            </svg>
+                            Back to Profile
+                        </a>
+                    </div>
+                    <div class="col-4">
+                        <form method="POST" action="{{ route('logout') }}" class="d-inline w-100">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-account-logout') }}"></use>
+                                </svg>
+                                Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
