@@ -209,8 +209,11 @@ class Order extends Model
      */
     public function generateOrderNumber(): string
     {
+        // Generate a cryptographically secure random order number
         $date = now()->format('Ymd');
-        $random = strtoupper(Str::random(6));
+        // Use random_bytes for cryptographic security
+        $randomBytes = random_bytes(4);
+        $random = strtoupper(bin2hex($randomBytes));
         return "ORD-{$date}-{$random}";
     }
 

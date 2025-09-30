@@ -25,7 +25,7 @@ class AdminOrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'orderItems'])
+        $query = Order::with(['user', 'orderItems.package'])
             ->orderBy('created_at', 'asc');
 
         // Apply filters
@@ -313,7 +313,7 @@ class AdminOrderController extends Controller
      */
     public function export(Request $request)
     {
-        $query = Order::with(['user', 'orderItems']);
+        $query = Order::with(['user', 'orderItems.package']);
 
         // Apply same filters as index
         if ($request->filled('status')) {
@@ -423,7 +423,7 @@ class AdminOrderController extends Controller
     {
         $lastUpdate = $request->get('last_update', now()->subMinutes(5));
 
-        $recentOrders = Order::with(['user'])
+        $recentOrders = Order::with(['user', 'orderItems.package'])
             ->where('updated_at', '>', $lastUpdate)
             ->orderBy('updated_at', 'desc')
             ->limit(10)

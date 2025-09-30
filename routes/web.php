@@ -34,24 +34,36 @@ Route::middleware(['auth', 'enforce.2fa'])->group(function () {
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('/packages/{package}', [PackageController::class, 'show'])->name('packages.show');
 
-    // Cart Routes
+    // Cart Routes (with rate limiting for cart mutations)
     Route::prefix('cart')->name('cart.')->group(function () {
         Route::get('/', [CartController::class, 'index'])->name('index');
-        Route::post('/add/{packageId}', [CartController::class, 'add'])->name('add');
-        Route::patch('/update/{packageId}', [CartController::class, 'update'])->name('update');
-        Route::delete('/remove/{packageId}', [CartController::class, 'remove'])->name('remove');
-        Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+        Route::post('/add/{packageId}', [CartController::class, 'add'])
+            ->middleware('throttle:30,1')
+            ->name('add');
+        Route::patch('/update/{packageId}', [CartController::class, 'update'])
+            ->middleware('throttle:30,1')
+            ->name('update');
+        Route::delete('/remove/{packageId}', [CartController::class, 'remove'])
+            ->middleware('throttle:30,1')
+            ->name('remove');
+        Route::delete('/clear', [CartController::class, 'clear'])
+            ->middleware('throttle:10,1')
+            ->name('clear');
         Route::get('/count', [CartController::class, 'getCount'])->name('count');
         Route::get('/summary', [CartController::class, 'getSummary'])->name('summary');
     });
 
-    // Checkout Routes
+    // Checkout Routes (with rate limiting for security)
     Route::prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/', [CheckoutController::class, 'index'])->name('index');
-        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        Route::post('/process', [CheckoutController::class, 'process'])
+            ->middleware('throttle:10,1')
+            ->name('process');
         Route::get('/confirmation/{order}', [CheckoutController::class, 'confirmation'])->name('confirmation');
         Route::get('/order/{order}', [CheckoutController::class, 'orderDetails'])->name('order-details');
-        Route::post('/order/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('cancel-order');
+        Route::post('/order/{order}/cancel', [CheckoutController::class, 'cancelOrder'])
+            ->middleware('throttle:10,1')
+            ->name('cancel-order');
         Route::get('/summary', [CheckoutController::class, 'getSummary'])->name('summary');
     });
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Package;
 use App\Services\CartService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class PackageController extends Controller
 {
@@ -52,6 +53,11 @@ class PackageController extends Controller
         if (!$package->is_active) {
             abort(404);
         }
+
+        // Cache individual package for 15 minutes
+        $package = Cache::remember("package_{$package->id}", 900, function() use ($package) {
+            return Package::find($package->id);
+        });
 
         // Get cart items to check if this package is already in cart
         $cartService = app(CartService::class);

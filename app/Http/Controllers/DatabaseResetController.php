@@ -59,6 +59,9 @@ class DatabaseResetController extends Controller
             $this->clearSystemCaches();
             $this->clearLogs();
 
+            // Run migrations to ensure all performance indexes are in place
+            $this->ensurePerformanceOptimizations();
+
             // Run the database reset seeder
             Artisan::call('db:seed', [
                 '--class' => 'DatabaseResetSeeder',
@@ -241,6 +244,30 @@ class DatabaseResetController extends Controller
             Log::warning('Failed to clear log files during reset', [
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Ensure all performance optimizations are in place
+     * Includes: indexes, migrations, and cache setup
+     */
+    private function ensurePerformanceOptimizations()
+    {
+        try {
+            Log::info('Ensuring performance optimizations are in place');
+
+            // Run all pending migrations to ensure performance indexes exist
+            Artisan::call('migrate', ['--force' => true]);
+
+            Log::info('Performance optimizations completed', [
+                'migrations_output' => Artisan::output()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to apply some performance optimizations during reset', [
+                'error' => $e->getMessage()
+            ]);
+            // Don't throw - reset should continue even if optimizations fail
         }
     }
 }

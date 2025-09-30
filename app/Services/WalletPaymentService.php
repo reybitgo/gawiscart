@@ -45,15 +45,21 @@ class WalletPaymentService
             DB::beginTransaction();
 
             $user = $order->user;
-            $wallet = $user->getOrCreateWallet();
+
+            // Lock wallet row for update to prevent race conditions
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+
+            if (!$wallet) {
+                $wallet = $user->getOrCreateWallet();
+            }
 
             // Validate wallet state
             if (!$wallet->is_active) {
                 throw new \Exception('Wallet is not active');
             }
 
-            // Check sufficient balance
-            if ($this->hasInsufficientBalance($user, $order->total_amount)) {
+            // Check sufficient balance with locked row
+            if ($wallet->balance < $order->total_amount) {
                 throw new \Exception('Insufficient wallet balance');
             }
 
@@ -217,7 +223,13 @@ class WalletPaymentService
             DB::beginTransaction();
 
             $user = $order->user;
-            $wallet = $user->getOrCreateWallet();
+
+            // Lock wallet row for update to prevent race conditions
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+
+            if (!$wallet) {
+                $wallet = $user->getOrCreateWallet();
+            }
 
             // Validate order is paid and can be refunded
             if (!$order->isPaid()) {

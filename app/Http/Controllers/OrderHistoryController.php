@@ -24,7 +24,7 @@ class OrderHistoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['orderItems'])
+        $query = Order::with(['orderItems.package'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc');
 
@@ -80,7 +80,7 @@ class OrderHistoryController extends Controller
         }
 
         // Load order items with package data
-        $order->load(['orderItems']);
+        $order->load(['orderItems.package']);
 
         return view('orders.show', compact('order'));
     }
@@ -271,7 +271,7 @@ class OrderHistoryController extends Controller
      */
     public function ajax(Request $request)
     {
-        $query = Order::with(['orderItems'])
+        $query = Order::with(['orderItems.package'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc');
 

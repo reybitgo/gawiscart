@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class Package extends Model
 {
@@ -48,6 +49,15 @@ class Package extends Model
             if ($package->isDirty('name') && !$package->isDirty('slug')) {
                 $package->slug = Str::slug($package->name);
             }
+        });
+
+        // Clear cache when package is created, updated, or deleted
+        static::saved(function ($package) {
+            Cache::forget("package_{$package->id}");
+        });
+
+        static::deleted(function ($package) {
+            Cache::forget("package_{$package->id}");
         });
     }
 

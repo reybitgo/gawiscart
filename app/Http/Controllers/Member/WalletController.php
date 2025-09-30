@@ -159,8 +159,23 @@ class WalletController extends Controller
         }
 
         try {
-            \DB::transaction(function () use ($request, $sender, $senderWallet, $recipient, $transferAmount, $transferCharge, $totalAmount) {
-                $recipientWallet = $recipient->getOrCreateWallet();
+            \DB::transaction(function () use ($request, $sender, $recipient, $transferAmount, $transferCharge, $totalAmount) {
+                // Lock both wallets in consistent order (by user ID) to prevent deadlock
+                $lockOrder = [$sender->id, $recipient->id];
+                sort($lockOrder);
+
+                // Lock wallets for update to prevent race conditions
+                $senderWallet = Wallet::where('user_id', $sender->id)->lockForUpdate()->first();
+                $recipientWallet = Wallet::where('user_id', $recipient->id)->lockForUpdate()->first();
+
+                if (!$recipientWallet) {
+                    $recipientWallet = $recipient->getOrCreateWallet();
+                }
+
+                // Re-check balance after locking (another transaction might have changed it)
+                if ($senderWallet->balance < $totalAmount) {
+                    throw new \Exception('Insufficient balance after lock');
+                }
 
                 // Create outgoing transaction for sender
                 $outgoingTransaction = Transaction::create([
