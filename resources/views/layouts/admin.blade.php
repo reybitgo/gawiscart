@@ -37,6 +37,16 @@
     <link href="{{ asset('coreui-template/vendors/@coreui/icons/css/flag.min.css') }}" rel="stylesheet">
     <link href="{{ asset('coreui-template/vendors/@coreui/icons/css/brand.min.css') }}" rel="stylesheet">
 
+    <!-- Custom CSS for alignment -->
+    <style>
+        /* Align header topbar border with sidebar header border */
+        .header .container-fluid.border-bottom {
+            min-height: calc(4rem + 1px);
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
     <!-- Additional CSS -->
     @stack('styles')
 

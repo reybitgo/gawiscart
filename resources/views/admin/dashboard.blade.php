@@ -305,102 +305,72 @@
         </div>
     </div>
     <div class="card-body p-0">
-        @php
-            // Sample recent admin activity data
-            $recentActivity = collect([
-                [
-                    'id' => 1,
-                    'type' => 'transaction_approval',
-                    'title' => 'Transaction Approved',
-                    'description' => '$1,500 withdrawal by john.doe@example.com',
-                    'amount' => 1500,
-                    'user' => 'john.doe@example.com',
-                    'status' => 'approved',
-                    'created_at' => now()->subMinutes(5),
-                    'icon' => 'cil-check-circle',
-                    'color' => 'success'
-                ],
-                [
-                    'id' => 2,
-                    'type' => 'new_user',
-                    'title' => 'New User Registration',
-                    'description' => 'jane.smith@example.com joined the platform',
-                    'amount' => null,
-                    'user' => 'jane.smith@example.com',
-                    'status' => 'active',
-                    'created_at' => now()->subMinutes(12),
-                    'icon' => 'cil-user-plus',
-                    'color' => 'info'
-                ],
-                [
-                    'id' => 3,
-                    'type' => 'large_deposit',
-                    'title' => 'Large Deposit Alert',
-                    'description' => '$5,000 deposit flagged for review',
-                    'amount' => 5000,
-                    'user' => 'mike.wilson@example.com',
-                    'status' => 'pending',
-                    'created_at' => now()->subMinutes(25),
-                    'icon' => 'cil-warning',
-                    'color' => 'warning'
-                ],
-                [
-                    'id' => 4,
-                    'type' => 'security_alert',
-                    'title' => 'Security Alert',
-                    'description' => 'Multiple failed login attempts detected',
-                    'amount' => null,
-                    'user' => 'Unknown User',
-                    'status' => 'blocked',
-                    'created_at' => now()->subHour(),
-                    'icon' => 'cil-shield-alt',
-                    'color' => 'danger'
-                ],
-                [
-                    'id' => 5,
-                    'type' => 'system_maintenance',
-                    'title' => 'System Maintenance',
-                    'description' => 'Database optimization completed successfully',
-                    'amount' => null,
-                    'user' => 'System',
-                    'status' => 'completed',
-                    'created_at' => now()->subHours(2),
-                    'icon' => 'cil-settings',
-                    'color' => 'secondary'
-                ]
-            ]);
-        @endphp
+        @forelse($recentTransactions as $transaction)
+            @php
+                // Map transaction type and status to appropriate colors and icons
+                $typeColors = [
+                    'deposit' => 'success',
+                    'withdrawal' => 'warning',
+                    'transfer' => 'info',
+                    'payment' => 'primary',
+                    'refund' => 'secondary',
+                    'fee' => 'danger'
+                ];
 
-        @forelse($recentActivity as $activity)
+                $statusColors = [
+                    'pending' => 'warning',
+                    'approved' => 'success',
+                    'completed' => 'success',
+                    'rejected' => 'danger',
+                    'cancelled' => 'secondary'
+                ];
+
+                $typeIcons = [
+                    'deposit' => 'cil-arrow-circle-bottom',
+                    'withdrawal' => 'cil-arrow-circle-top',
+                    'transfer' => 'cil-swap-horizontal',
+                    'payment' => 'cil-credit-card',
+                    'refund' => 'cil-reload',
+                    'fee' => 'cil-dollar'
+                ];
+
+                $color = $statusColors[$transaction->status] ?? 'secondary';
+                $icon = $typeIcons[$transaction->type] ?? 'cil-money';
+                $typeColor = $typeColors[$transaction->type] ?? 'secondary';
+            @endphp
             <div class="transaction-item d-flex justify-content-between align-items-center p-3 border-bottom">
                 <div class="d-flex align-items-center">
-                    <div class="avatar avatar-md me-3 bg-{{ $activity['color'] }}-gradient">
+                    <div class="avatar avatar-md me-3 bg-{{ $typeColor }}-gradient">
                         <svg class="icon text-white">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#' . $activity['icon']) }}"></use>
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#' . $icon) }}"></use>
                         </svg>
                     </div>
                     <div>
-                        <div class="fw-semibold text-dark">{{ $activity['title'] }}</div>
+                        <div class="fw-semibold text-dark">{{ ucfirst($transaction->type) }} Transaction</div>
                         <div class="small text-body-secondary d-flex align-items-center">
                             <svg class="icon icon-xs me-1">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-clock') }}"></use>
                             </svg>
-                            {{ $activity['created_at']->diffForHumans() }}
+                            {{ $transaction->created_at->diffForHumans() }}
                             <span class="mx-1">•</span>
-                            {{ $activity['user'] }}
+                            {{ $transaction->user->email ?? 'System' }}
                         </div>
-                        <div class="small text-muted">{{ $activity['description'] }}</div>
+                        <div class="small text-muted">
+                            @if($transaction->description)
+                                {{ Str::limit($transaction->description, 50) }}
+                            @else
+                                {{ ucfirst($transaction->type) }} by {{ $transaction->user->fullname ?? $transaction->user->username ?? 'User' }}
+                            @endif
+                        </div>
                     </div>
                 </div>
                 <div class="text-end">
-                    @if($activity['amount'])
-                        <div class="fw-bold h6 mb-1 text-{{ $activity['color'] }}">
-                            ${{ number_format($activity['amount'], 2) }}
-                        </div>
-                    @endif
-                    <span class="badge rounded-pill bg-{{ $activity['color'] }}
-                        @if($activity['color'] === 'warning') text-dark @else text-white @endif">
-                        {{ ucfirst($activity['status']) }}
+                    <div class="fw-bold h6 mb-1 text-{{ $typeColor }}">
+                        ${{ number_format($transaction->amount, 2) }}
+                    </div>
+                    <span class="badge rounded-pill bg-{{ $color }}
+                        @if($color === 'warning') text-dark @else text-white @endif">
+                        {{ ucfirst($transaction->status) }}
                     </span>
                 </div>
             </div>

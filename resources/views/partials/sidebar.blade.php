@@ -84,7 +84,12 @@
                                 <span class="nav-icon-bullet"></span>
                             </span>
                             Order Management
-                            <span class="badge badge-sm bg-info ms-auto">{{ \App\Models\Order::where('status', 'paid')->count() }}</span>
+                            @php
+                                $paidOrdersCount = \App\Models\Order::where('status', 'paid')->count();
+                            @endphp
+                            @if($paidOrdersCount > 0)
+                                <span class="badge badge-sm bg-info ms-auto">{{ $paidOrdersCount }}</span>
+                            @endif
                         </a>
                     </li>
                     <li class="nav-item">
