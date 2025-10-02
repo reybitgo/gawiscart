@@ -44,7 +44,13 @@
                             <svg class="icon text-danger me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-cart') }}"></use>
                             </svg>
-                            All orders and order history will be cleared
+                            All orders, order items, and order history will be cleared
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-danger me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-action-undo') }}"></use>
+                            </svg>
+                            All return requests and refund history will be cleared
                         </li>
                         <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-info me-2">
@@ -62,7 +68,13 @@
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                             </svg>
-                            System settings will be&nbsp;<strong>preserved</strong>
+                            System settings will be&nbsp;<strong>preserved</strong>&nbsp;(fees, email verification)
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-success me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-applications-settings') }}"></use>
+                            </svg>
+                            Application settings will be&nbsp;<strong>preserved</strong>&nbsp;(tax rate, email verification)
                         </li>
                         <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
@@ -74,13 +86,13 @@
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-user') }}"></use>
                             </svg>
-                            Default admin and member accounts will be refreshed
+                            Default admin and member accounts will be refreshed with&nbsp;<strong>complete profiles</strong>
                         </li>
                         <li class="list-group-item d-flex align-items-center">
                             <svg class="icon text-success me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-gift') }}"></use>
                             </svg>
-                            Sample packages will be&nbsp;<strong>restored</strong>&nbsp;(5 preloaded packages)
+                            Sample packages will be&nbsp;<strong>restored</strong>&nbsp;(preloaded e-commerce products)
                         </li>
                     </ul>
 
@@ -99,15 +111,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <strong>Admin Account:</strong><br>
-                                Email: admin@ewallet.com<br>
+                                Email: admin@gawisherbal.com<br>
                                 Password: Admin123!@#<br>
-                                Balance: $1,000.00
+                                Balance: $1,000.00<br>
+                                <small class="text-muted">Complete profile with address</small>
                             </div>
                             <div class="col-md-6">
                                 <strong>Member Account:</strong><br>
-                                Email: member@ewallet.com<br>
+                                Email: member@gawisherbal.com<br>
                                 Password: Member123!@#<br>
-                                Balance: $100.00
+                                Balance: $100.00<br>
+                                <small class="text-muted">Complete delivery address for testing</small>
                             </div>
                         </div>
                     </div>
@@ -180,7 +194,9 @@
                     <ul class="mb-0">
                         <li>Non-default user accounts and profiles (admin & member preserved)</li>
                         <li>All transaction history and records</li>
-                        <li>All orders and order items (complete order history)</li>
+                        <li>All orders and order items (complete order history with 26-status lifecycle)</li>
+                        <li>All return requests and refund history</li>
+                        <li>All order status histories and timeline notes</li>
                         <li>Non-default wallet balances (default wallets reset to initial amounts)</li>
                         <li>All log files and debugging information</li>
                         <li>All cached data (config, routes, views, application cache)</li>
@@ -195,13 +211,15 @@
                         What will be restored:
                     </h6>
                     <ul class="mb-0">
-                        <li>Default admin account (admin@ewallet.com)</li>
-                        <li>Default member account (member@ewallet.com)</li>
-                        <li><strong>Current system settings preserved</strong></li>
+                        <li>Default admin account (admin@gawisherbal.com) with <strong>complete profile</strong></li>
+                        <li>Default member account (member@gawisherbal.com) with <strong>complete delivery address</strong></li>
+                        <li><strong>Current system settings preserved</strong> (fees, email verification)</li>
+                        <li><strong>Current application settings preserved</strong> (tax rate, email verification after registration)</li>
                         <li><strong>All roles and permissions preserved</strong></li>
-                        <li><strong>Sample packages restored to initial state</strong> (5 packages)</li>
+                        <li><strong>Sample packages restored to initial state</strong> (preloaded e-commerce products)</li>
                         <li>Fresh wallets with initial balances ($1,000 & $100)</li>
-                        <li>Clean e-commerce system ready for new orders</li>
+                        <li>Clean e-commerce system ready for new orders (26-status order lifecycle)</li>
+                        <li>Return & refund system ready for testing (7-day return window)</li>
                         <li><strong>Fresh log files for clean debugging</strong></li>
                         <li><strong>Optimized performance with cleared caches</strong></li>
                     </ul>

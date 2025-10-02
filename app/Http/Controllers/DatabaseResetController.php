@@ -97,11 +97,11 @@ class DatabaseResetController extends Controller
                     'redirect' => route('login'),
                     'credentials' => [
                         'admin' => [
-                            'email' => 'admin@ewallet.com',
+                            'email' => 'admin@gawisherbal.com',
                             'password' => 'Admin123!@#'
                         ],
                         'member' => [
-                            'email' => 'member@ewallet.com',
+                            'email' => 'member@gawisherbal.com',
                             'password' => 'Member123!@#'
                         ]
                     ]

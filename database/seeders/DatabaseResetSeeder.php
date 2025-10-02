@@ -43,6 +43,9 @@ class DatabaseResetSeeder extends Seeder
         // Step 4: Ensure system settings are preserved (no action needed since we don't clear them)
         $this->ensureSystemSettings([]);
 
+        // Step 4.5: Ensure application settings are preserved/created
+        $this->ensureApplicationSettings();
+
         // Step 5: Create/update wallets for users
         $this->ensureUserWallets();
 
@@ -53,28 +56,39 @@ class DatabaseResetSeeder extends Seeder
         $this->updateResetTracking();
 
         $this->command->info('✅ Database reset completed successfully!');
-        $this->command->info('👤 Admin: admin@ewallet.com / Admin123!@#');
-        $this->command->info('👤 Member: member@ewallet.com / Member123!@#');
+        $this->command->info('👤 Admin: admin@gawisherbal.com / Admin123!@#');
+        $this->command->info('👤 Member: member@gawisherbal.com / Member123!@#');
         $this->command->info('⚙️  System settings preserved');
+        $this->command->info('⚙️  Application settings preserved');
         $this->command->info('📦 Preloaded packages restored');
         $this->command->info('🛒 Order history cleared (ready for new orders)');
         $this->command->info('↩️  Return requests cleared (ready for new returns)');
         $this->command->info('🔢 User IDs reset to sequential (1, 2)');
+        $this->command->info('📍 Complete profile data for admin and member');
         $this->command->info('');
-        $this->command->info('🚀 Sprint 1 Performance & Security Enhancements Active:');
+        $this->command->info('🚀 E-Commerce Platform Features:');
+        $this->command->info('  ✅ 26-Status Order Lifecycle Management');
+        $this->command->info('  ✅ Dual Delivery Methods (Office Pickup + Home Delivery)');
+        $this->command->info('  ✅ Shopping Cart with Real-time Updates');
+        $this->command->info('  ✅ Integrated E-Wallet Payment System');
+        $this->command->info('  ✅ Complete Return & Refund System');
+        $this->command->info('  ✅ Package Management with Inventory Tracking');
+        $this->command->info('  ✅ Order Analytics Dashboard');
+        $this->command->info('');
+        $this->command->info('🔒 Performance & Security Enhancements:');
         $this->command->info('  ✅ Database indexes for faster queries');
         $this->command->info('  ✅ Eager loading to eliminate N+1 queries');
         $this->command->info('  ✅ Package caching for improved load times');
         $this->command->info('  ✅ Rate limiting on critical routes');
         $this->command->info('  ✅ CSRF protection on all AJAX operations');
-        $this->command->info('  ✅ Wallet transaction locking (prevents race conditions)');
+        $this->command->info('  ✅ Transaction locking (prevents race conditions)');
         $this->command->info('  ✅ Secure cryptographic order number generation');
         $this->command->info('');
-        $this->command->info('📋 Return Process Features:');
+        $this->command->info('📋 Return & Refund Process:');
         $this->command->info('  ✅ 7-day return window after delivery');
-        $this->command->info('  ✅ Customer return request with images');
+        $this->command->info('  ✅ Customer return request with proof images');
         $this->command->info('  ✅ Admin approval/rejection workflow');
-        $this->command->info('  ✅ Automatic e-wallet refund processing');
+        $this->command->info('  ✅ Automatic wallet refund processing');
     }
 
     /**
@@ -85,7 +99,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('🗑️  Clearing user transactions and orders (preserving system settings, users, roles, and permissions)...');
 
         // Get default user IDs to preserve
-        $defaultUserEmails = ['admin@ewallet.com', 'member@ewallet.com'];
+        $defaultUserEmails = ['admin@gawisherbal.com', 'member@gawisherbal.com'];
         $defaultUserIds = DB::table('users')
             ->whereIn('email', $defaultUserEmails)
             ->pluck('id')
@@ -233,7 +247,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('👥 Ensuring default users exist and have correct roles...');
 
         // Delete existing default users to recreate with proper IDs
-        $defaultUserEmails = ['admin@ewallet.com', 'member@ewallet.com'];
+        $defaultUserEmails = ['admin@gawisherbal.com', 'member@gawisherbal.com'];
 
         // Get existing user IDs before deletion
         $existingUsers = User::whereIn('email', $defaultUserEmails)->get();
@@ -277,29 +291,45 @@ class DatabaseResetSeeder extends Seeder
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Create admin user (will get ID = 1)
+        // Create admin user (will get ID = 1) with complete profile
         $admin = User::create([
             'username' => 'admin',
             'fullname' => 'System Administrator',
-            'email' => 'admin@ewallet.com',
+            'email' => 'admin@gawisherbal.com',
             'password' => Hash::make('Admin123!@#'),
             'email_verified_at' => now(),
+            'phone' => '+63 (947) 367-7436',
+            'address' => '123 Herbal Street',
+            'address_2' => null,
+            'city' => 'Wellness City',
+            'state' => 'HC',
+            'zip' => '12345',
+            'delivery_instructions' => null,
+            'delivery_time_preference' => 'anytime',
         ]);
 
         $admin->syncRoles(['admin']);
-        $this->command->info('✅ Created admin user (ID: ' . $admin->id . ')');
+        $this->command->info('✅ Created admin user (ID: ' . $admin->id . ') with complete profile');
 
-        // Create member user (will get ID = 2)
+        // Create member user (will get ID = 2) with modified profile
         $member = User::create([
             'username' => 'member',
-            'fullname' => 'Test Member',
-            'email' => 'member@ewallet.com',
+            'fullname' => 'John Michael Santos',
+            'email' => 'member@gawisherbal.com',
             'password' => Hash::make('Member123!@#'),
             'email_verified_at' => now(),
+            'phone' => '+63 (912) 456-7890',
+            'address' => '456 Wellness Avenue',
+            'address_2' => 'Unit 202',
+            'city' => 'Health City',
+            'state' => 'Metro Manila',
+            'zip' => '54321',
+            'delivery_instructions' => 'Ring doorbell twice. Gate code: 1234',
+            'delivery_time_preference' => 'morning',
         ]);
 
         $member->syncRoles(['member']);
-        $this->command->info('✅ Created member user (ID: ' . $member->id . ')');
+        $this->command->info('✅ Created member user (ID: ' . $member->id . ') with complete delivery address');
 
         $this->command->info('✅ Default users created with sequential IDs (1, 2)');
     }
@@ -331,7 +361,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('⚙️  Creating minimal default settings...');
 
         $defaults = [
-            ['key' => 'app_name', 'value' => 'Gawis iHerbal E-Wallet', 'type' => 'string', 'description' => 'Application name'],
+            ['key' => 'app_name', 'value' => 'Gawis iHerbal', 'type' => 'string', 'description' => 'Application name'],
             ['key' => 'app_version', 'value' => '1.0.0', 'type' => 'string', 'description' => 'Application version'],
             ['key' => 'email_verification_enabled', 'value' => true, 'type' => 'boolean', 'description' => 'Enable email verification'],
             ['key' => 'maintenance_mode', 'value' => false, 'type' => 'boolean', 'description' => 'Maintenance mode status']
@@ -345,14 +375,54 @@ class DatabaseResetSeeder extends Seeder
     }
 
     /**
+     * Ensure application settings (tax rate, email verification after registration) are preserved/created
+     */
+    private function ensureApplicationSettings(): void
+    {
+        $this->command->info('⚙️  Verifying application settings preservation...');
+
+        // Check if application settings exist in system_settings table
+        $taxRateSetting = SystemSetting::where('key', 'tax_rate')->first();
+        $emailVerifRegSetting = SystemSetting::where('key', 'email_verification_required')->first();
+
+        if ($taxRateSetting && $emailVerifRegSetting) {
+            $this->command->info("✅ Application settings preserved (tax rate, email verification)");
+            return;
+        }
+
+        // Create default application settings if they don't exist
+        $this->command->info('⚙️  Creating default application settings...');
+
+        if (!$taxRateSetting) {
+            SystemSetting::create([
+                'key' => 'tax_rate',
+                'value' => 0.12,
+                'type' => 'decimal',
+                'description' => 'E-commerce tax rate (0.0 to 1.0)'
+            ]);
+            $this->command->info('✅ Created default tax rate: 12%');
+        }
+
+        if (!$emailVerifRegSetting) {
+            SystemSetting::create([
+                'key' => 'email_verification_required',
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Require email verification after registration'
+            ]);
+            $this->command->info('✅ Created default email verification setting: enabled');
+        }
+    }
+
+    /**
      * Reset wallets for default users to initial balances
      */
     private function ensureUserWallets(): void
     {
         $this->command->info('💰 Resetting default user wallets to initial balances...');
 
-        $admin = User::where('email', 'admin@ewallet.com')->first();
-        $member = User::where('email', 'member@ewallet.com')->first();
+        $admin = User::where('email', 'admin@gawisherbal.com')->first();
+        $member = User::where('email', 'member@gawisherbal.com')->first();
 
         if ($admin) {
             // Reset admin wallet to initial balance
