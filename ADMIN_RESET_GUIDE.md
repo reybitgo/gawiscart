@@ -25,6 +25,8 @@ php artisan db:seed --class=DatabaseResetSeeder
 
 ### ✅ Cleared (Fresh Start)
 - All orders and order items
+- All order status histories
+- All return requests
 - All transactions
 - Non-default user accounts
 - Wallets (reset to initial balances)
@@ -33,7 +35,7 @@ php artisan db:seed --class=DatabaseResetSeeder
 ### ✅ Preserved (Your Settings Stay)
 - **All system settings** (tax rates, email verification, etc.)
 - **Roles and permissions** structure
-- **Default users** (admin & member)
+- **Default users** (admin & member - recreated with sequential IDs: 1, 2)
 - **Application configuration**
 
 ### ✅ Automatically Applied (Sprint 1 Enhancements)
@@ -86,12 +88,27 @@ After running the reset, you should see output like this:
 ✅ Performance indexes migration detected
 ℹ️  Cache driver: database
 🗑️  Clearing user transactions and orders...
+✅ Cleared all return requests
+✅ Cleared all order status histories
 ✅ Cleared all order items
 ✅ Cleared all orders
 ✅ Cleared all transactions
+✅ Preserved wallets for 2 default users
+✅ Preserved 2 default users with their roles
+✅ Auto-increment counters reset for all cleared tables
+🔐 Ensuring roles and permissions exist...
+✅ Found 2 roles and 8 permissions (preserved)
+👥 Ensuring default users exist and have correct roles...
+✅ Created admin user (ID: 1)
+✅ Created member user (ID: 2)
+✅ Default users created with sequential IDs (1, 2)
+💰 Resetting default user wallets to initial balances...
+✅ Default user wallets reset to initial balances
+💰 Admin wallet: $1,000.00
+💰 Member wallet: $100.00
 📦 Resetting and reloading preloaded packages...
-🗑️  Cleared cache for X packages
-✅ Reloaded X preloaded packages
+🗑️  Cleared all existing packages
+✅ Reloaded 5 preloaded packages
 ✅ Database reset completed successfully!
 
 👤 Admin: admin@ewallet.com / Admin123!@#
@@ -99,6 +116,8 @@ After running the reset, you should see output like this:
 ⚙️  System settings preserved
 📦 Preloaded packages restored
 🛒 Order history cleared (ready for new orders)
+↩️  Return requests cleared (ready for new returns)
+🔢 User IDs reset to sequential (1, 2)
 
 🚀 Sprint 1 Performance & Security Enhancements Active:
   ✅ Database indexes for faster queries
@@ -108,6 +127,12 @@ After running the reset, you should see output like this:
   ✅ CSRF protection on all AJAX operations
   ✅ Wallet transaction locking (prevents race conditions)
   ✅ Secure cryptographic order number generation
+
+📋 Return Process Features:
+  ✅ 7-day return window after delivery
+  ✅ Customer return request with images
+  ✅ Admin approval/rejection workflow
+  ✅ Automatic e-wallet refund processing
 ```
 
 ---
@@ -148,7 +173,24 @@ After running the reset, you should see output like this:
    Check order history
    ```
 
-5. **Security Test**
+5. **Order Fulfillment & Return Test**
+   ```
+   As Admin:
+   - Navigate to /admin/orders
+   - Mark order as delivered (set delivery timestamp)
+
+   As Customer:
+   - Navigate to /orders/{order}
+   - Verify "Return Request" section appears
+   - Submit return request with reason and description
+
+   As Admin:
+   - Navigate to /admin/returns
+   - Verify pending return request appears with badge
+   - Approve or reject the return request
+   ```
+
+6. **Security Test**
    ```
    Try rapid checkout submissions (should be rate-limited)
    Check order numbers (should be non-sequential)
@@ -198,14 +240,20 @@ php artisan tinker
 
 Before deploying to production:
 
-1. **Switch to Redis Cache**
+1. **Verify Timezone Configuration**
+   ```env
+   APP_TIMEZONE=Asia/Manila
+   ```
+   The system is configured to use **Asia/Manila** timezone for all timestamps.
+
+2. **Switch to Redis Cache**
    ```env
    CACHE_STORE=redis
    REDIS_HOST=127.0.0.1
    REDIS_PORT=6379
    ```
 
-2. **Enable Query Logging (Temporarily)**
+3. **Enable Query Logging (Temporarily)**
    ```bash
    php artisan tinker
    >>> DB::enableQueryLog();
@@ -214,12 +262,12 @@ Before deploying to production:
    ```
    Should be <20 queries per page
 
-3. **Monitor Performance**
+4. **Monitor Performance**
    - Page load times should be <2s
    - Cart operations should be <500ms
    - Checkout should complete in <1s
 
-4. **Security Audit**
+5. **Security Audit**
    - Verify rate limiting works: `ab -n 35 -c 5 http://your-site.com/cart/add/1`
    - Check order numbers are random
    - Verify CSRF tokens on all POST requests
@@ -250,6 +298,9 @@ Before deploying to production:
 - **Full Sprint 1 Report**: See `SPRINT1_COMPLETED.md`
 - **Enhancement Roadmap**: See `ECOMMERCE_ENHANCEMENTS.md`
 - **E-Commerce Features**: See `ECOMMERCE_ROADMAP.md`
+- **Return Process Guide**: See `RETURN_PROCESS_COMPLETE_TEST_GUIDE.md`
+- **Return Implementation**: See `RETURN_PROCESS_IMPLEMENTATION.md`
+- **Order Return Policy**: See `ORDER_RETURN.md`
 - **Project Overview**: See `CLAUDE.md`
 
 ---
@@ -265,9 +316,39 @@ Before deploying to production:
 | CSRF Protection | ✅ Verified | layouts/admin.blade.php |
 | Wallet Locking | ✅ Active | WalletPaymentService, WalletController |
 | Secure Order Numbers | ✅ Active | Order model |
+| Return Requests | ✅ Active | AdminReturnController, ReturnRequestController |
+| Order Status Tracking | ✅ Active | Order model (22 statuses) |
+| E-Wallet Refunds | ✅ Active | Order::processRefund() |
 
 ---
 
-**Last Updated**: 2025-09-30
-**Sprint**: 1 (Security & Performance Foundation)
+## Important Notes
+
+### User ID Sequencing
+After reset, users are recreated with proper sequential IDs:
+- Admin user: **ID = 1**
+- Member user: **ID = 2**
+
+This ensures clean database state and prevents ID gaps that can occur from repeated testing.
+
+### Return Process Tables
+The following tables are now included in the reset:
+- `return_requests` - Customer return submissions
+- `order_status_histories` - Complete order lifecycle tracking
+
+### Auto-Increment Reset
+All cleared tables have their auto-increment counters reset to 1:
+- ✅ `users` (after recreation)
+- ✅ `orders`
+- ✅ `order_items`
+- ✅ `order_status_histories`
+- ✅ `return_requests`
+- ✅ `transactions`
+
+This provides a clean slate for testing and ensures consistent data patterns.
+
+---
+
+**Last Updated**: 2025-10-02
+**Sprint**: Return Process Implementation Complete
 **Status**: ✅ Production Ready

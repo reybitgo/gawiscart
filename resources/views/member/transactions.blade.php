@@ -123,7 +123,7 @@
 <!-- Professional Transactions Table -->
 <div class="card shadow-sm">
     <div class="card-header bg-white border-bottom">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
             <div class="d-flex align-items-center">
                 <div class="bg-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px; flex-shrink: 0;">
                     <svg class="icon text-white">
@@ -131,17 +131,17 @@
                     </svg>
                 </div>
                 <div>
-                    <h5 class="mb-0 fw-bold">Transaction History</h5>
-                    <small class="text-muted">Manage and review all your e-wallet transactions</small>
+                    <h5 class="mb-0 fw-bold">Recent Transactions</h5>
+                    <small class="text-muted">View and track all your wallet activity</small>
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex flex-column flex-sm-row align-items-start gap-2">
                 <div class="badge bg-light text-dark px-3 py-2">
-                    <strong>{{ $transactions->total() }}</strong> total transactions
+                    <strong>{{ $transactions->total() }}</strong> total
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <label for="per_page" class="form-label mb-0 small text-muted">Show:</label>
-                    <select id="per_page" onchange="changePerPage(this.value)" class="form-select form-select-sm border-primary">
+                    <label for="per_page" class="form-label mb-0 small text-muted text-nowrap">Show:</label>
+                    <select id="per_page" onchange="changePerPage(this.value)" class="form-select form-select-sm border-primary" style="min-width: 70px;">
                         <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10</option>
                         <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
                         <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>

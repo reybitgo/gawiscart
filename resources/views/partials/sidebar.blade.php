@@ -93,6 +93,20 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link{{ Request::routeIs('admin.returns.*') ? ' active' : '' }}" href="{{ route('admin.returns.index') }}">
+                            <span class="nav-icon">
+                                <span class="nav-icon-bullet"></span>
+                            </span>
+                            Return Requests
+                            @php
+                                $pendingReturnsCount = \App\Models\ReturnRequest::where('status', 'pending')->count();
+                            @endphp
+                            @if($pendingReturnsCount > 0)
+                                <span class="badge badge-sm bg-warning ms-auto">{{ $pendingReturnsCount }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link{{ Request::routeIs('admin.settings.*') ? ' active' : '' }}" href="{{ route('admin.settings.index') }}">
                             <span class="nav-icon">
                                 <span class="nav-icon-bullet"></span>

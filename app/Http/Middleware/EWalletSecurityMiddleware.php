@@ -23,10 +23,8 @@ class EWalletSecurityMiddleware
             return redirect()->route('login');
         }
 
-        // Check if user has verified email (conditional based on system settings)
-        if ($user->mustVerifyEmail()) {
-            return redirect()->route('verification.notice');
-        }
+        // Email verification is now optional - users can use the system without verified emails
+        // Email notifications are handled conditionally throughout the app
 
         // Check for required permissions
         foreach ($permissions as $permission) {

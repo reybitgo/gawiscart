@@ -4,9 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Laravel 12 application with authentication, user management, wallet system, transaction tracking features, and a comprehensive e-commerce system. The application uses Laravel Fortify for authentication (including two-factor authentication), Spatie Laravel Permission for role-based access control, and includes a comprehensive wallet/transaction system with fee management.
+This is a **Laravel 12 e-commerce application** with complete order management, returns/refunds processing, and customer delivery tracking. The application features comprehensive package management, shopping cart, checkout, and a 26-status order lifecycle system with dual delivery methods (office pickup and home delivery). Authentication is handled by Laravel Fortify (including two-factor authentication), role-based access control via Spatie Laravel Permission, and an integrated e-wallet system for seamless payment processing.
 
-**E-Commerce Status**: Phase 6 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration + Order Management & History System + Admin Order Management & Analytics)
+**E-Commerce Status**: Phase 6 Complete + Return/Refund System ✅
+- ✅ Package Management (CRUD, inventory, images)
+- ✅ Shopping Cart (session-based, real-time updates)
+- ✅ Checkout Process (order review, confirmation)
+- ✅ E-Wallet Payment Integration (instant payments, automatic refunds)
+- ✅ Order Management (26-status lifecycle, dual delivery methods)
+- ✅ Admin Order Dashboard (analytics, bulk operations, filtering)
+- ✅ Return/Refund System (customer requests, admin approval, automatic wallet refunds)
 
 ## Development Commands
 
@@ -60,6 +67,27 @@ php artisan migrate:rollback
 php artisan make:migration create_table_name
 ```
 
+## Important Development Notes
+
+### Windows NUL File Issue ⚠️
+**Problem**: A file named `NUL` may occasionally appear in the project root directory on Windows systems.
+
+**Cause**: This occurs when shell commands use output redirection to `NUL` (e.g., `> NUL` or `2> NUL`) in contexts where Windows doesn't properly interpret it as the null device. This can happen with:
+- Git bash or WSL commands
+- npm/node scripts with output suppression
+- Laravel Pint or other PHP tools
+- Any script using Windows null device redirection
+
+**Solution**:
+- The `NUL` file is safe to delete - it's not needed by the application
+- It's just a vestige of malformed shell redirections
+- No action needed from Claude Code - just be aware it may appear
+
+**Prevention**:
+- Use lowercase `nul` in Windows CMD: `> nul 2>&1`
+- Use `/dev/null` in Git Bash/WSL: `> /dev/null 2>&1`
+- Avoid uppercase `NUL` in scripts when possible
+
 ## Application Architecture
 
 ### Authentication & Authorization
@@ -70,13 +98,15 @@ php artisan make:migration create_table_name
 - Custom User model with wallet relationship and enhanced email verification logic
 
 ### Core Models
-- **User**: Extended with wallet relationships, two-factor auth, roles/permissions
-- **Wallet**: One-to-one relationship with User
-- **Transaction**: Belongs to User, tracks financial transactions
-- **SystemSetting**: Key-value configuration storage
-- **Package**: E-commerce packages with pricing, points, inventory, and media management
-- **Order**: Complete order management with status tracking and package snapshots
-- **OrderItem**: Individual order items with package snapshot preservation
+- **User**: Extended with wallet relationships, two-factor auth, roles/permissions, delivery addresses
+- **Package**: E-commerce products with pricing, inventory, images, and SEO-friendly slugs
+- **Order**: Complete order management with 26-status lifecycle, delivery tracking, and package snapshots
+- **OrderItem**: Individual order items with package snapshot preservation at time of purchase
+- **OrderStatusHistory**: Full audit trail of all status changes with admin notes
+- **ReturnRequest**: Customer return requests with reason tracking, image uploads, and admin responses
+- **Wallet**: One-to-one relationship with User for payment processing (supporting e-commerce transactions)
+- **Transaction**: Financial transaction tracking for payments, refunds, and wallet operations
+- **SystemSetting**: Key-value configuration storage for application-wide settings
 
 ### Key Directories
 - `app/Actions/Fortify/`: Custom Fortify action classes
@@ -101,7 +131,9 @@ php artisan make:migration create_table_name
 - Test suites: Unit and Feature tests in `tests/` directory
 
 ### E-Commerce System
-**Current Status**: Phase 6 Complete ✅ (Package Management + Shopping Cart + Checkout Process + Wallet Payment Integration + Order Management & History System + Admin Order Management & Analytics)
+**Current Status**: Phase 6 Complete + Return/Refund System ✅
+
+The application is a fully-functional e-commerce platform with complete order lifecycle management (26 statuses), dual delivery methods, return/refund processing, and admin analytics dashboard.
 
 #### Package Management System ✅
 - **Admin Interface**: Full CRUD operations for packages via `/admin/packages`
@@ -152,15 +184,16 @@ php artisan make:migration create_table_name
 
 #### Admin Order Management & Analytics System ✅
 - **Comprehensive Order Dashboard**: Advanced admin interface at `/admin/orders`
-- **17-Status Order Lifecycle**: Complete order status management system
+- **26-Status Order Lifecycle**: Complete order status management system (reduced from 27, removed redundant "in_transit")
 - **Dual Delivery Methods**: Office pickup (recommended) and home delivery support
 - **Advanced Filtering**: Status-based, date-based, and customer-based filtering
 - **Bulk Operations**: Multi-order status updates and management
 - **Order Analytics**: Revenue metrics, status distribution, fulfillment analytics
 - **Customer Management**: Integrated customer information and communication
 - **Delivery Management**: Complete address tracking and delivery coordination
-- **Status History**: Full audit trail of all order status changes
-- **Real-time Updates**: AJAX-powered interface with instant feedback
+- **Status History**: Full audit trail of all order status changes with editable notes
+- **Real-time Updates**: AJAX-powered interface with instant feedback and toast notifications
+- **Timeline Management**: Visual order progression with inline note editing
 
 #### Profile-Based Delivery System ✅
 - **Centralized Address Management**: Single point of entry in user profile
@@ -170,25 +203,46 @@ php artisan make:migration create_table_name
 - **Delivery Preferences**: Time preferences and special instructions
 - **Address Validation**: Real-time validation with user feedback
 
-#### Available URLs
-- **Admin Package Management**: `/admin/packages` (full CRUD)
-- **Admin Application Settings**: `/admin/application-settings` (tax rate, email verification)
-- **Admin Order Management**: `/admin/orders` (comprehensive order management)
-- **Admin Order Details**: `/admin/orders/{order}` (detailed order management)
-- **Admin Order Analytics**: `/admin/orders/analytics` (order analytics and reporting)
-- **Public Package Browsing**: `/packages` (listing with search/sort)
-- **Individual Package Pages**: `/packages/{slug}` (SEO-friendly)
-- **Shopping Cart**: `/cart` (full cart management)
-- **Checkout Process**: `/checkout` (order review and placement)
-- **Order Confirmation**: `/checkout/confirmation/{order}` (order details and management)
-- **Member Order History**: `/orders` (customer order history)
-- **Member Order Details**: `/orders/{order}` (detailed order information)
-- **User Profile**: `/profile` (delivery address management)
-- **Cart API**: AJAX endpoints for cart operations
+#### Return & Refund System ✅
+- **Customer Return Interface**: Return request submission at `/orders/{order}` (delivered orders only)
+- **Return Reasons**: Predefined categories (damaged, wrong item, quality issue, etc.)
+- **Image Upload**: Customers can upload proof images for return claims
+- **Return Window**: 7-day return window from delivery date (configurable in Order model)
+- **Admin Return Dashboard**: Complete return management at `/admin/returns`
+- **Return Approval/Rejection**: Admin can approve or reject with custom responses
+- **Automatic Refunds**: E-wallet refunds processed automatically upon return confirmation
+- **Return Tracking**: Full tracking of return status from request to refund
+- **Order Status Integration**: Return statuses integrated with main order lifecycle
 
-#### Next Phase
-- **Phase 7**: Advanced reporting and analytics dashboard
-- **Phase 8**: Inventory management and restocking system
+#### Available URLs
+**Admin Panel:**
+- `/admin/packages` - Package management (full CRUD)
+- `/admin/application-settings` - Application settings (tax rate, email verification)
+- `/admin/orders` - Order management dashboard (26-status lifecycle)
+- `/admin/orders/{order}` - Detailed order management with timeline
+- `/admin/orders/analytics` - Order analytics and reporting
+- `/admin/returns` - Return request management and approval
+
+**Customer-Facing:**
+- `/packages` - Package catalog with search/filter/sort
+- `/packages/{slug}` - Individual package details (SEO-friendly)
+- `/cart` - Shopping cart management
+- `/checkout` - Checkout and order placement
+- `/checkout/confirmation/{order}` - Order confirmation page
+- `/orders` - Order history for logged-in customers
+- `/orders/{order}` - Order details with return request option
+- `/profile` - User profile with delivery address management
+
+**API Endpoints:**
+- Cart operations (AJAX)
+- Order status updates (AJAX with toast notifications)
+- Timeline notes editing (AJAX)
+
+#### Next Development Phases
+- **Phase 7**: Advanced reporting and analytics dashboard with export capabilities
+- **Phase 8**: Inventory management, low-stock alerts, and automated restocking system
+- **Phase 9**: Customer reviews and ratings for packages
+- **Phase 10**: Multi-vendor marketplace support
 
 ## Common Development Tasks
 
@@ -318,6 +372,12 @@ php artisan migrate:fresh --seed
 - Bcrypt rounds reduced to 4 for faster tests
 - Test database automatically configured in `phpunit.xml`
 
+### Timezone Configuration
+- **Application Timezone**: `Asia/Manila` (configured in `.env` and `config/app.php`)
+- All timestamps (orders, transactions, deliveries, returns, etc.) use Asia/Manila timezone
+- Database timestamps are stored in application timezone
+- All `now()` and `Carbon::now()` calls automatically use configured timezone
+
 ### E-Commerce Configuration Details
 
 #### Package System
@@ -342,9 +402,10 @@ php artisan migrate:fresh --seed
 #### Key Files Created
 **Models & Services:**
 - `app/Models/Package.php` - Package model with business logic
-- `app/Models/Order.php` - Order model with comprehensive business logic and status management
+- `app/Models/Order.php` - Order model with 26-status lifecycle and comprehensive business logic
 - `app/Models/OrderItem.php` - Order item model with package snapshot functionality
-- `app/Models/OrderStatusHistory.php` - Order status history tracking
+- `app/Models/OrderStatusHistory.php` - Order status history tracking with editable notes
+- `app/Models/ReturnRequest.php` - Return request model with status management
 - `app/Services/CartService.php` - Comprehensive cart management service
 - `app/Services/WalletPaymentService.php` - Complete wallet payment processing service
 - `app/Services/OrderStatusService.php` - Order status management and validation
@@ -353,11 +414,13 @@ php artisan migrate:fresh --seed
 **Controllers:**
 - `app/Http/Controllers/Admin/AdminPackageController.php` - Admin package CRUD
 - `app/Http/Controllers/Admin/AdminSettingsController.php` - Application settings management
-- `app/Http/Controllers/Admin/AdminOrderController.php` - Complete admin order management
+- `app/Http/Controllers/Admin/AdminOrderController.php` - Complete admin order management with timeline editing
+- `app/Http/Controllers/Admin/AdminReturnController.php` - Return request approval and refund processing
 - `app/Http/Controllers/PackageController.php` - Public package browsing with cart status indicators
 - `app/Http/Controllers/CartController.php` - Cart operations and API
 - `app/Http/Controllers/CheckoutController.php` - Complete checkout process and order management
 - `app/Http/Controllers/OrderHistoryController.php` - Member order history and details
+- `app/Http/Controllers/ReturnRequestController.php` - Customer return request submission
 - `app/Http/Controllers/ProfileController.php` - Enhanced with delivery address management
 
 **Middleware:**
@@ -365,14 +428,16 @@ php artisan migrate:fresh --seed
 
 **Database:**
 - `database/migrations/*_create_packages_table.php` - Package database structure
-- `database/migrations/*_create_orders_table.php` - Order management structure
+- `database/migrations/*_create_orders_table.php` - Order management structure (26 statuses)
 - `database/migrations/*_create_order_items_table.php` - Order items with package snapshots
+- `database/migrations/*_create_return_requests_table.php` - Return requests with image support
 - `database/migrations/*_enhance_orders_table_for_delivery_system.php` - Enhanced order status system
 - `database/migrations/*_create_order_status_histories_table.php` - Order status history tracking
 - `database/migrations/*_add_delivery_address_to_users_table.php` - User delivery address fields
 - `database/migrations/*_add_delivery_address_json_to_orders_table.php` - Order delivery address storage
 - `database/migrations/*_add_payment_and_refund_to_transaction_types.php` - Payment transaction types
 - `database/migrations/*_add_completed_status_to_transactions.php` - Transaction status enhancement
+- `database/migrations/*_add_return_statuses_to_orders_status_enum.php` - Return statuses (removed in_transit)
 - `database/seeders/PackageSeeder.php` - Sample package data
 - `database/seeders/SystemSettingSeeder.php` - Application settings seeder
 
@@ -380,14 +445,16 @@ php artisan migrate:fresh --seed
 - `resources/views/admin/packages/` - Complete admin interface
 - `resources/views/admin/settings/index.blade.php` - Application settings interface
 - `resources/views/admin/orders/index.blade.php` - Advanced admin order management interface
-- `resources/views/admin/orders/show.blade.php` - Comprehensive admin order details
+- `resources/views/admin/orders/show.blade.php` - Comprehensive admin order details with editable timeline
+- `resources/views/admin/returns/index.blade.php` - Return request management dashboard
 - `resources/views/packages/` - Public package browsing with cart status indicators
 - `resources/views/cart/index.blade.php` - Full cart management page
 - `resources/views/checkout/index.blade.php` - Enhanced checkout with delivery address
 - `resources/views/checkout/confirmation.blade.php` - Order confirmation and management
 - `resources/views/orders/index.blade.php` - Member order history interface
-- `resources/views/orders/show.blade.php` - Detailed member order view with delivery info
+- `resources/views/orders/show.blade.php` - Detailed member order view with return request option
 - `resources/views/orders/partials/order-list.blade.php` - Order listing components
+- `resources/views/orders/partials/return-request-form.blade.php` - Return request submission form
 - `resources/views/profile/show.blade.php` - Enhanced profile with delivery address
 - `resources/views/legal/` - Terms of service and privacy policy modals
 

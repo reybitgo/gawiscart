@@ -29,7 +29,7 @@
 </div>
 
 <!-- Balance Information Cards -->
-<div class="row mb-4">
+<div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
@@ -223,8 +223,22 @@
                                                     Fee calculation:
                                                     @if($withdrawalFeeSettings['fee_type'] === 'percentage')
                                                         {{ $withdrawalFeeSettings['fee_value'] }}% of withdrawal amount
-                                                        @if($withdrawalFeeSettings['minimum_fee'] > 0 || $withdrawalFeeSettings['maximum_fee'] < 999999)
-                                                            (Min: ${{ number_format($withdrawalFeeSettings['minimum_fee'], 2) }}, Max: ${{ number_format($withdrawalFeeSettings['maximum_fee'], 2) }})
+                                                        @php
+                                                            $hasMinFee = $withdrawalFeeSettings['minimum_fee'] > 0;
+                                                            $hasMaxFee = $withdrawalFeeSettings['maximum_fee'] > 0;
+                                                        @endphp
+                                                        @if($hasMinFee || $hasMaxFee)
+                                                            (
+                                                            @if($hasMinFee)
+                                                                Min: ${{ number_format($withdrawalFeeSettings['minimum_fee'], 2) }}
+                                                            @endif
+                                                            @if($hasMinFee && $hasMaxFee)
+                                                                ,
+                                                            @endif
+                                                            @if($hasMaxFee)
+                                                                Max: ${{ number_format($withdrawalFeeSettings['maximum_fee'], 2) }}
+                                                            @endif
+                                                            )
                                                         @endif
                                                     @else
                                                         Fixed fee of ${{ number_format($withdrawalFeeSettings['fee_value'], 2) }}
@@ -413,9 +427,16 @@
             fee = withdrawalFeeSettings.fee_value;
         }
 
-        // Apply min/max limits
-        fee = Math.max(fee, withdrawalFeeSettings.minimum_fee);
-        fee = Math.min(fee, withdrawalFeeSettings.maximum_fee);
+        // Apply minimum limit (0 means no minimum)
+        if (withdrawalFeeSettings.minimum_fee > 0) {
+            fee = Math.max(fee, withdrawalFeeSettings.minimum_fee);
+        }
+
+        // Apply maximum limit (0 means no limit)
+        if (withdrawalFeeSettings.maximum_fee > 0) {
+            fee = Math.min(fee, withdrawalFeeSettings.maximum_fee);
+        }
+
         fee = Math.round(fee * 100) / 100; // Round to 2 decimal places
 
         const totalAmount = amount + fee;

@@ -35,7 +35,7 @@
 @section('content')
 <div class="container-fluid">
     <!-- Order Statistics Cards -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         @foreach($statusStats as $groupName => $stats)
         <div class="col-md-2 col-sm-4 col-6">
             <div class="card text-center">
@@ -396,6 +396,9 @@
     </div>
 </div>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @endsection
 
 @push('scripts')
@@ -592,4 +595,3 @@ function getStatusBadgeColor(status) {
 }
 </script>
 @endpush
-

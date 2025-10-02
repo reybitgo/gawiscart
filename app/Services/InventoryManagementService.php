@@ -354,15 +354,42 @@ class InventoryManagementService
                 return;
             }
 
-            // Send alert to admins
+            // Send alert to admins with verified emails only
             $admins = User::role('admin')->get();
+            $sentCount = 0;
+            $skippedCount = 0;
+
             foreach ($admins as $admin) {
                 try {
-                    Mail::to($admin->email)->send(new LowStockAlert($package));
+                    // Check if admin has verified email
+                    if ($admin->hasVerifiedEmail()) {
+                        Mail::to($admin->email)->send(new LowStockAlert($package));
+                        $sentCount++;
+
+                        Log::info('Low stock alert sent to admin', [
+                            'package_id' => $package->id,
+                            'package_name' => $package->name,
+                            'admin_id' => $admin->id,
+                            'admin_email' => $admin->email,
+                            'current_stock' => $package->quantity_available,
+                            'threshold' => $threshold
+                        ]);
+                    } else {
+                        $skippedCount++;
+
+                        Log::warning('Low stock alert skipped - Admin email not verified', [
+                            'package_id' => $package->id,
+                            'package_name' => $package->name,
+                            'admin_id' => $admin->id,
+                            'admin_email' => $admin->email ?? 'N/A',
+                            'current_stock' => $package->quantity_available,
+                            'threshold' => $threshold
+                        ]);
+                    }
                 } catch (\Exception $e) {
                     Log::error('Failed to send low stock alert', [
                         'package_id' => $package->id,
-                        'admin_email' => $admin->email,
+                        'admin_email' => $admin->email ?? 'N/A',
                         'error' => $e->getMessage()
                     ]);
                 }
@@ -371,11 +398,13 @@ class InventoryManagementService
             // Cache alert to prevent spam (24 hours)
             Cache::put($cacheKey, true, now()->addDay());
 
-            Log::warning('Low stock alert sent', [
+            Log::warning('Low stock alert process completed', [
                 'package_id' => $package->id,
                 'package_name' => $package->name,
                 'current_stock' => $package->quantity_available,
-                'threshold' => $threshold
+                'threshold' => $threshold,
+                'emails_sent' => $sentCount,
+                'emails_skipped' => $skippedCount
             ]);
         }
     }

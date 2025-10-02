@@ -320,17 +320,35 @@ class WalletPaymentService
                 $order->load('user');
             }
 
-            // Send payment confirmation email
-            Mail::to($order->user->email)->send(
-                new OrderPaymentConfirmed($order, $paymentMethod)
-            );
+            $user = $order->user;
 
-            Log::info('Payment confirmation email sent', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'recipient' => $order->user->email,
-                'payment_method' => $paymentMethod
-            ]);
+            // Check if user has verified email
+            if ($user->hasVerifiedEmail()) {
+                // Send payment confirmation email
+                Mail::to($user->email)->send(
+                    new OrderPaymentConfirmed($order, $paymentMethod)
+                );
+
+                Log::info('Payment confirmation email sent', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'recipient' => $user->email,
+                    'payment_method' => $paymentMethod
+                ]);
+            } else {
+                // User email not verified - skip sending and log
+                Log::warning('Payment confirmation email skipped - User email not verified', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'user_id' => $user->id,
+                    'user_name' => $user->fullname ?? $user->username,
+                    'user_email' => $user->email ?? 'N/A',
+                    'payment_method' => $paymentMethod
+                ]);
+
+                // Notify admins about this payment from unverified user
+                $this->notifyAdminsAboutUnverifiedUser($order, $user, $paymentMethod);
+            }
 
         } catch (\Exception $e) {
             Log::error('Failed to send payment confirmation email', [
@@ -338,6 +356,41 @@ class WalletPaymentService
                 'order_number' => $order->order_number,
                 'recipient' => $order->user->email ?? 'unknown',
                 'payment_method' => $paymentMethod,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Notify admins about payment from unverified user
+     */
+    private function notifyAdminsAboutUnverifiedUser(Order $order, User $user, string $paymentMethod): void
+    {
+        try {
+            $admins = User::role('admin')->get();
+
+            foreach ($admins as $admin) {
+                if ($admin->hasVerifiedEmail()) {
+                    // Send email to admin
+                    Mail::to($admin->email)->send(
+                        new \App\Mail\UnverifiedUserOrderNotification($order, $user, 'paid')
+                    );
+
+                    Log::info('Admin notified about unverified user payment', [
+                        'admin_id' => $admin->id,
+                        'admin_email' => $admin->email,
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'unverified_user_id' => $user->id,
+                        'unverified_user_name' => $user->fullname ?? $user->username,
+                        'payment_method' => $paymentMethod
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify admins about unverified user payment', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
                 'error' => $e->getMessage()
             ]);
         }

@@ -328,17 +328,32 @@ class OrderHistoryController extends Controller
                 $order->load('user');
             }
 
-            // Send cancellation notification email
-            Mail::to($order->user->email)->send(
-                new OrderCancelled($order, $reason, $refundProcessed)
-            );
+            $user = $order->user;
 
-            \Log::info('Order cancellation email sent', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'recipient' => $order->user->email,
-                'refund_processed' => $refundProcessed
-            ]);
+            // Check if user has verified email
+            if ($user->hasVerifiedEmail()) {
+                // Send cancellation notification email
+                Mail::to($user->email)->send(
+                    new OrderCancelled($order, $reason, $refundProcessed)
+                );
+
+                \Log::info('Order cancellation email sent', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'recipient' => $user->email,
+                    'refund_processed' => $refundProcessed
+                ]);
+            } else {
+                // User email not verified - skip sending and log
+                \Log::warning('Order cancellation email skipped - User email not verified', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'user_id' => $user->id,
+                    'user_name' => $user->fullname ?? $user->username,
+                    'user_email' => $user->email ?? 'N/A',
+                    'refund_processed' => $refundProcessed
+                ]);
+            }
 
         } catch (\Exception $e) {
             \Log::error('Failed to send order cancellation email', [

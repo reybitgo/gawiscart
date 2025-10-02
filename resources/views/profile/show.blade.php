@@ -4,26 +4,14 @@
 
 @section('content')
 <!-- Email Status Information -->
-@if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
+@if (!$user->hasVerifiedEmail() && $user->email)
     <div class="alert alert-info alert-dismissible fade show" role="alert">
         <svg class="icon me-2">
-            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-envelope-letter') }}"></use>
+            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
         </svg>
         <div>
             <strong>Email Not Verified</strong>
-            <p class="mb-0">Your email address is not verified. You can continue using the site normally, but verifying your email helps with account security and password recovery.</p>
-            <div class="mt-2">
-                <form method="POST" action="{{ route('verification.send') }}" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-outline-info">
-                        <svg class="icon icon-sm me-1">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-send') }}"></use>
-                        </svg>
-                        Send Verification Email
-                    </button>
-                </form>
-                <small class="text-muted ms-2">(Optional)</small>
-            </div>
+            <p class="mb-0">Your email address is not verified. You can continue using the site normally. Email verification is optional and helps with account security and receiving notifications.</p>
         </div>
         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -82,14 +70,14 @@
                             @error('email')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
+                            @if (!$user->hasVerifiedEmail() && $user->email)
                                 <div class="mt-2">
-                                    <p class="text-sm text-warning">
-                                        Your email address is unverified.
-                                        <button form="send-verification" class="btn btn-link p-0 text-decoration-underline">
-                                            Click here to re-send the verification email.
-                                        </button>
-                                    </p>
+                                    <small class="text-muted">
+                                        <svg class="icon icon-sm me-1">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                                        </svg>
+                                        Your email address is not verified. Email verification is optional.
+                                    </small>
                                 </div>
                             @endif
                         </div>
@@ -412,13 +400,6 @@
         </div>
     </div>
 </div>
-
-<!-- Email verification form -->
-@if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-    <form id="send-verification" method="post" action="{{ route('verification.send') }}">
-        @csrf
-    </form>
-@endif
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

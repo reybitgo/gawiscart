@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
             <h1 class="h2 mb-2">Order History</h1>
-            <p class="text-muted">Track and manage all your orders</p>
+            <p class="text-muted mb-0">Track and manage all your orders</p>
         </div>
         <div>
             <a href="{{ route('packages.index') }}" class="btn btn-primary">

@@ -42,6 +42,7 @@ class WalletController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1|max:10000',
             'payment_method' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         $user = Auth::user();
@@ -53,17 +54,41 @@ class WalletController extends Controller
             'amount' => $request->amount,
             'status' => 'pending',
             'payment_method' => $request->payment_method,
-            'description' => 'Deposit via ' . $request->payment_method,
+            'description' => $request->description ?: 'Deposit via ' . $request->payment_method,
             'metadata' => [
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]
         ]);
 
-        // Send email notification to all admin users
+        // Send email notification to all admin users with verified emails
         $adminUsers = User::role('admin')->get();
         foreach ($adminUsers as $admin) {
-            Mail::to($admin->email)->send(new DepositNotification($transaction, $user));
+            if ($admin->hasVerifiedEmail()) {
+                try {
+                    Mail::to($admin->email)->send(new DepositNotification($transaction, $user));
+                    \Log::info('Deposit notification sent to admin', [
+                        'admin_id' => $admin->id,
+                        'admin_email' => $admin->email,
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send deposit notification to admin', [
+                        'admin_id' => $admin->id,
+                        'admin_email' => $admin->email,
+                        'transaction_id' => $transaction->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            } else {
+                \Log::warning('Deposit notification skipped - Admin email not verified', [
+                    'admin_id' => $admin->id,
+                    'admin_email' => $admin->email ?? 'N/A',
+                    'transaction_id' => $transaction->id,
+                    'user_id' => $user->id
+                ]);
+            }
         }
 
         session()->flash('success', 'Deposit request of $' . number_format($request->amount, 2) . ' has been submitted for approval. Reference: ' . $transaction->reference_number);
@@ -441,15 +466,32 @@ class WalletController extends Controller
                 $wallet->update(['last_transaction_at' => now()]);
             });
 
-            // Send email notification to all admin users
+            // Send email notification to all admin users with verified emails
             $adminUsers = User::role('admin')->get();
             foreach ($adminUsers as $admin) {
-                try {
-                    Mail::to($admin->email)->send(new WithdrawalNotification($transaction, $user));
-                } catch (\Exception $emailError) {
-                    \Log::warning('Failed to send withdrawal notification email', [
-                        'admin_email' => $admin->email,
-                        'error' => $emailError->getMessage()
+                if ($admin->hasVerifiedEmail()) {
+                    try {
+                        Mail::to($admin->email)->send(new WithdrawalNotification($transaction, $user));
+                        \Log::info('Withdrawal notification sent to admin', [
+                            'admin_id' => $admin->id,
+                            'admin_email' => $admin->email,
+                            'transaction_id' => $transaction->id,
+                            'user_id' => $user->id
+                        ]);
+                    } catch (\Exception $emailError) {
+                        \Log::error('Failed to send withdrawal notification to admin', [
+                            'admin_id' => $admin->id,
+                            'admin_email' => $admin->email,
+                            'transaction_id' => $transaction->id,
+                            'error' => $emailError->getMessage()
+                        ]);
+                    }
+                } else {
+                    \Log::warning('Withdrawal notification skipped - Admin email not verified', [
+                        'admin_id' => $admin->id,
+                        'admin_email' => $admin->email ?? 'N/A',
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id
                     ]);
                 }
             }

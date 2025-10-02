@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Models\SystemSetting;
 use Closure;
-use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -13,23 +12,17 @@ class ConditionalEmailVerification
     /**
      * Handle an incoming request.
      *
+     * This middleware does NOT block users from accessing routes.
+     * Email verification is optional - users can use the system without verified emails.
+     * Email sending logic in the application checks hasVerifiedEmail() and skips sending when not verified.
+     *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if email verification after registration is required
-        $registrationVerificationRequired = SystemSetting::get('email_verification_required', true);
-
-        // Check if ongoing email verification is enabled (from system settings)
-        $ongoingVerificationEnabled = SystemSetting::get('email_verification_enabled', true);
-
-        // If both verification settings are disabled, skip verification entirely
-        if (!$registrationVerificationRequired && !$ongoingVerificationEnabled) {
-            return $next($request);
-        }
-
-        // If either verification setting is enabled, use Laravel's default verification middleware
-        $emailVerificationMiddleware = new EnsureEmailIsVerified();
-        return $emailVerificationMiddleware->handle($request, $next);
+        // Email verification is now optional - never block access
+        // Users without verified emails can use all features
+        // Email notifications are handled conditionally throughout the app
+        return $next($request);
     }
 }

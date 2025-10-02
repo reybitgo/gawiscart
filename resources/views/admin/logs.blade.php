@@ -6,7 +6,7 @@
 <!-- Page Header -->
 <div class="card mb-4">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
                 <h4 class="card-title mb-0">
                     <svg class="icon me-2">
@@ -16,8 +16,8 @@
                 </h4>
                 <p class="text-body-secondary mb-0">Monitor system activity and security events</p>
             </div>
-            <div>
-                <button onclick="refreshLogs()" class="btn btn-primary me-2">
+            <div class="d-flex gap-2 flex-wrap">
+                <button onclick="refreshLogs()" class="btn btn-primary">
                     <svg class="icon me-2">
                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-reload') }}"></use>
                     </svg>
@@ -527,4 +527,7 @@ function showAlert(message, type = 'success') {
     }, 5000);
 }
 </script>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 @endsection

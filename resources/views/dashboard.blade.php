@@ -4,23 +4,19 @@
 
 @section('content')
 <!-- Welcome Header -->
-<div class="row mb-4">
-    <div class="col">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="card-title mb-0">Welcome back, {{ $user->username }}! 👋</h4>
-                        <p class="text-body-secondary mb-0">Here's what's happening with your wallet today.</p>
-                    </div>
-                    <div class="d-none d-md-block">
-                        @if($user->hasRole('admin'))
-                            <span class="badge bg-purple-gradient text-white">Administrator</span>
-                        @elseif($user->hasRole('member'))
-                            <span class="badge bg-info-gradient text-white">Member</span>
-                        @endif
-                    </div>
-                </div>
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="card-title mb-0">Welcome back, {{ $user->username }}! 👋</h4>
+                <p class="text-body-secondary mb-0">Here's what's happening with your wallet today.</p>
+            </div>
+            <div class="d-none d-md-block">
+                @if($user->hasRole('admin'))
+                    <span class="badge bg-purple-gradient text-white">Administrator</span>
+                @elseif($user->hasRole('member'))
+                    <span class="badge bg-info-gradient text-white">Member</span>
+                @endif
             </div>
         </div>
     </div>
@@ -30,13 +26,13 @@
 <div class="row g-3 mb-4">
     <!-- Current Balance -->
     <div class="col-sm-6 col-xl-3">
-        <div class="card text-white bg-success-gradient h-100">
-            <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="card text-white bg-success-gradient">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
                     <div class="fs-4 fw-semibold">${{ number_format($wallet->balance, 2) }}</div>
                     <div>Current Balance</div>
                 </div>
-                <svg class="icon icon-2xl">
+                <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
                 </svg>
             </div>
@@ -45,13 +41,13 @@
 
     <!-- Total Deposits -->
     <div class="col-sm-6 col-xl-3">
-        <div class="card text-white bg-info-gradient h-100">
-            <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="card text-white bg-info-gradient">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
                     <div class="fs-4 fw-semibold">${{ number_format($totalDeposits, 2) }}</div>
                     <div>Total Deposits</div>
                 </div>
-                <svg class="icon icon-2xl">
+                <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-circle-bottom') }}"></use>
                 </svg>
             </div>
@@ -60,13 +56,13 @@
 
     <!-- Total Withdrawals -->
     <div class="col-sm-6 col-xl-3">
-        <div class="card text-white bg-warning-gradient h-100">
-            <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="card text-white bg-warning-gradient">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
                     <div class="fs-4 fw-semibold">${{ number_format($totalWithdrawals, 2) }}</div>
                     <div>Total Withdrawals</div>
                 </div>
-                <svg class="icon icon-2xl">
+                <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-circle-top') }}"></use>
                 </svg>
             </div>
@@ -75,8 +71,8 @@
 
     <!-- Points Earned -->
     <div class="col-sm-6 col-xl-3">
-        <div class="card text-white bg-purple-gradient h-100">
-            <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="card text-white bg-purple-gradient">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
                     <div class="fs-4 fw-semibold">{{ number_format($totalPointsEarned) }}</div>
                     <div>Points Earned</div>
@@ -84,7 +80,7 @@
                         <small class="opacity-75">{{ number_format($pendingPoints) }} pending</small>
                     @endif
                 </div>
-                <svg class="icon icon-2xl">
+                <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-star') }}"></use>
                 </svg>
             </div>
@@ -101,11 +97,11 @@
         </div>
     </div>
     <div class="card-body">
-        <div class="row g-2">
+        <div class="row g-3">
             @if($user->hasRole('admin'))
                 <!-- Admin Actions -->
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('admin.dashboard') }}" class="btn btn-purple btn-block">
+                    <a href="{{ route('admin.dashboard') }}" class="btn btn-purple w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-chart-pie') }}"></use>
                         </svg>
@@ -114,7 +110,7 @@
                 </div>
                 @can('wallet_management')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('admin.wallet.management') }}" class="btn btn-info btn-block">
+                    <a href="{{ route('admin.wallet.management') }}" class="btn btn-info w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
                         </svg>
@@ -124,7 +120,7 @@
                 @endcan
                 @can('transaction_approval')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('admin.transaction.approval') }}" class="btn btn-warning btn-block">
+                    <a href="{{ route('admin.transaction.approval') }}" class="btn btn-warning w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-task') }}"></use>
                         </svg>
@@ -134,7 +130,7 @@
                 @endcan
                 @can('system_settings')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('admin.system.settings') }}" class="btn btn-secondary btn-block">
+                    <a href="{{ route('admin.system.settings') }}" class="btn btn-secondary w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-settings') }}"></use>
                         </svg>
@@ -146,7 +142,7 @@
                 <!-- Member Actions -->
                 @can('deposit_funds')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('wallet.deposit') }}" class="btn btn-success btn-block">
+                    <a href="{{ route('wallet.deposit') }}" class="btn btn-success w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-circle-bottom') }}"></use>
                         </svg>
@@ -156,7 +152,7 @@
                 @endcan
                 @can('transfer_funds')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('wallet.transfer') }}" class="btn btn-info btn-block">
+                    <a href="{{ route('wallet.transfer') }}" class="btn btn-info w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-right') }}"></use>
                         </svg>
@@ -166,7 +162,7 @@
                 @endcan
                 @can('withdraw_funds')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('wallet.withdraw') }}" class="btn btn-danger btn-block">
+                    <a href="{{ route('wallet.withdraw') }}" class="btn btn-danger w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-circle-top') }}"></use>
                         </svg>
@@ -176,7 +172,7 @@
                 @endcan
                 @can('view_transactions')
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('wallet.transactions') }}" class="btn btn-outline-primary btn-block">
+                    <a href="{{ route('wallet.transactions') }}" class="btn btn-outline-primary w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list-numbered') }}"></use>
                         </svg>
@@ -185,7 +181,7 @@
                 </div>
                 @endcan
                 <div class="col-md-3 col-sm-6">
-                    <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary btn-block">
+                    <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary w-100">
                         <svg class="icon me-2">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
                         </svg>
@@ -523,14 +519,11 @@
     background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
 }
 
-/* Equal height cards */
-.h-100 {
-    height: 100% !important;
-}
-
-/* Compact card bodies for stats cards */
-.row .card .card-body {
-    padding: 1.25rem;
+/* Fix mobile overflow */
+@media (max-width: 575px) {
+    .row {
+        --cui-gutter-x: 0.75rem;
+    }
 }
 
 /* Welcome header improvements */

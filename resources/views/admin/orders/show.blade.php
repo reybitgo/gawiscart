@@ -53,12 +53,24 @@
                                     @endif
                                 </div>
                                 <div class="timeline-content">
-                                    <h6 class="mb-1 {{ $step['is_current'] ? 'text-primary fw-bold' : '' }}">{{ $step['label'] }}</h6>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="mb-1 {{ $step['is_current'] ? 'text-primary fw-bold' : '' }}">{{ $step['label'] }}</h6>
+                                        @if($step['completed'] && $step['history_id'])
+                                            <button type="button"
+                                                    class="btn btn-sm btn-link text-muted p-0 ms-2"
+                                                    onclick="editTimelineNotes({{ $step['history_id'] }}, '{{ $step['status'] }}', {{ json_encode($step['notes']) }})"
+                                                    title="Edit notes">
+                                                <svg class="icon icon-sm">
+                                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-pencil') }}"></use>
+                                                </svg>
+                                            </button>
+                                        @endif
+                                    </div>
                                     @if($step['timestamp'])
                                         <div class="text-muted small">{{ \Carbon\Carbon::parse($step['timestamp'])->format('M d, Y H:i') }}</div>
                                     @endif
-                                    @if($step['notes'])
-                                        <div class="text-muted small mt-1">{{ $step['notes'] }}</div>
+                                    @if($step['completed'] && $step['history_id'])
+                                        <div class="text-muted small mt-1" id="timeline-notes-{{ $step['history_id'] }}" style="{{ !$step['notes'] ? 'display: none;' : '' }}">{!! $step['notes'] ? nl2br(e($step['notes'])) : '' !!}</div>
                                     @endif
                                     @if($step['changed_by'])
                                         <div class="text-muted small">by {{ $step['changed_by'] }}</div>
@@ -547,6 +559,23 @@
                         <textarea name="notes" class="form-control" rows="3"
                                   placeholder="Add notes about this status change..."></textarea>
                     </div>
+
+                    <!-- Delivery Timestamp Field (shown when status is 'delivered') -->
+                    <div class="mb-3" id="deliveryTimestampField" style="display: none;">
+                        <label class="form-label fw-semibold">
+                            Delivery Date & Time
+                            <span class="badge bg-warning text-dark ms-1">Required for Returns</span>
+                        </label>
+                        <input type="datetime-local" name="delivered_at" class="form-control"
+                               value="{{ now()->format('Y-m-d\TH:i') }}">
+                        <div class="form-text">
+                            <svg class="icon me-1">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            This timestamp determines when the 7-day return window starts. Customers can request returns within 7 days of delivery.
+                        </div>
+                    </div>
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="notify_customer" id="notifyCustomer" checked>
                         <label class="form-check-label" for="notifyCustomer">
@@ -707,6 +736,63 @@
     </div>
 </div>
 
+<!-- Edit Timeline Notes Modal -->
+<div class="modal fade" id="editTimelineNotesModal" tabindex="-1" aria-labelledby="editTimelineNotesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTimelineNotesModalLabel">Edit Timeline Notes</h5>
+                <button type="button" class="btn-close" data-coreui-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editTimelineNotesForm">
+                @csrf
+                <input type="hidden" id="edit_history_id" name="history_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" id="edit_status_label">Status</label>
+                        <p class="text-muted small">Update the notes for this status change in the order timeline.</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="edit_notes" name="notes" rows="4" placeholder="Enter notes for this status..."></textarea>
+                        <div class="form-text">These notes will appear in the order timeline.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-coreui-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Notes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <svg class="icon me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                </svg>
+                <span id="successToastMessage"></span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-coreui-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <svg class="icon me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x-circle') }}"></use>
+                </svg>
+                <span id="errorToastMessage"></span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-coreui-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('styles')
@@ -781,6 +867,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Show/hide delivery timestamp field based on selected status
+    document.querySelector('select[name="status"]').addEventListener('change', function() {
+        const deliveryTimestampField = document.getElementById('deliveryTimestampField');
+        const selectedStatus = this.value;
+
+        if (selectedStatus === 'delivered') {
+            deliveryTimestampField.style.display = 'block';
+        } else {
+            deliveryTimestampField.style.display = 'none';
+        }
+    });
+
     // Status form - show confirmation modal instead of direct update
     document.getElementById('statusForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -788,6 +886,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newStatus = formData.get('status');
         const notes = formData.get('notes');
         const notifyCustomer = formData.get('notify_customer') === 'on';
+        const deliveredAt = formData.get('delivered_at');
 
         // Get status label from the selected option
         const statusSelect = this.querySelector('select[name="status"]');
@@ -811,7 +910,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.pendingStatusUpdate = {
             status: newStatus,
             notes: notes,
-            notifyCustomer: notifyCustomer
+            notifyCustomer: notifyCustomer,
+            delivered_at: deliveredAt
         };
 
         // Hide status modal and show confirmation modal
@@ -827,14 +927,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Status confirmation handler
     document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
         if (window.pendingStatusUpdate) {
-            const { status, notes, notifyCustomer } = window.pendingStatusUpdate;
+            const { status, notes, notifyCustomer, delivered_at } = window.pendingStatusUpdate;
 
             // Hide confirmation modal
             const confirmModal = new coreui.Modal(document.getElementById('statusConfirmModal'));
             confirmModal.hide();
 
             // Perform the actual status update
-            updateOrderStatus(status, notes, notifyCustomer);
+            updateOrderStatus(status, notes, notifyCustomer, delivered_at);
 
             // Clear pending update
             window.pendingStatusUpdate = null;
@@ -927,7 +1027,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    function updateOrderStatus(status, notes = null, notifyCustomer = false) {
+    function updateOrderStatus(status, notes = null, notifyCustomer = false, deliveredAt = null) {
+        const requestBody = {
+            status: status,
+            notes: notes,
+            notify_customer: notifyCustomer
+        };
+
+        // Include delivered_at timestamp if provided
+        if (deliveredAt) {
+            requestBody.delivered_at = deliveredAt;
+        }
+
         fetch('{{ route("admin.orders.update-status", $order) }}', {
             method: 'POST',
             headers: {
@@ -935,11 +1046,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                status: status,
-                notes: notes,
-                notify_customer: notifyCustomer
-            })
+            body: JSON.stringify(requestBody)
         })
         .then(response => response.json())
         .then(data => {
@@ -967,7 +1074,6 @@ function getStatusBadgeColor(status) {
         'pickup_notified': 'info',
         'ready_to_ship': 'info',
         'shipped': 'info',
-        'in_transit': 'info',
         'out_for_delivery': 'info',
         'delivered': 'success',
         'received_in_office': 'success',
@@ -982,6 +1088,95 @@ function getStatusBadgeColor(status) {
     };
     return colors[status] || 'secondary';
 }
+
+// Toast helper functions
+function showSuccessToast(message) {
+    const toastElement = document.getElementById('successToast');
+    document.getElementById('successToastMessage').textContent = message;
+    const toast = new coreui.Toast(toastElement, {
+        autohide: true,
+        delay: 3000
+    });
+    toast.show();
+}
+
+function showErrorToast(message) {
+    const toastElement = document.getElementById('errorToast');
+    document.getElementById('errorToastMessage').textContent = message;
+    const toast = new coreui.Toast(toastElement, {
+        autohide: true,
+        delay: 5000
+    });
+    toast.show();
+}
+
+// Edit Timeline Notes
+function editTimelineNotes(historyId, status, currentNotes) {
+    const modal = new coreui.Modal(document.getElementById('editTimelineNotesModal'));
+    const statusLabels = {!! json_encode(\App\Models\Order::getStatusLabels()) !!};
+
+    // Set form values
+    document.getElementById('edit_history_id').value = historyId;
+    document.getElementById('edit_notes').value = currentNotes || '';
+    document.getElementById('edit_status_label').textContent = statusLabels[status] || status;
+
+    modal.show();
+}
+
+// Handle timeline notes update form submission
+document.getElementById('editTimelineNotesForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const historyId = formData.get('history_id');
+    const notes = formData.get('notes');
+
+    fetch(`/admin/orders/status-history/${historyId}/update-notes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ notes: notes })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the timeline notes display
+            const notesElement = document.getElementById('timeline-notes-' + historyId);
+            if (notesElement) {
+                if (notes) {
+                    // Escape HTML and convert newlines to <br> tags
+                    const escapedNotes = notes
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                        .replace(/\n/g, '<br>');
+                    notesElement.innerHTML = escapedNotes;
+                    notesElement.style.display = 'block';
+                } else {
+                    notesElement.innerHTML = '';
+                    notesElement.style.display = 'none';
+                }
+            }
+
+            // Close modal
+            const modal = coreui.Modal.getInstance(document.getElementById('editTimelineNotesModal'));
+            modal.hide();
+
+            // Show success toast
+            showSuccessToast('Timeline notes updated successfully!');
+        } else {
+            showErrorToast(data.message || 'Failed to update notes');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showErrorToast('An error occurred while updating the notes.');
+    });
+});
 </script>
 @endpush
 

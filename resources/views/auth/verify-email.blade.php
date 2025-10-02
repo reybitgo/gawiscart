@@ -31,7 +31,7 @@
 
                 <div class="alert alert-info" role="alert">
                     <svg class="icon me-2">
-                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info") }}"></use>
+                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
                     </svg>
                     <strong>Optional verification:</strong> Email verification is completely optional. You can skip this and continue using the site normally, or verify for enhanced security.
                 </div>
@@ -82,4 +82,7 @@
         </div>
     </div>
 </div>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 @endsection

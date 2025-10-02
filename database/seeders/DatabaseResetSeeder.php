@@ -58,6 +58,8 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('⚙️  System settings preserved');
         $this->command->info('📦 Preloaded packages restored');
         $this->command->info('🛒 Order history cleared (ready for new orders)');
+        $this->command->info('↩️  Return requests cleared (ready for new returns)');
+        $this->command->info('🔢 User IDs reset to sequential (1, 2)');
         $this->command->info('');
         $this->command->info('🚀 Sprint 1 Performance & Security Enhancements Active:');
         $this->command->info('  ✅ Database indexes for faster queries');
@@ -67,6 +69,12 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('  ✅ CSRF protection on all AJAX operations');
         $this->command->info('  ✅ Wallet transaction locking (prevents race conditions)');
         $this->command->info('  ✅ Secure cryptographic order number generation');
+        $this->command->info('');
+        $this->command->info('📋 Return Process Features:');
+        $this->command->info('  ✅ 7-day return window after delivery');
+        $this->command->info('  ✅ Customer return request with images');
+        $this->command->info('  ✅ Admin approval/rejection workflow');
+        $this->command->info('  ✅ Automatic e-wallet refund processing');
     }
 
     /**
@@ -83,16 +91,27 @@ class DatabaseResetSeeder extends Seeder
             ->pluck('id')
             ->toArray();
 
-        // Clear order items first (foreign key dependency)
-        DB::table('order_items')->delete();
+        // Disable foreign key checks for proper truncation
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // Clear return requests first (foreign key dependency on orders)
+        DB::table('return_requests')->truncate();
+        $this->command->info('✅ Cleared all return requests');
+
+        // Clear order status histories (foreign key dependency on orders)
+        DB::table('order_status_histories')->truncate();
+        $this->command->info('✅ Cleared all order status histories');
+
+        // Clear order items (foreign key dependency on orders)
+        DB::table('order_items')->truncate();
         $this->command->info('✅ Cleared all order items');
 
         // Clear orders
-        DB::table('orders')->delete();
+        DB::table('orders')->truncate();
         $this->command->info('✅ Cleared all orders');
 
         // Clear transactions (all of them)
-        DB::table('transactions')->delete();
+        DB::table('transactions')->truncate();
         $this->command->info('✅ Cleared all transactions');
 
         // Clear wallets except for default users
@@ -100,7 +119,7 @@ class DatabaseResetSeeder extends Seeder
             DB::table('wallets')->whereNotIn('user_id', $defaultUserIds)->delete();
             $this->command->info('✅ Preserved wallets for ' . count($defaultUserIds) . ' default users');
         } else {
-            DB::table('wallets')->delete();
+            DB::table('wallets')->truncate();
             $this->command->info('⚠️  No default users found to preserve wallets');
         }
 
@@ -123,11 +142,14 @@ class DatabaseResetSeeder extends Seeder
             $this->command->info('✅ Preserved ' . count($defaultUserIds) . ' default users with their roles');
         } else {
             // If no default users exist, clear all users but preserve roles/permissions structure
-            DB::table('model_has_roles')->delete();
-            DB::table('model_has_permissions')->delete();
-            DB::table('users')->delete();
+            DB::table('model_has_roles')->truncate();
+            DB::table('model_has_permissions')->truncate();
+            DB::table('users')->truncate();
             $this->command->info('⚠️  No default users found to preserve');
         }
+
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // NOTE: We deliberately preserve:
         // - system_settings table
@@ -135,10 +157,8 @@ class DatabaseResetSeeder extends Seeder
         // - permissions table
         // - role_has_permissions table (role-permission relationships)
 
-        // Reset auto-increment counters for fully cleared tables only
-        DB::statement('ALTER TABLE order_items AUTO_INCREMENT = 1');
-        DB::statement('ALTER TABLE orders AUTO_INCREMENT = 1');
-        DB::statement('ALTER TABLE transactions AUTO_INCREMENT = 1');
+        // Auto-increment counters are automatically reset by TRUNCATE
+        $this->command->info('✅ Auto-increment counters reset for all cleared tables');
     }
 
     /**
@@ -206,43 +226,82 @@ class DatabaseResetSeeder extends Seeder
     }
 
     /**
-     * Ensure default users exist and have correct roles
+     * Ensure default users exist and have correct roles with proper sequential IDs
      */
     private function ensureDefaultUsers(): void
     {
         $this->command->info('👥 Ensuring default users exist and have correct roles...');
 
-        // Create or update default admin user
-        $admin = User::updateOrCreate(
-            ['email' => 'admin@ewallet.com'],
-            [
-                'username' => 'admin',
-                'fullname' => 'System Administrator',
-                'email' => 'admin@ewallet.com',
-                'password' => Hash::make('Admin123!@#'),
-                'email_verified_at' => now(),
-            ]
-        );
+        // Delete existing default users to recreate with proper IDs
+        $defaultUserEmails = ['admin@ewallet.com', 'member@ewallet.com'];
 
-        // Remove all existing roles and assign fresh admin role
+        // Get existing user IDs before deletion
+        $existingUsers = User::whereIn('email', $defaultUserEmails)->get();
+        $existingWallets = [];
+
+        foreach ($existingUsers as $user) {
+            // Store wallet data if exists
+            if ($user->wallet) {
+                $existingWallets[$user->email] = [
+                    'balance' => $user->wallet->balance,
+                    'reserved_balance' => $user->wallet->reserved_balance,
+                ];
+            }
+        }
+
+        // Delete existing default users and their relationships
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        foreach ($existingUsers as $user) {
+            // Delete wallet
+            DB::table('wallets')->where('user_id', $user->id)->delete();
+
+            // Delete role assignments
+            DB::table('model_has_roles')
+                ->where('model_type', 'App\\Models\\User')
+                ->where('model_id', $user->id)
+                ->delete();
+
+            // Delete permission assignments
+            DB::table('model_has_permissions')
+                ->where('model_type', 'App\\Models\\User')
+                ->where('model_id', $user->id)
+                ->delete();
+        }
+
+        // Delete the users
+        User::whereIn('email', $defaultUserEmails)->delete();
+
+        // Reset users auto-increment to 1
+        DB::statement('ALTER TABLE users AUTO_INCREMENT = 1');
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Create admin user (will get ID = 1)
+        $admin = User::create([
+            'username' => 'admin',
+            'fullname' => 'System Administrator',
+            'email' => 'admin@ewallet.com',
+            'password' => Hash::make('Admin123!@#'),
+            'email_verified_at' => now(),
+        ]);
+
         $admin->syncRoles(['admin']);
+        $this->command->info('✅ Created admin user (ID: ' . $admin->id . ')');
 
-        // Create or update default member user
-        $member = User::updateOrCreate(
-            ['email' => 'member@ewallet.com'],
-            [
-                'username' => 'member',
-                'fullname' => 'Test Member',
-                'email' => 'member@ewallet.com',
-                'password' => Hash::make('Member123!@#'),
-                'email_verified_at' => now(),
-            ]
-        );
+        // Create member user (will get ID = 2)
+        $member = User::create([
+            'username' => 'member',
+            'fullname' => 'Test Member',
+            'email' => 'member@ewallet.com',
+            'password' => Hash::make('Member123!@#'),
+            'email_verified_at' => now(),
+        ]);
 
-        // Remove all existing roles and assign fresh member role
         $member->syncRoles(['member']);
+        $this->command->info('✅ Created member user (ID: ' . $member->id . ')');
 
-        $this->command->info('✅ Default users ensured with correct roles (admin and member)');
+        $this->command->info('✅ Default users created with sequential IDs (1, 2)');
     }
 
     /**

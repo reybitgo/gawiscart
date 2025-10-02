@@ -8,6 +8,7 @@ use App\Mail\OrderStatusChanged;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 class OrderStatusService
 {
@@ -181,7 +182,8 @@ class OrderStatusService
                 'is_current' => $order->status === $status,
                 'timestamp' => $history ? $history->created_at : null,
                 'notes' => $history ? $history->notes : null,
-                'changed_by' => $history ? $history->changed_by_description : null
+                'changed_by' => $history ? $history->changed_by_description : null,
+                'history_id' => $history ? $history->id : null
             ];
         }
 
@@ -415,24 +417,78 @@ class OrderStatusService
                 $order->load('user');
             }
 
-            // Send notification to customer
-            Mail::to($order->user->email)->send(
-                new OrderStatusChanged($order, $oldStatus, $newStatus, $notes, $changedBy)
-            );
+            $user = $order->user;
 
-            Log::info('Order status change notification sent', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'recipient' => $order->user->email,
-                'old_status' => $oldStatus,
-                'new_status' => $newStatus
-            ]);
+            // Check if user has verified email
+            if ($user->hasVerifiedEmail()) {
+                // Send notification to customer
+                Mail::to($user->email)->send(
+                    new OrderStatusChanged($order, $oldStatus, $newStatus, $notes, $changedBy)
+                );
+
+                Log::info('Order status change notification sent', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'recipient' => $user->email,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus
+                ]);
+            } else {
+                // User email not verified - skip sending and log
+                Log::warning('Order status change notification skipped - User email not verified', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'user_id' => $user->id,
+                    'user_name' => $user->fullname ?? $user->username,
+                    'user_email' => $user->email ?? 'N/A',
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus
+                ]);
+
+                // Notify admins about this
+                $this->notifyAdminsAboutUnverifiedUser($order, $user, $newStatus);
+            }
 
         } catch (\Exception $e) {
             Log::error('Failed to send order status change notification', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'recipient' => $order->user->email ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Notify admins about order activity from unverified user
+     */
+    private function notifyAdminsAboutUnverifiedUser(Order $order, $user, string $newStatus): void
+    {
+        try {
+            $admins = \App\Models\User::role('admin')->get();
+
+            foreach ($admins as $admin) {
+                if ($admin->hasVerifiedEmail()) {
+                    // Send email to admin
+                    Mail::to($admin->email)->send(
+                        new \App\Mail\UnverifiedUserOrderNotification($order, $user, $newStatus)
+                    );
+
+                    Log::info('Admin notified about unverified user order activity', [
+                        'admin_id' => $admin->id,
+                        'admin_email' => $admin->email,
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'unverified_user_id' => $user->id,
+                        'unverified_user_name' => $user->fullname ?? $user->username,
+                        'new_status' => $newStatus
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify admins about unverified user', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
                 'error' => $e->getMessage()
             ]);
         }

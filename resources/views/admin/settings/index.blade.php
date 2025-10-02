@@ -152,6 +152,9 @@
     </div>
 </div>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

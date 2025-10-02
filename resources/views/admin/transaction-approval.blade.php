@@ -274,8 +274,9 @@
             </div>
           </div>
           <div class="mt-2">
-            <p class="mb-0"><strong>Description:</strong></p>
-            <p class="mb-0 text-muted" id="approve-description">No description provided</p>
+            <p class="mb-0"><strong id="approve-description-label">Description:</strong></p>
+            <p class="mb-0 text-muted" id="approve-description" style="white-space: pre-wrap;">No description provided</p>
+            <small class="text-muted" id="approve-description-hint"></small>
           </div>
         </div>
 
@@ -328,8 +329,9 @@
             </div>
           </div>
           <div class="mt-2">
-            <p class="mb-0"><strong>Description:</strong></p>
-            <p class="mb-0 text-muted" id="reject-description">No description provided</p>
+            <p class="mb-0"><strong id="reject-description-label">Description:</strong></p>
+            <p class="mb-0 text-muted" id="reject-description" style="white-space: pre-wrap;">No description provided</p>
+            <small class="text-muted" id="reject-description-hint"></small>
           </div>
         </div>
 
@@ -426,10 +428,13 @@
               </tr>
             </table>
 
-            <h6 class="text-muted mb-3 mt-4">Transaction Description</h6>
+            <h6 class="text-muted mb-3 mt-4">
+              <span id="review-description-label">Transaction Information</span>
+            </h6>
             <div class="border rounded p-3 bg-light">
-              <p class="mb-0" id="review-description">No description provided</p>
+              <p class="mb-0" id="review-description" style="white-space: pre-wrap;">No information provided</p>
             </div>
+            <small class="text-muted" id="review-description-hint"></small>
           </div>
         </div>
       </div>
@@ -451,6 +456,9 @@
     </div>
   </div>
 </div>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 @endsection
 
 @push('scripts')
@@ -516,8 +524,25 @@ function populateReviewModal(transaction) {
     document.getElementById('review-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.balance).toFixed(2)}` : 'N/A';
     document.getElementById('review-user-id').textContent = transaction.user.id;
 
-    // Description
-    document.getElementById('review-description').textContent = transaction.description || 'No description provided';
+    // Description with contextual labeling
+    const descriptionLabel = document.getElementById('review-description-label');
+    const descriptionHint = document.getElementById('review-description-hint');
+    const descriptionText = document.getElementById('review-description');
+
+    if (transaction.type === 'deposit') {
+        descriptionLabel.textContent = 'Payment Notification / Reference';
+        descriptionText.textContent = transaction.description || 'No payment notification provided';
+        descriptionHint.textContent = 'User should paste Gcash/Maya notification with reference number for faster verification';
+        descriptionHint.className = 'text-info d-block mt-2';
+    } else if (transaction.type === 'withdrawal') {
+        descriptionLabel.textContent = 'Withdrawal Details';
+        descriptionText.textContent = transaction.description || 'No details provided';
+        descriptionHint.textContent = '';
+    } else {
+        descriptionLabel.textContent = 'Transaction Information';
+        descriptionText.textContent = transaction.description || 'No information provided';
+        descriptionHint.textContent = '';
+    }
 }
 
 function approveFromReview() {
@@ -555,7 +580,26 @@ function populateApprovalModal() {
                 document.getElementById('approve-user-name').textContent = transaction.user.fullname || transaction.user.username;
                 document.getElementById('approve-payment-method').textContent = transaction.payment_method || 'N/A';
                 document.getElementById('approve-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.balance).toFixed(2)}` : 'N/A';
-                document.getElementById('approve-description').textContent = transaction.description || 'No description provided';
+
+                // Contextual description labeling
+                const approveDescLabel = document.getElementById('approve-description-label');
+                const approveDescHint = document.getElementById('approve-description-hint');
+                const approveDescText = document.getElementById('approve-description');
+
+                if (transaction.type === 'deposit') {
+                    approveDescLabel.textContent = 'Payment Notification / Reference:';
+                    approveDescText.textContent = transaction.description || 'No payment notification provided';
+                    approveDescHint.textContent = 'Check reference number against payment received';
+                    approveDescHint.className = 'text-info d-block mt-1';
+                } else if (transaction.type === 'withdrawal') {
+                    approveDescLabel.textContent = 'Withdrawal Details:';
+                    approveDescText.textContent = transaction.description || 'No details provided';
+                    approveDescHint.textContent = '';
+                } else {
+                    approveDescLabel.textContent = 'Description:';
+                    approveDescText.textContent = transaction.description || 'No description provided';
+                    approveDescHint.textContent = '';
+                }
             }
         })
         .catch(error => {
@@ -578,7 +622,26 @@ function populateRejectionModal() {
                 document.getElementById('reject-user-name').textContent = transaction.user.fullname || transaction.user.username;
                 document.getElementById('reject-payment-method').textContent = transaction.payment_method || 'N/A';
                 document.getElementById('reject-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.balance).toFixed(2)}` : 'N/A';
-                document.getElementById('reject-description').textContent = transaction.description || 'No description provided';
+
+                // Contextual description labeling
+                const rejectDescLabel = document.getElementById('reject-description-label');
+                const rejectDescHint = document.getElementById('reject-description-hint');
+                const rejectDescText = document.getElementById('reject-description');
+
+                if (transaction.type === 'deposit') {
+                    rejectDescLabel.textContent = 'Payment Notification / Reference:';
+                    rejectDescText.textContent = transaction.description || 'No payment notification provided';
+                    rejectDescHint.textContent = 'Verify if payment was actually received before rejecting';
+                    rejectDescHint.className = 'text-warning d-block mt-1';
+                } else if (transaction.type === 'withdrawal') {
+                    rejectDescLabel.textContent = 'Withdrawal Details:';
+                    rejectDescText.textContent = transaction.description || 'No details provided';
+                    rejectDescHint.textContent = '';
+                } else {
+                    rejectDescLabel.textContent = 'Description:';
+                    rejectDescText.textContent = transaction.description || 'No description provided';
+                    rejectDescHint.textContent = '';
+                }
             }
         })
         .catch(error => {

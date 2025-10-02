@@ -277,6 +277,9 @@
     // Transfer settings from server
     const transferSettings = @json($transferSettings);
 
+    // Debug: Log transfer settings to console
+    console.log('Transfer Settings:', transferSettings);
+
     function setRecipient(email) {
         document.getElementById('recipient_identifier').value = email;
         document.getElementById('recipient_identifier').focus();
@@ -306,9 +309,13 @@
             charge = chargeValue;
         }
 
-        // Apply min/max limits
+        // Apply minimum limit
         charge = Math.max(charge, minCharge);
-        charge = Math.min(charge, maxCharge);
+
+        // Apply maximum limit (0 means no limit)
+        if (maxCharge > 0) {
+            charge = Math.min(charge, maxCharge);
+        }
 
         return Math.round(charge * 100) / 100; // Round to 2 decimal places
     }

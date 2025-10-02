@@ -66,13 +66,18 @@ class OrderStatusHistory extends Model
 
         if ($this->changed_by === 'admin' || $this->isAdminChange()) {
             if (is_numeric($this->changed_by) && $this->changer) {
-                return "Admin ({$this->changer->name})";
+                return $this->changer->fullname ?? $this->changer->username;
             }
             return 'Admin';
         }
 
         if ($this->changed_by === 'user') {
             return 'Customer';
+        }
+
+        // If numeric, try to get user info
+        if (is_numeric($this->changed_by) && $this->changer) {
+            return $this->changer->fullname ?? $this->changer->username;
         }
 
         return 'Unknown';

@@ -150,7 +150,6 @@
                         <th scope="col">Balance</th>
                         <th scope="col">Last Transaction</th>
                         <th scope="col">Status</th>
-                        <th scope="col" class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -196,26 +195,10 @@
                                     <span class="badge bg-secondary">No Wallet</span>
                                 @endif
                             </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-outline-primary" title="View">
-                                        <svg class="icon">
-                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-magnifying-glass') }}"></use>
-                                        </svg>
-                                    </button>
-                                    @if($user->wallet)
-                                        @if($user->wallet->is_active)
-                                            <button class="btn btn-sm btn-outline-warning">Freeze</button>
-                                        @else
-                                            <button class="btn btn-sm btn-outline-success">Unfreeze</button>
-                                        @endif
-                                    @endif
-                                </div>
-                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-body-secondary py-4">
+                            <td colspan="4" class="text-center text-body-secondary py-4">
                                 No wallets found
                             </td>
                         </tr>
@@ -410,17 +393,20 @@
                                     <div class="text-body-secondary">{{ $transaction->created_at->format('h:i A') }}</div>
                                 </td>
                                 <td class="text-center">
-                                    @if($transaction->status === 'pending')
-                                        <div class="btn-group" role="group">
+                                    <div class="btn-group" role="group">
+                                        <button onclick="viewTransactionDetails({{ $transaction->id }})" class="btn btn-sm btn-outline-secondary" title="View Details">
+                                            <svg class="icon">
+                                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-search') }}"></use>
+                                            </svg>
+                                        </button>
+                                        @if($transaction->status === 'pending')
                                             <a href="{{ route('admin.transaction.approval') }}" class="btn btn-sm btn-outline-primary" title="Go to Transaction Approval">
                                                 <svg class="icon">
                                                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-external-link') }}"></use>
                                                 </svg>
                                             </a>
-                                        </div>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -578,6 +564,28 @@
 .btn-sm {
     border-radius: 6px;
     font-weight: 500;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Ensure proper spacing in action button groups */
+.btn-group .btn-sm {
+    padding: 0.375rem 0.5rem;
+    margin-right: 0.25rem;
+}
+
+.btn-group .btn-sm:last-child {
+    margin-right: 0;
+}
+
+.btn-group .btn-sm svg.icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Add gap between buttons in action column */
+td .btn-group {
+    gap: 0.25rem;
+    display: flex;
 }
 
 /* Filter section styling */
@@ -609,4 +617,168 @@
     }
 }
 </style>
+
+<!-- Transaction Details Modal -->
+<div class="modal fade" id="transactionDetailsModal" tabindex="-1" aria-labelledby="transactionDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transactionDetailsModalLabel">
+          <svg class="icon me-2">
+            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-magnifying-glass') }}"></use>
+          </svg>
+          Transaction Details
+        </h5>
+        <button type="button" class="btn-close" data-coreui-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="text-muted mb-3">Transaction Information</h6>
+            <table class="table table-borderless table-sm">
+              <tr>
+                <td class="text-muted">Transaction ID:</td>
+                <td class="fw-semibold" id="detail-transaction-id">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Reference Number:</td>
+                <td class="fw-semibold" id="detail-reference-number">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Type:</td>
+                <td>
+                  <span id="detail-type-badge" class="badge">-</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted">Amount:</td>
+                <td class="fw-semibold" id="detail-amount">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Payment Method:</td>
+                <td class="fw-semibold" id="detail-payment-method">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Status:</td>
+                <td>
+                  <span id="detail-status-badge" class="badge">-</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted">Created:</td>
+                <td class="fw-semibold" id="detail-created-at">-</td>
+              </tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-3">User Information</h6>
+            <table class="table table-borderless table-sm">
+              <tr>
+                <td class="text-muted">Name:</td>
+                <td class="fw-semibold" id="detail-user-name">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Email:</td>
+                <td class="fw-semibold" id="detail-user-email">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Current Balance:</td>
+                <td class="fw-semibold" id="detail-user-balance">-</td>
+              </tr>
+              <tr>
+                <td class="text-muted">User ID:</td>
+                <td class="fw-semibold" id="detail-user-id">-</td>
+              </tr>
+            </table>
+
+            <h6 class="text-muted mb-3 mt-4">
+              <span id="detail-description-label">Transaction Information</span>
+            </h6>
+            <div class="border rounded p-3 bg-light">
+              <p class="mb-0" id="detail-description" style="white-space: pre-wrap;">No information provided</p>
+            </div>
+            <small class="text-muted" id="detail-description-hint"></small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-coreui-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function viewTransactionDetails(transactionId) {
+    // Fetch transaction details
+    fetch(`/admin/transactions/${transactionId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateTransactionDetailsModal(data.transaction);
+                const modal = new coreui.Modal(document.getElementById('transactionDetailsModal'));
+                modal.show();
+            } else {
+                alert('Error loading transaction details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading transaction details');
+        });
+}
+
+function populateTransactionDetailsModal(transaction) {
+    document.getElementById('detail-transaction-id').textContent = transaction.id;
+    document.getElementById('detail-reference-number').textContent = transaction.reference_number || 'N/A';
+
+    // Type badge
+    const typeBadge = document.getElementById('detail-type-badge');
+    typeBadge.textContent = transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1);
+    typeBadge.className = `badge ${transaction.type === 'deposit' ? 'bg-success' : 'bg-danger'}`;
+
+    document.getElementById('detail-amount').textContent = `${transaction.type === 'withdrawal' ? '-' : '+'}$${parseFloat(transaction.amount).toFixed(2)}`;
+    document.getElementById('detail-payment-method').textContent = transaction.payment_method || 'N/A';
+
+    // Status badge
+    const statusBadge = document.getElementById('detail-status-badge');
+    statusBadge.textContent = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1);
+    statusBadge.className = `badge ${
+        transaction.status === 'approved' ? 'bg-success' :
+        transaction.status === 'rejected' ? 'bg-danger' :
+        transaction.status === 'pending' ? 'bg-warning' : 'bg-secondary'
+    }`;
+
+    document.getElementById('detail-created-at').textContent = new Date(transaction.created_at).toLocaleString();
+
+    // User information
+    document.getElementById('detail-user-name').textContent = transaction.user.fullname || transaction.user.username;
+    document.getElementById('detail-user-email').textContent = transaction.user.email;
+    document.getElementById('detail-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.balance).toFixed(2)}` : 'N/A';
+    document.getElementById('detail-user-id').textContent = transaction.user.id;
+
+    // Description with contextual labeling
+    const descriptionLabel = document.getElementById('detail-description-label');
+    const descriptionHint = document.getElementById('detail-description-hint');
+    const descriptionText = document.getElementById('detail-description');
+
+    if (transaction.type === 'deposit') {
+        descriptionLabel.textContent = 'Payment Notification / Reference';
+        descriptionText.textContent = transaction.description || 'No payment notification provided';
+        descriptionHint.textContent = 'Check reference number against payment received';
+        descriptionHint.className = 'text-info d-block mt-2';
+    } else if (transaction.type === 'withdrawal') {
+        descriptionLabel.textContent = 'Withdrawal Details';
+        descriptionText.textContent = transaction.description || 'No details provided';
+        descriptionHint.textContent = '';
+    } else {
+        descriptionLabel.textContent = 'Transaction Information';
+        descriptionText.textContent = transaction.description || 'No information provided';
+        descriptionHint.textContent = '';
+    }
+}
+</script>
+
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
 @endsection

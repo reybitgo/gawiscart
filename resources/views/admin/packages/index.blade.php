@@ -204,4 +204,7 @@ function setDeletePackage(packageId, packageName, actionUrl) {
 }
 </script>
 
+<!-- Bottom spacing for better visual layout -->
+<div class="pb-5"></div>
+
 @endsection

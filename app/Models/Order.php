@@ -40,6 +40,7 @@ class Order extends Model
         'processed_at',
         'completed_at',
         'cancelled_at',
+        'delivered_at',
     ];
 
     protected $casts = [
@@ -51,6 +52,7 @@ class Order extends Model
         'processed_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'delivered_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
@@ -77,10 +79,16 @@ class Order extends Model
     // Home Delivery Statuses
     const STATUS_READY_TO_SHIP = 'ready_to_ship';
     const STATUS_SHIPPED = 'shipped';
-    const STATUS_IN_TRANSIT = 'in_transit';
     const STATUS_OUT_FOR_DELIVERY = 'out_for_delivery';
     const STATUS_DELIVERED = 'delivered';
     const STATUS_DELIVERY_FAILED = 'delivery_failed';
+
+    // Return Process Statuses
+    const STATUS_RETURN_REQUESTED = 'return_requested';
+    const STATUS_RETURN_APPROVED = 'return_approved';
+    const STATUS_RETURN_REJECTED = 'return_rejected';
+    const STATUS_RETURN_IN_TRANSIT = 'return_in_transit';
+    const STATUS_RETURN_RECEIVED = 'return_received';
 
     // Common End Statuses
     const STATUS_COMPLETED = 'completed';
@@ -111,6 +119,11 @@ class Order extends Model
     public function statusHistory(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class);
+    }
+
+    public function returnRequest()
+    {
+        return $this->hasOne(ReturnRequest::class);
     }
 
     /**
@@ -239,7 +252,10 @@ class Order extends Model
 
     public function canBeCancelled(): bool
     {
-        return in_array($this->status, [self::STATUS_PENDING, self::STATUS_PAID]);
+        // Per ORDER_RETURN.md: Once payment is made (especially e-wallet), orders cannot be cancelled.
+        // Only PENDING orders (unpaid) can be cancelled.
+        // Paid orders must use the return process after delivery.
+        return $this->status === self::STATUS_PENDING && $this->payment_status !== self::PAYMENT_STATUS_PAID;
     }
 
     public function markAsPaid(): void
@@ -344,10 +360,16 @@ class Order extends Model
             // Home Delivery
             self::STATUS_READY_TO_SHIP => 'Ready for Shipment',
             self::STATUS_SHIPPED => 'Shipped',
-            self::STATUS_IN_TRANSIT => 'In Transit',
             self::STATUS_OUT_FOR_DELIVERY => 'Out for Delivery',
             self::STATUS_DELIVERED => 'Delivered',
             self::STATUS_DELIVERY_FAILED => 'Delivery Failed',
+
+            // Return Process
+            self::STATUS_RETURN_REQUESTED => 'Return Requested',
+            self::STATUS_RETURN_APPROVED => 'Return Approved',
+            self::STATUS_RETURN_REJECTED => 'Return Rejected',
+            self::STATUS_RETURN_IN_TRANSIT => 'Return In Transit',
+            self::STATUS_RETURN_RECEIVED => 'Return Received',
 
             // Common
             self::STATUS_COMPLETED => 'Completed',
@@ -381,7 +403,6 @@ class Order extends Model
         return array_merge($universal, [
             self::STATUS_READY_TO_SHIP,
             self::STATUS_SHIPPED,
-            self::STATUS_IN_TRANSIT,
             self::STATUS_OUT_FOR_DELIVERY,
             self::STATUS_DELIVERED,
             self::STATUS_COMPLETED
@@ -405,8 +426,7 @@ class Order extends Model
 
             // Home delivery transitions
             self::STATUS_READY_TO_SHIP => [self::STATUS_SHIPPED, self::STATUS_ON_HOLD],
-            self::STATUS_SHIPPED => [self::STATUS_IN_TRANSIT, self::STATUS_RETURNED],
-            self::STATUS_IN_TRANSIT => [self::STATUS_OUT_FOR_DELIVERY, self::STATUS_DELIVERED, self::STATUS_DELIVERY_FAILED],
+            self::STATUS_SHIPPED => [self::STATUS_OUT_FOR_DELIVERY, self::STATUS_RETURNED],
             self::STATUS_OUT_FOR_DELIVERY => [self::STATUS_DELIVERED, self::STATUS_DELIVERY_FAILED],
             self::STATUS_DELIVERED => [self::STATUS_COMPLETED, self::STATUS_RETURNED],
 
@@ -488,7 +508,6 @@ class Order extends Model
             'delivery' => [
                 self::STATUS_PICKUP_NOTIFIED,
                 self::STATUS_SHIPPED,
-                self::STATUS_IN_TRANSIT,
                 self::STATUS_OUT_FOR_DELIVERY,
                 self::STATUS_DELIVERED,
                 self::STATUS_RECEIVED_IN_OFFICE
@@ -520,10 +539,14 @@ class Order extends Model
             self::STATUS_READY_TO_SHIP => 'warning',
             self::STATUS_PICKUP_NOTIFIED => 'warning',
             self::STATUS_SHIPPED => 'primary',
-            self::STATUS_IN_TRANSIT => 'primary',
             self::STATUS_OUT_FOR_DELIVERY => 'warning',
             self::STATUS_DELIVERED => 'success',
             self::STATUS_RECEIVED_IN_OFFICE => 'success',
+            self::STATUS_RETURN_REQUESTED => 'warning',
+            self::STATUS_RETURN_APPROVED => 'info',
+            self::STATUS_RETURN_REJECTED => 'danger',
+            self::STATUS_RETURN_IN_TRANSIT => 'primary',
+            self::STATUS_RETURN_RECEIVED => 'info',
             self::STATUS_COMPLETED => 'success',
             self::STATUS_ON_HOLD => 'warning',
             self::STATUS_CANCELLED => 'dark',
@@ -534,5 +557,110 @@ class Order extends Model
             self::STATUS_FAILED => 'danger',
             default => 'secondary'
         };
+    }
+
+    /**
+     * Return Process Methods
+     */
+    public function canRequestReturn(): bool
+    {
+        // Can only request return if:
+        // 1. Order is delivered
+        // 2. Within 7 days of delivery
+        // 3. No existing return request
+        if ($this->status !== self::STATUS_DELIVERED || !$this->delivered_at) {
+            return false;
+        }
+
+        // Check if within 7-day return window
+        $returnWindowDays = 7;
+        if ($this->delivered_at->diffInDays(now()) > $returnWindowDays) {
+            return false;
+        }
+
+        // Check if return request already exists
+        return !$this->returnRequest()->exists();
+    }
+
+    public function isDelivered(): bool
+    {
+        return $this->status === self::STATUS_DELIVERED && $this->delivered_at !== null;
+    }
+
+    public function markAsDelivered(): void
+    {
+        $this->update([
+            'status' => self::STATUS_DELIVERED,
+            'delivered_at' => now(),
+        ]);
+
+        $this->updateStatus(
+            self::STATUS_DELIVERED,
+            'Order marked as delivered',
+            'admin'
+        );
+    }
+
+    public function processRefund(): bool
+    {
+        // Only process refund for e-wallet payments
+        if (!$this->isPaid()) {
+            return false;
+        }
+
+        // Find the original payment transaction
+        $paymentTransaction = Transaction::where('user_id', $this->user_id)
+            ->where('type', 'payment')
+            ->where('metadata->order_id', $this->id)
+            ->where('status', 'completed')
+            ->first();
+
+        if (!$paymentTransaction) {
+            return false;
+        }
+
+        // Create refund transaction
+        $refundTransaction = Transaction::create([
+            'user_id' => $this->user_id,
+            'type' => 'refund',
+            'amount' => $this->total_amount,
+            'status' => 'completed',
+            'description' => "Refund for Order #{$this->order_number}",
+            'metadata' => [
+                'order_id' => $this->id,
+                'original_transaction_id' => $paymentTransaction->id,
+                'refund_reason' => 'Return request approved',
+            ],
+        ]);
+
+        // Credit the wallet
+        $wallet = $this->user->wallet;
+        $wallet->balance += $this->total_amount;
+        $wallet->save();
+
+        // Update order status
+        $this->update([
+            'status' => self::STATUS_REFUNDED,
+            'payment_status' => self::PAYMENT_STATUS_REFUNDED,
+        ]);
+
+        $this->updateStatus(
+            self::STATUS_REFUNDED,
+            "Refund processed: $" . number_format($this->total_amount, 2),
+            'admin'
+        );
+
+        return true;
+    }
+
+    public function getReturnWindowDaysRemaining(): int
+    {
+        if (!$this->delivered_at) {
+            return 0;
+        }
+
+        $returnWindowDays = 7;
+        $daysPassed = $this->delivered_at->diffInDays(now());
+        return max(0, $returnWindowDays - $daysPassed);
     }
 }

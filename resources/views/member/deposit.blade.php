@@ -150,7 +150,7 @@
                                 @if($paymentMethods['gcash_name'])
                                     <p class="mb-1"><strong>Account Name:</strong> {{ $paymentMethods['gcash_name'] }}</p>
                                 @endif
-                                <p class="mb-0 small text-muted">Send your deposit to this Gcash number and type/paste Express Send Notification to Description below for faster approval process.</p>
+                                <p class="mb-0 small text-muted">Send your deposit to this Gcash number and paste your Gcash notification in the field below for faster approval.</p>
                             </div>
                         </div>
                     </div>
@@ -169,7 +169,7 @@
                                 @if($paymentMethods['maya_name'])
                                     <p class="mb-1"><strong>Account Name:</strong> {{ $paymentMethods['maya_name'] }}</p>
                                 @endif
-                                <p class="mb-0 small text-muted">Send your deposit to this Maya number and type/paste Express Send Notification to Description below for faster approval process.</p>
+                                <p class="mb-0 small text-muted">Send your deposit to this Maya number and paste your Maya notification in the field below for faster approval.</p>
                             </div>
                         </div>
                     </div>
@@ -178,12 +178,34 @@
                     <div class="mb-3">
                         <label for="description" class="form-label">
                             <svg class="icon me-2">
-                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-notes') }}"></use>
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-file') }}"></use>
                             </svg>
-                            Description (Optional)
+                            Payment Notification / Reference
+                            <span class="badge bg-success ms-2">Recommended for Fast Approval</span>
                         </label>
-                        <textarea id="description" name="description" class="form-control" rows="2"
-                                  placeholder="Add a note for this deposit...">{{ old('description') }}</textarea>
+                        <textarea id="description" name="description" class="form-control" rows="6"
+                                  placeholder="Paste your complete payment notification here (including reference number, amount, date & time)...&#10;&#10;Example:&#10;You sent ₱100.00 to John Doe&#10;Reference No: 1234567890&#10;Date & Time: Jan 15, 2025 10:30 AM&#10;&#10;Including this information helps us process your deposit faster!">{{ old('description') }}</textarea>
+                        <div class="form-text">
+                            <svg class="icon me-1">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-lightbulb') }}"></use>
+                            </svg>
+                            <strong>Pro Tip:</strong> Paste your complete Gcash/Maya payment notification here (including reference number) for instant verification and faster approval! Without this, processing may take longer as admin needs to manually verify your payment.
+                        </div>
+                    </div>
+
+                    <!-- Important Information Alert -->
+                    <div class="alert alert-warning mb-3">
+                        <h6 class="alert-heading">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-speedometer') }}"></use>
+                            </svg>
+                            Speed Up Your Deposit Approval
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li><strong>With Payment Notification:</strong> Your deposit can be approved within minutes! Admin just needs to verify the reference number.</li>
+                            <li><strong>Without Payment Notification:</strong> Processing may take several hours as admin needs to manually check all incoming payments.</li>
+                            <li><strong>What to Include:</strong> Reference number, amount sent, date & time, and sender name.</li>
+                        </ul>
                     </div>
 
 

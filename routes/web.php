@@ -76,6 +76,16 @@ Route::middleware(['auth', 'enforce.2fa'])->group(function () {
         Route::get('/{order}/invoice', [OrderHistoryController::class, 'invoice'])->name('invoice');
         Route::get('/ajax/list', [OrderHistoryController::class, 'ajax'])->name('ajax');
     });
+
+    // Return Request Routes (Customer Side)
+    Route::prefix('returns')->name('returns.')->group(function () {
+        Route::post('/orders/{order}', [\App\Http\Controllers\ReturnRequestController::class, 'store'])
+            ->middleware('throttle:5,1')
+            ->name('store');
+        Route::post('/{returnRequest}/tracking', [\App\Http\Controllers\ReturnRequestController::class, 'updateTracking'])
+            ->middleware('throttle:10,1')
+            ->name('update-tracking');
+    });
 });
 
 // Admin Routes
@@ -165,6 +175,23 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
         Route::get('/export', [AdminOrderController::class, 'export'])->name('export');
         Route::get('/analytics', [AdminOrderController::class, 'analytics'])->name('analytics');
         Route::get('/updates', [AdminOrderController::class, 'getUpdates'])->name('updates');
+        Route::post('/status-history/{statusHistory}/update-notes', [AdminOrderController::class, 'updateTimelineNotes'])->name('status-history.update-notes');
+    });
+
+    // Admin Return Request Management Routes
+    Route::prefix('returns')->name('returns.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminReturnController::class, 'index'])->name('index');
+        Route::get('/{returnRequest}', [\App\Http\Controllers\Admin\AdminReturnController::class, 'show'])->name('show');
+        Route::post('/{returnRequest}/approve', [\App\Http\Controllers\Admin\AdminReturnController::class, 'approve'])
+            ->middleware('throttle:10,1')
+            ->name('approve');
+        Route::post('/{returnRequest}/reject', [\App\Http\Controllers\Admin\AdminReturnController::class, 'reject'])
+            ->middleware('throttle:10,1')
+            ->name('reject');
+        Route::post('/{returnRequest}/confirm-received', [\App\Http\Controllers\Admin\AdminReturnController::class, 'confirmReceived'])
+            ->middleware('throttle:10,1')
+            ->name('confirm-received');
+        Route::get('/pending/count', [\App\Http\Controllers\Admin\AdminReturnController::class, 'pendingCount'])->name('pending-count');
     });
 });
 

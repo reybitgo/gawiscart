@@ -301,15 +301,37 @@ class AdminController extends Controller
 
             DB::commit();
 
-            // Send email notification to user based on transaction type
-            if ($transaction->type === 'deposit') {
-                Mail::to($transaction->user->email)->send(
-                    new DepositStatusNotification($transaction, $transaction->user, 'approved', $request->notes)
-                );
-            } elseif ($transaction->type === 'withdrawal') {
-                Mail::to($transaction->user->email)->send(
-                    new WithdrawalStatusNotification($transaction, $transaction->user, 'approved', $request->notes)
-                );
+            // Send email notification to user based on transaction type (only if email verified)
+            $user = $transaction->user;
+
+            if ($user->hasVerifiedEmail()) {
+                if ($transaction->type === 'deposit') {
+                    Mail::to($user->email)->send(
+                        new DepositStatusNotification($transaction, $user, 'approved', $request->notes)
+                    );
+                    \Log::info('Deposit approval notification sent', [
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id,
+                        'user_email' => $user->email
+                    ]);
+                } elseif ($transaction->type === 'withdrawal') {
+                    Mail::to($user->email)->send(
+                        new WithdrawalStatusNotification($transaction, $user, 'approved', $request->notes)
+                    );
+                    \Log::info('Withdrawal approval notification sent', [
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id,
+                        'user_email' => $user->email
+                    ]);
+                }
+            } else {
+                \Log::warning('Transaction approval notification skipped - User email not verified', [
+                    'transaction_id' => $transaction->id,
+                    'transaction_type' => $transaction->type,
+                    'user_id' => $user->id,
+                    'user_name' => $user->fullname ?? $user->username,
+                    'user_email' => $user->email ?? 'N/A'
+                ]);
             }
 
             return response()->json([
@@ -368,15 +390,37 @@ class AdminController extends Controller
 
             DB::commit();
 
-            // Send email notification to user based on transaction type
-            if ($transaction->type === 'deposit') {
-                Mail::to($transaction->user->email)->send(
-                    new DepositStatusNotification($transaction, $transaction->user, 'rejected', $request->reason)
-                );
-            } elseif ($transaction->type === 'withdrawal') {
-                Mail::to($transaction->user->email)->send(
-                    new WithdrawalStatusNotification($transaction, $transaction->user, 'rejected', $request->reason)
-                );
+            // Send email notification to user based on transaction type (only if email verified)
+            $user = $transaction->user;
+
+            if ($user->hasVerifiedEmail()) {
+                if ($transaction->type === 'deposit') {
+                    Mail::to($user->email)->send(
+                        new DepositStatusNotification($transaction, $user, 'rejected', $request->reason)
+                    );
+                    \Log::info('Deposit rejection notification sent', [
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id,
+                        'user_email' => $user->email
+                    ]);
+                } elseif ($transaction->type === 'withdrawal') {
+                    Mail::to($user->email)->send(
+                        new WithdrawalStatusNotification($transaction, $user, 'rejected', $request->reason)
+                    );
+                    \Log::info('Withdrawal rejection notification sent', [
+                        'transaction_id' => $transaction->id,
+                        'user_id' => $user->id,
+                        'user_email' => $user->email
+                    ]);
+                }
+            } else {
+                \Log::warning('Transaction rejection notification skipped - User email not verified', [
+                    'transaction_id' => $transaction->id,
+                    'transaction_type' => $transaction->type,
+                    'user_id' => $user->id,
+                    'user_name' => $user->fullname ?? $user->username,
+                    'user_email' => $user->email ?? 'N/A'
+                ]);
             }
 
             return response()->json([
@@ -1048,19 +1092,35 @@ class AdminController extends Controller
         // Update transfer fee settings (mapping to existing backend settings)
         if ($request->has('transfer_fee_enabled')) {
             \App\Models\SystemSetting::set('transfer_charge_enabled', $request->boolean('transfer_fee_enabled'), 'boolean', 'Enable transfer fees');
+        }
+        if ($request->has('transfer_fee_type')) {
             \App\Models\SystemSetting::set('transfer_charge_type', $request->input('transfer_fee_type', 'percentage'), 'string', 'Transfer fee type (percentage or fixed)');
-            \App\Models\SystemSetting::set('transfer_charge_value', $request->input('transfer_fee_value', 1.5), 'string', 'Transfer fee value');
-            \App\Models\SystemSetting::set('transfer_minimum_charge', $request->input('transfer_minimum_fee', 0.50), 'string', 'Minimum transfer fee');
-            \App\Models\SystemSetting::set('transfer_maximum_charge', $request->input('transfer_maximum_fee', 25.00), 'string', 'Maximum transfer fee');
+        }
+        if ($request->has('transfer_fee_value')) {
+            \App\Models\SystemSetting::set('transfer_charge_value', $request->input('transfer_fee_value', 0), 'string', 'Transfer fee value');
+        }
+        if ($request->has('transfer_minimum_fee')) {
+            \App\Models\SystemSetting::set('transfer_minimum_charge', $request->input('transfer_minimum_fee', 0), 'string', 'Minimum transfer fee');
+        }
+        if ($request->has('transfer_maximum_fee')) {
+            \App\Models\SystemSetting::set('transfer_maximum_charge', $request->input('transfer_maximum_fee', 999999), 'string', 'Maximum transfer fee');
         }
 
         // Update withdrawal fee settings
         if ($request->has('withdrawal_fee_enabled')) {
             \App\Models\SystemSetting::set('withdrawal_fee_enabled', $request->boolean('withdrawal_fee_enabled'), 'boolean', 'Enable withdrawal fees');
+        }
+        if ($request->has('withdrawal_fee_type')) {
             \App\Models\SystemSetting::set('withdrawal_fee_type', $request->input('withdrawal_fee_type', 'percentage'), 'string', 'Withdrawal fee type (percentage or fixed)');
-            \App\Models\SystemSetting::set('withdrawal_fee_value', $request->input('withdrawal_fee_value', 2.5), 'string', 'Withdrawal fee value');
-            \App\Models\SystemSetting::set('withdrawal_minimum_fee', $request->input('withdrawal_minimum_fee', 1.00), 'string', 'Minimum withdrawal fee');
-            \App\Models\SystemSetting::set('withdrawal_maximum_fee', $request->input('withdrawal_maximum_fee', 50.00), 'string', 'Maximum withdrawal fee');
+        }
+        if ($request->has('withdrawal_fee_value')) {
+            \App\Models\SystemSetting::set('withdrawal_fee_value', $request->input('withdrawal_fee_value', 0), 'string', 'Withdrawal fee value');
+        }
+        if ($request->has('withdrawal_minimum_fee')) {
+            \App\Models\SystemSetting::set('withdrawal_minimum_fee', $request->input('withdrawal_minimum_fee', 0), 'string', 'Minimum withdrawal fee');
+        }
+        if ($request->has('withdrawal_maximum_fee')) {
+            \App\Models\SystemSetting::set('withdrawal_maximum_fee', $request->input('withdrawal_maximum_fee', 999999), 'string', 'Maximum withdrawal fee');
         }
 
         // Update payment method settings

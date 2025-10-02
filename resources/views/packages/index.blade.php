@@ -15,10 +15,10 @@
         </div>
     </div>
 
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-6">
-            <form method="GET" action="{{ route('packages.index') }}" class="d-flex">
-                <input type="text" name="search" class="form-control me-2" placeholder="Search packages..."
+            <form method="GET" action="{{ route('packages.index') }}" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control" placeholder="Search packages..."
                        value="{{ request('search') }}">
                 <button type="submit" class="btn btn-outline-primary">
                     <svg class="icon">
@@ -28,8 +28,8 @@
             </form>
         </div>
         <div class="col-md-6">
-            <div class="d-flex justify-content-end">
-                <select class="form-select w-auto" onchange="location = this.value;">
+            <div class="d-flex justify-content-md-end">
+                <select class="form-select" onchange="location = this.value;" style="max-width: 250px;">
                     <option value="{{ route('packages.index') }}"
                             {{ !request('sort') ? 'selected' : '' }}>Sort by Default</option>
                     <option value="{{ route('packages.index', ['sort' => 'price_low'] + request()->query()) }}"

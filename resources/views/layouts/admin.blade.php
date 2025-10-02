@@ -53,6 +53,7 @@
     <!-- Cart JavaScript -->
     <script>
         window.cartRoutes = {
+            index: '{{ route("cart.index") }}',
             count: '{{ route("cart.count") }}',
             summary: '{{ route("cart.summary") }}',
             add: '/cart/add/{packageId}',

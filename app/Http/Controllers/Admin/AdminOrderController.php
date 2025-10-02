@@ -132,12 +132,20 @@ class AdminOrderController extends Controller
         $validated = $request->validate([
             'status' => 'required|string',
             'notes' => 'nullable|string|max:1000',
-            'notify_customer' => 'sometimes|boolean'
+            'notify_customer' => 'sometimes|boolean',
+            'delivered_at' => 'nullable|date'
         ]);
 
         try {
             // Handle checkbox value: if checked it sends true, if unchecked it's not sent at all
             $notifyCustomer = $request->has('notify_customer') && $request->input('notify_customer');
+
+            // If status is being set to 'delivered' and delivered_at is provided, update the order
+            if ($validated['status'] === Order::STATUS_DELIVERED && !empty($validated['delivered_at'])) {
+                $order->update([
+                    'delivered_at' => $validated['delivered_at']
+                ]);
+            }
 
             $this->orderStatusService->updateStatus(
                 $order,
@@ -446,5 +454,57 @@ class AdminOrderController extends Controller
             'attention_count' => $attentionCount,
             'last_update' => now()->toISOString()
         ]);
+    }
+
+    /**
+     * Update notes for a specific status history entry
+     */
+    public function updateTimelineNotes(Request $request, \App\Models\OrderStatusHistory $statusHistory): JsonResponse
+    {
+        $request->validate([
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            $notes = $request->input('notes');
+
+            // Log the update for debugging
+            Log::info('Updating timeline notes', [
+                'history_id' => $statusHistory->id,
+                'old_notes' => $statusHistory->notes,
+                'new_notes' => $notes,
+                'old_notes_length' => strlen($statusHistory->notes ?? ''),
+                'new_notes_length' => strlen($notes ?? ''),
+            ]);
+
+            $statusHistory->update([
+                'notes' => $notes
+            ]);
+
+            // Refresh to get the actual saved value
+            $statusHistory->refresh();
+
+            Log::info('Timeline notes updated', [
+                'history_id' => $statusHistory->id,
+                'saved_notes' => $statusHistory->notes,
+                'saved_notes_length' => strlen($statusHistory->notes ?? ''),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Timeline notes updated successfully',
+                'notes' => $statusHistory->notes
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update timeline notes', [
+                'history_id' => $statusHistory->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update timeline notes'
+            ], 500);
+        }
     }
 }
