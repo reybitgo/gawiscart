@@ -37,6 +37,7 @@ class AdminPackageController extends Controller
             'long_description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
+            'is_mlm_package' => 'boolean',
             'sort_order' => 'integer|min:0',
             'features' => 'nullable|array',
             'features.*' => 'nullable|string|max:255',
@@ -79,6 +80,10 @@ class AdminPackageController extends Controller
         // Remove the temporary fields from validated data
         unset($validated['features'], $validated['duration'], $validated['category']);
 
+        // Handle checkbox values (unchecked checkboxes are not submitted)
+        $validated['is_active'] = $request->has('is_active');
+        $validated['is_mlm_package'] = $request->has('is_mlm_package');
+
         Package::create($validated);
 
         return redirect()->route('admin.packages.index')
@@ -107,6 +112,7 @@ class AdminPackageController extends Controller
             'long_description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
+            'is_mlm_package' => 'boolean',
             'sort_order' => 'integer|min:0',
             'features' => 'nullable|array',
             'features.*' => 'nullable|string|max:255',
@@ -153,6 +159,17 @@ class AdminPackageController extends Controller
 
         // Remove the temporary fields from validated data
         unset($validated['features'], $validated['duration'], $validated['category']);
+
+        // Handle checkbox values (unchecked checkboxes are not submitted)
+        $validated['is_active'] = $request->has('is_active');
+
+        // Prevent changing MLM status if package has been purchased
+        if (!$package->canBeDeleted() && $package->is_mlm_package) {
+            // Keep the original MLM status - cannot be changed
+            $validated['is_mlm_package'] = $package->is_mlm_package;
+        } else {
+            $validated['is_mlm_package'] = $request->has('is_mlm_package');
+        }
 
         $package->update($validated);
 

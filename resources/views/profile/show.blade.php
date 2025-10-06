@@ -3,15 +3,15 @@
 @section('title', 'Profile')
 
 @section('content')
-<!-- Email Status Information -->
-@if (!$user->hasVerifiedEmail() && $user->email)
-    <div class="alert alert-info alert-dismissible fade show" role="alert">
-        <svg class="icon me-2">
-            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+<!-- Email Verification Status Information -->
+@if ($user->email && !$user->hasVerifiedEmail())
+    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center" role="alert">
+        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
+            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
         </svg>
-        <div>
-            <strong>Email Not Verified</strong>
-            <p class="mb-0">Your email address is not verified. You can continue using the site normally. Email verification is optional and helps with account security and receiving notifications.</p>
+        <div class="flex-grow-1">
+            <strong>Email Not Verified</strong><br>
+            Your email address is not verified. Email verification is optional.
         </div>
         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -19,20 +19,15 @@
 
 <!-- Validation Error Messages -->
 @if ($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <svg class="icon me-2">
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
         </svg>
-        <div>
+        <div class="flex-grow-1">
             <strong>Please correct the following issues:</strong>
             <div class="mt-2">
                 @foreach ($errors->all() as $error)
-                    <div class="d-flex align-items-start mb-1">
-                        <svg class="icon icon-sm me-2 mt-1 text-danger">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>
-                        </svg>
-                        <span>{{ $error }}</span>
-                    </div>
+                    <div class="mb-1">• {{ $error }}</div>
                 @endforeach
             </div>
         </div>
@@ -64,19 +59,37 @@
                             @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">Email Address</label>
+                            <label for="email" class="form-label">Email Address <span class="text-muted">(Optional)</span></label>
                             <input type="email" class="form-control @error('email') is-invalid @enderror"
-                                   id="email" name="email" value="{{ old('email', $user->email) }}" required>
+                                   id="email" name="email" value="{{ old('email', $user->email) }}" placeholder="your.email@example.com">
                             @error('email')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            @if (!$user->hasVerifiedEmail() && $user->email)
+                            @if (!$user->email)
                                 <div class="mt-2">
                                     <small class="text-muted">
                                         <svg class="icon icon-sm me-1">
                                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
                                         </svg>
+                                        Add an email to receive notifications. A verification email will be sent automatically.
+                                    </small>
+                                </div>
+                            @elseif ($user->email && !$user->hasVerifiedEmail())
+                                <div class="mt-2">
+                                    <small class="text-warning">
+                                        <svg class="icon icon-sm me-1">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+                                        </svg>
                                         Your email address is not verified. Email verification is optional.
+                                    </small>
+                                </div>
+                            @elseif ($user->email && $user->hasVerifiedEmail())
+                                <div class="mt-2">
+                                    <small class="text-success">
+                                        <svg class="icon icon-sm me-1">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                                        </svg>
+                                        Your email address is verified.
                                     </small>
                                 </div>
                             @endif

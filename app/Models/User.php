@@ -32,6 +32,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'zip',
         'delivery_instructions',
         'delivery_time_preference',
+        'sponsor_id',
+        'referral_code',
     ];
 
     /**
@@ -100,11 +102,133 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Determine if the user has verified their email address.
+     * Users without email are considered "verified" since they don't need verification.
      *
      * @return bool
      */
     public function hasVerifiedEmail()
     {
+        // Users without email don't need verification
+        if (is_null($this->email)) {
+            return true;
+        }
+
+        // Users with email need to verify it
         return !is_null($this->email_verified_at);
+    }
+
+    /**
+     * Get the sponsor (upline) of this user
+     */
+    public function sponsor()
+    {
+        return $this->belongsTo(User::class, 'sponsor_id');
+    }
+
+    /**
+     * Get all direct referrals (downline) of this user
+     */
+    public function referrals()
+    {
+        return $this->hasMany(User::class, 'sponsor_id');
+    }
+
+    /**
+     * Get all referral clicks for this user's referral link
+     */
+    public function referralClicks()
+    {
+        return $this->hasMany(ReferralClick::class);
+    }
+
+    /**
+     * Boot method to auto-generate referral code and validate sponsor relationships
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            if (empty($user->referral_code)) {
+                $user->referral_code = self::generateReferralCode();
+            }
+        });
+
+        // Validate sponsor relationship before saving (create or update)
+        static::saving(function ($user) {
+            if (!empty($user->sponsor_id)) {
+                // Prevent self-sponsorship
+                if ($user->id && $user->sponsor_id == $user->id) {
+                    throw new \InvalidArgumentException('A user cannot sponsor themselves.');
+                }
+
+                // Prevent circular reference by checking if the sponsor is in this user's downline
+                if ($user->id && self::wouldCreateCircularReference($user->id, $user->sponsor_id)) {
+                    throw new \InvalidArgumentException('Circular sponsor reference detected. The selected sponsor is already in your downline network.');
+                }
+            }
+        });
+    }
+
+    /**
+     * Check if setting a sponsor would create a circular reference
+     *
+     * @param int $userId The user whose sponsor is being set
+     * @param int $sponsorId The proposed sponsor
+     * @return bool True if circular reference would be created
+     */
+    private static function wouldCreateCircularReference($userId, $sponsorId): bool
+    {
+        // If sponsor is null, no circular reference possible
+        if (is_null($sponsorId)) {
+            return false;
+        }
+
+        // Start from the proposed sponsor and walk up the chain
+        $currentId = $sponsorId;
+        $visited = [];
+        $maxDepth = 100; // Prevent infinite loops in corrupted data
+        $depth = 0;
+
+        while ($currentId && $depth < $maxDepth) {
+            // If we encounter the original user in the upline, it's circular
+            if ($currentId == $userId) {
+                return true;
+            }
+
+            // Prevent infinite loops from corrupted data
+            if (in_array($currentId, $visited)) {
+                // Already visited this user - there's already a circular reference in the data
+                return true;
+            }
+
+            $visited[] = $currentId;
+
+            // Get the next sponsor in the chain
+            $nextSponsor = self::where('id', $currentId)->value('sponsor_id');
+
+            if (is_null($nextSponsor)) {
+                // Reached the top of the chain, no circular reference
+                return false;
+            }
+
+            $currentId = $nextSponsor;
+            $depth++;
+        }
+
+        // If we hit max depth, assume circular reference exists
+        return $depth >= $maxDepth;
+    }
+
+    /**
+     * Generate a unique referral code
+     */
+    public static function generateReferralCode(): string
+    {
+        do {
+            $code = 'REF' . strtoupper(\Illuminate\Support\Str::random(8));
+        } while (self::where('referral_code', $code)->exists());
+
+        return $code;
     }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminPackageController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\AdminMlmSettingsController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\CartController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DatabaseResetController;
+use App\Http\Controllers\ReferralController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,6 +31,12 @@ Route::middleware(['auth', 'enforce.2fa'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+    // Member Registration Route (for logged-in users to register others)
+    Route::get('/register-member', [\App\Http\Controllers\MemberRegistrationController::class, 'show'])->name('member.register.show');
+    Route::post('/register-member', [\App\Http\Controllers\MemberRegistrationController::class, 'register'])
+        ->middleware('throttle:10,1')
+        ->name('member.register.process');
 
     // Package Routes (Public)
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
@@ -85,6 +93,11 @@ Route::middleware(['auth', 'enforce.2fa'])->group(function () {
         Route::post('/{returnRequest}/tracking', [\App\Http\Controllers\ReturnRequestController::class, 'updateTracking'])
             ->middleware('throttle:10,1')
             ->name('update-tracking');
+    });
+
+    // Referral Routes (MLM System)
+    Route::prefix('referral')->name('referral.')->group(function () {
+        Route::get('/', [ReferralController::class, 'index'])->name('index');
     });
 });
 
@@ -158,6 +171,10 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
     // Admin Package Management Routes
     Route::resource('packages', AdminPackageController::class);
     Route::post('/packages/{package}/toggle-status', [AdminPackageController::class, 'toggleStatus'])->name('packages.toggle-status');
+
+    // MLM Settings Routes
+    Route::get('/packages/{package}/mlm-settings', [AdminMlmSettingsController::class, 'edit'])->name('packages.mlm.edit');
+    Route::put('/packages/{package}/mlm-settings', [AdminMlmSettingsController::class, 'update'])->name('packages.mlm.update');
 
     // Admin Settings Routes
     Route::get('/application-settings', [AdminSettingsController::class, 'index'])->name('settings.index');

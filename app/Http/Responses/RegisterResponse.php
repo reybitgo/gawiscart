@@ -16,8 +16,18 @@ class RegisterResponse implements RegisterResponseContract
      */
     public function toResponse($request)
     {
+        $user = $request->user();
+
+        // Build welcome message
+        $message = "Welcome to " . config('app.name', 'Gawis iHerbal') . ", {$user->fullname}!<br>Your account has been created successfully.";
+
+        // Add email verification notice if email was provided
+        if ($user->email && !$user->hasVerifiedEmail()) {
+            $message .= "<br>A verification email has been sent to {$user->email}.";
+        }
+
         return $request->wantsJson()
                     ? new JsonResponse('', 201)
-                    : redirect()->route('dashboard');
+                    : redirect()->route('dashboard')->with('success', $message);
     }
 }

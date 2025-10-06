@@ -30,7 +30,8 @@
                                         <th>Points</th>
                                         <th>Quantity</th>
                                         <th>Status</th>
-                                        <th>Sort Order</th>
+                                        <th>Sort</th>
+                                        <th class="text-center">Plan</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -73,6 +74,15 @@
                                                 @endif
                                             </td>
                                             <td>{{ $package->sort_order }}</td>
+                                            <td class="text-center">
+                                                @if($package->is_mlm_package)
+                                                    <svg class="icon text-success">
+                                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check') }}"></use>
+                                                    </svg>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <div class="btn-group" role="group">
                                                     @if(!$package->trashed())

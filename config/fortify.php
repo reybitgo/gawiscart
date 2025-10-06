@@ -146,9 +146,9 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
-        // Email verification disabled - users can use the system without verified emails
-        // Email notifications are handled conditionally throughout the app
-        // Features::emailVerification(),
+        // Email verification enabled - only sends emails if user provides email during registration
+        // Users without email can still use the system
+        Features::emailVerification(),
         Features::updateProfileInformation(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([

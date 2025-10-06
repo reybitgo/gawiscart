@@ -23,7 +23,9 @@ class Package extends Model
         'image_path',
         'is_active',
         'sort_order',
-        'meta_data'
+        'meta_data',
+        'is_mlm_package',
+        'max_mlm_levels',
     ];
 
     protected $casts = [
@@ -32,7 +34,9 @@ class Package extends Model
         'quantity_available' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
-        'meta_data' => 'array'
+        'meta_data' => 'array',
+        'is_mlm_package' => 'boolean',
+        'max_mlm_levels' => 'integer',
     ];
 
     protected static function boot()
@@ -117,5 +121,21 @@ class Package extends Model
             $this->quantity_available = max(0, $this->quantity_available - $amount);
             $this->save();
         }
+    }
+
+    /**
+     * Get MLM settings for this package
+     */
+    public function mlmSettings()
+    {
+        return $this->hasMany(MlmSetting::class);
+    }
+
+    /**
+     * Check if this is an MLM package
+     */
+    public function isMLMPackage(): bool
+    {
+        return (bool) $this->is_mlm_package;
     }
 }

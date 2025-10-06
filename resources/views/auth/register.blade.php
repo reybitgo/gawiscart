@@ -17,12 +17,23 @@
                         <p class="text-body-secondary">Create your account</p>
 
                         @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
+                            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
+                                </svg>
+                                <div class="flex-grow-1">
+                                    @if($errors->count() === 1)
+                                        {{ $errors->first() }}
+                                    @else
+                                        <strong>Please correct the following issues:</strong>
+                                        <div class="mt-2">
+                                            @foreach ($errors->all() as $error)
+                                                <div class="mb-1">• {{ $error }}</div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                                <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                             </div>
                         @endif
 
@@ -71,11 +82,36 @@
                                        type="email"
                                        name="email"
                                        id="email"
-                                       placeholder="Email"
+                                       placeholder="Email (Optional)"
                                        value="{{ old('email') }}"
-                                       autocomplete="email"
-                                       required>
+                                       autocomplete="email">
                             </div>
+                            <small class="text-muted d-block mb-3">Email is optional. If provided, you will need to verify it. You can add it later in your profile.</small>
+
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">
+                                    <svg class="icon">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-people') }}"></use>
+                                    </svg>
+                                </span>
+                                <input class="form-control @error('sponsor_name') is-invalid @enderror"
+                                       type="text"
+                                       name="sponsor_name"
+                                       id="sponsor_name"
+                                       placeholder="Sponsor Name or Referral Code (Optional)"
+                                       value="{{ old('sponsor_name', session('referral_code') ?? request('ref')) }}"
+                                       autocomplete="off"
+                                       {{ session('referral_code') || request('ref') ? 'readonly' : '' }}>
+                            </div>
+                            @if(session('referral_code') || request('ref'))
+                                <div class="alert alert-success mb-3">
+                                    <small><svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                                    </svg><strong>Referral Code Applied:</strong> {{ session('referral_code') ?? request('ref') }}</small>
+                                </div>
+                            @else
+                                <small class="text-muted d-block mb-3">Leave blank to be assigned to default sponsor (Admin)</small>
+                            @endif
 
                             <div class="input-group mb-3">
                                 <span class="input-group-text">

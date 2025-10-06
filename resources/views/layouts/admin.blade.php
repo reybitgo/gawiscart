@@ -72,38 +72,40 @@
         <div class="body flex-grow-1">
             <div class="container-lg h-auto px-4">
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <svg class="icon me-2">
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
                         </svg>
-                        {{ session('success') }}
+                        <div class="flex-grow-1">{!! session('success') !!}</div>
                         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
                 @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x-circle') }}"></use>
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
                         </svg>
-                        {{ session('error') }}
+                        <div class="flex-grow-1">{!! session('error') !!}</div>
                         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
                 @if($errors->any())
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <svg class="icon me-2">
-                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
                         </svg>
-                        @if($errors->count() === 1)
-                            {{ $errors->first() }}
-                        @else
-                            <div class="fw-bold mb-2">Please correct the following issues:</div>
-                            @foreach($errors->all() as $error)
-                                <div class="mb-1">• {{ $error }}</div>
-                            @endforeach
-                        @endif
+                        <div class="flex-grow-1">
+                            @if($errors->count() === 1)
+                                {!! $errors->first() !!}
+                            @else
+                                <div class="fw-bold mb-2">Please correct the following issues:</div>
+                                @foreach($errors->all() as $error)
+                                    <div class="mb-1">• {{ $error }}</div>
+                                @endforeach
+                            @endif
+                        </div>
                         <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif

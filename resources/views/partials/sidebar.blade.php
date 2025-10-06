@@ -197,6 +197,25 @@
             </ul>
         </li>
 
+        <!-- Member Actions Section -->
+        <li class="nav-title">Member Actions</li>
+        <li class="nav-item">
+            <a class="nav-link{{ Request::routeIs('member.register.*') ? ' active' : '' }}" href="{{ route('member.register.show') }}">
+                <svg class="nav-icon">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-user-follow') }}"></use>
+                </svg>
+                <span>Register New Member</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link{{ Request::routeIs('referral.*') ? ' active' : '' }}" href="{{ route('referral.index') }}">
+                <svg class="nav-icon">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-share-alt') }}"></use>
+                </svg>
+                <span>My Referral Link</span>
+            </a>
+        </li>
+
         <!-- E-commerce Section -->
         <li class="nav-title">E-commerce</li>
         <li class="nav-group">

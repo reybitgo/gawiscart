@@ -33,22 +33,45 @@ class ProfileController extends Controller
         // Profile information update
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => [
+                'nullable',
+                'string',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) use ($user) {
+                    // Only check uniqueness if email is not null
+                    if ($value !== null) {
+                        $exists = \App\Models\User::where('email', $value)
+                            ->where('id', '!=', $user->id)
+                            ->whereNotNull('email')
+                            ->exists();
+                        if ($exists) {
+                            $fail('The email has already been taken.');
+                        }
+                    }
+                },
+            ],
         ]);
 
         $oldEmail = $user->email;
-        $newEmail = $validated['email'];
+        $newEmail = $validated['email'] ?? null;
 
         // If email is being changed
         if ($oldEmail !== $newEmail) {
-            // Mark new email as unverified
-            $user->email_verified_at = null;
+            // Mark new email as unverified if email is provided
+            $user->email_verified_at = $newEmail ? null : null;
 
             // Update email immediately - no restrictions
             $user->fill($validated);
             $user->save();
 
-            return redirect()->route('profile.show')->with('success', 'Email address updated successfully. You can verify your new email address at any time for enhanced security.');
+            if ($newEmail) {
+                // Automatically send verification email for new/changed email
+                $user->sendEmailVerificationNotification();
+                return redirect()->route('profile.show')->with('success', "Email address updated successfully. A verification email has been sent to {$newEmail}.");
+            } else {
+                return redirect()->route('profile.show')->with('success', 'Email address removed successfully.');
+            }
         }
 
         // If only username is being updated

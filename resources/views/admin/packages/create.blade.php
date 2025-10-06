@@ -191,6 +191,17 @@
                                     </div>
                                 </div>
 
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_mlm_package" name="is_mlm_package" value="1"
+                                               {{ old('is_mlm_package', false) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="is_mlm_package">
+                                            MLM Package (Commission-based)
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Enable multi-level marketing commission structure for this package</div>
+                                </div>
+
                                 <div class="card">
                                     <div class="card-header">
                                         <h6 class="card-title mb-0">Package Preview</h6>

@@ -26,6 +26,12 @@ class FortifyServiceProvider extends ServiceProvider
             \Laravel\Fortify\Contracts\RegisterResponse::class,
             \App\Http\Responses\RegisterResponse::class
         );
+
+        // Bind custom email verification response
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\VerifyEmailResponse::class,
+            \App\Http\Responses\VerifyEmailResponse::class
+        );
     }
 
     /**
@@ -57,7 +63,25 @@ class FortifyServiceProvider extends ServiceProvider
             return view('auth.login');
         });
 
-        Fortify::registerView(function () {
+        Fortify::registerView(function (Request $request) {
+            // Track referral clicks if ref parameter is present
+            if ($request->has('ref')) {
+                $refCode = $request->query('ref');
+                $user = \App\Models\User::where('referral_code', $refCode)->first();
+
+                if ($user) {
+                    // Track click
+                    \App\Models\ReferralClick::create([
+                        'user_id' => $user->id,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent()
+                    ]);
+
+                    // Store in session for form pre-fill
+                    session(['referral_code' => $refCode]);
+                }
+            }
+
             return view('auth.register');
         });
 
