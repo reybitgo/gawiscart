@@ -2520,24 +2520,44 @@ WHERE u.username = 'testdirect';
 
 ### Test Case 13.2: Test Invalid Referral Code in URL
 
-**Objective**: Verify handling of invalid referral code
+**Objective**: Verify handling of invalid referral code with server-side validation
 
 **Steps**:
 
 1. Manually construct URL: `/register?ref=INVALIDCODE123`
 2. Navigate to this URL
 3. Check registration form
+4. Attempt to submit registration with the invalid code
 
-**Expected Results**:
+**Expected Results - Initial Load**:
 
 -   ✅ Page loads normally
--   ✅ No referral click is tracked
--   ✅ Sponsor field is empty (not pre-filled)
--   ✅ No success alert displays
--   ✅ No error messages display
--   ✅ User can still register normally
+-   ✅ No referral click is tracked (code doesn't exist in database)
+-   ✅ Sponsor field IS pre-filled with `INVALIDCODE123` (from URL parameter)
+-   ✅ Sponsor field is readonly (same behavior as valid codes)
+-   ✅ Success alert displays: "Referral Code Applied: INVALIDCODE123"
+-   ✅ No error messages on initial load
 
-**Pass Criteria**: Invalid code is gracefully ignored
+**Expected Results - Form Submission**:
+
+-   ✅ Registration fails with validation error
+-   ✅ Error message displays: "The sponsor 'INVALIDCODE123' could not be found. Please check the username, referral code, or full name."
+-   ✅ Form retains all entered data (except password)
+-   ✅ User remains on registration page
+-   ✅ User can see the validation error clearly
+
+**Expected Results - Alternative Action**:
+
+-   ✅ User can navigate back and use a different URL without the invalid ref parameter
+-   ✅ User can manually register with a valid sponsor or leave blank for default admin sponsor
+
+**Pass Criteria**: Invalid referral code is validated on submission, providing clear feedback to the user
+
+**Security Note**: This approach is preferred because:
+1. It validates on server-side (secure and authoritative)
+2. Provides clear error messaging to users
+3. Prevents silent failures
+4. Allows users to understand what went wrong
 
 ---
 
@@ -2613,22 +2633,57 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ### Test Case 14.1: Test SQL Injection in Referral Code
 
-**Objective**: Verify referral code is sanitized against SQL injection
+**Objective**: Verify referral code is protected against SQL injection through parameterized queries and validation
 
 **Steps**:
 
 1. Construct malicious URL: `/register?ref=' OR '1'='1`
 2. Navigate to URL
-3. Check application behavior and database
+3. Check registration form
+4. Attempt to submit registration with the malicious code
 
-**Expected Results**:
+**Expected Results - Initial Load**:
 
--   ✅ No SQL injection occurs
--   ✅ Invalid code is treated as non-existent
--   ✅ No referral click is tracked
--   ✅ Registration proceeds normally without pre-fill
+-   ✅ Page loads normally
+-   ✅ No SQL injection occurs during page load
+-   ✅ No referral click is tracked (malicious code doesn't match any user)
+-   ✅ Sponsor field IS pre-filled with `' OR '1'='1` (treated as literal string)
+-   ✅ Sponsor field is readonly
+-   ✅ Success alert displays: "Referral Code Applied: ' OR '1'='1"
+-   ✅ No database corruption or unauthorized data access
 
-**Pass Criteria**: SQL injection is prevented
+**Expected Results - Form Submission**:
+
+-   ✅ Registration fails with validation error
+-   ✅ Error message displays: "The sponsor '' OR '1'='1' could not be found. Please check the username, referral code, or full name."
+-   ✅ No SQL injection executed
+-   ✅ Database queries use parameterized statements (Laravel's Eloquent ORM)
+-   ✅ Malicious input treated as literal string value
+-   ✅ Form retains all entered data (except password)
+-   ✅ User remains on registration page
+
+**Expected Results - Database Security**:
+
+-   ✅ Database lookup: `WHERE referral_code = "' OR '1'='1"` (parameterized)
+-   ✅ No records returned (no user has this as their referral code)
+-   ✅ No SQL injection vulnerability exploited
+-   ✅ No unauthorized data access
+-   ✅ No database errors in logs
+
+**Pass Criteria**: SQL injection is completely prevented through multiple layers of defense
+
+**Security Analysis**:
+1. **Parameterized Queries**: Laravel's Eloquent ORM uses prepared statements
+2. **Input Sanitization**: Special characters treated as literal strings, not SQL commands
+3. **Validation Layer**: Invalid sponsor triggers validation error before any database modification
+4. **No Silent Failures**: User receives clear error message
+5. **Defense in Depth**: Multiple security layers working together
+
+**Technical Details**:
+- Laravel's query builder automatically escapes and parameterizes all user input
+- The string `' OR '1'='1` is passed as a bound parameter, not concatenated into SQL
+- Actual query: `SELECT * FROM users WHERE referral_code = ?` with parameter `[' OR '1'='1]`
+- This prevents any SQL injection regardless of input content
 
 ---
 

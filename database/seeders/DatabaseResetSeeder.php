@@ -64,6 +64,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('📦 Preloaded packages restored with MLM settings');
         $this->command->info('🛒 Order history cleared (ready for new orders)');
         $this->command->info('↩️  Return requests cleared (ready for new returns)');
+        $this->command->info('🔗 Referral clicks cleared (ready for new tracking)');
         $this->command->info('🔢 User IDs reset to sequential (1, 2)');
         $this->command->info('📍 Complete profile data for admin and member');
         $this->command->info('');
@@ -76,16 +77,26 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('  ✅ Package Management with Inventory Tracking');
         $this->command->info('  ✅ Order Analytics Dashboard');
         $this->command->info('');
-        $this->command->info('💰 MLM System Features:');
-        $this->command->info('  ✅ 5-Level Commission Structure (L1: ₱200, L2-L5: ₱50 each)');
-        $this->command->info('  ✅ Real-time Commission Distribution');
-        $this->command->info('  ✅ MLM Package Configuration (toggleable per package)');
-        $this->command->info('  ✅ Active/Inactive Level Toggling with Real-time Calculations');
-        $this->command->info('  ✅ MLM Settings Preservation (survives package toggle)');
-        $this->command->info('  ✅ Circular Reference Prevention (self-sponsorship & loops)');
-        $this->command->info('  ✅ Sponsor Relationship Validation');
-        $this->command->info('  ✅ Segregated Wallet Balances (MLM vs Purchase)');
-        $this->command->info('  ✅ Auto-generated Unique Referral Codes');
+        $this->command->info('💰 MLM System Features (Phase 1 & 2):');
+        $this->command->info('  ✅ Phase 1: Core MLM Package & Registration');
+        $this->command->info('    • 5-Level Commission Structure (L1: ₱200, L2-L5: ₱50 each)');
+        $this->command->info('    • Real-time Commission Distribution');
+        $this->command->info('    • MLM Package Configuration (toggleable per package)');
+        $this->command->info('    • Active/Inactive Level Toggling with Real-time Calculations');
+        $this->command->info('    • MLM Settings Preservation (survives package toggle)');
+        $this->command->info('    • Circular Reference Prevention (self-sponsorship & loops)');
+        $this->command->info('    • Sponsor Relationship Validation');
+        $this->command->info('    • Segregated Wallet Balances (MLM vs Purchase)');
+        $this->command->info('    • Auto-generated Unique Referral Codes');
+        $this->command->info('  ✅ Phase 2: Referral Link System & Auto-Fill Sponsor');
+        $this->command->info('    • Shareable Referral Links with QR Codes');
+        $this->command->info('    • Social Media Sharing (Facebook, WhatsApp, Messenger, Twitter)');
+        $this->command->info('    • Referral Click Tracking (IP, User Agent, Timestamp)');
+        $this->command->info('    • Auto-fill Sponsor on Registration');
+        $this->command->info('    • Referral Statistics Dashboard (Clicks, Conversions, Rate)');
+        $this->command->info('    • Copy to Clipboard Functionality');
+        $this->command->info('    • Session-based Referral Code Storage');
+        $this->command->info('    • Registration Conversion Tracking');
         $this->command->info('');
         $this->command->info('🔒 Performance & Security Enhancements:');
         $this->command->info('  ✅ Database indexes for faster queries');
@@ -122,7 +133,11 @@ class DatabaseResetSeeder extends Seeder
         // Disable foreign key checks for proper truncation
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-        // Clear return requests first (foreign key dependency on orders)
+        // Clear referral clicks first (foreign key dependency on users)
+        DB::table('referral_clicks')->truncate();
+        $this->command->info('✅ Cleared all referral clicks');
+
+        // Clear return requests (foreign key dependency on orders)
         DB::table('return_requests')->truncate();
         $this->command->info('✅ Cleared all return requests');
 
