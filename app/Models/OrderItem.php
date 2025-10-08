@@ -45,12 +45,12 @@ class OrderItem extends Model
      */
     public function getFormattedUnitPriceAttribute(): string
     {
-        return '$' . number_format($this->unit_price, 2);
+        return currency($this->unit_price);
     }
 
     public function getFormattedTotalPriceAttribute(): string
     {
-        return '$' . number_format($this->total_price, 2);
+        return currency($this->total_price);
     }
 
     public function getPackageNameAttribute(): string

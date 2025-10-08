@@ -29,5 +29,25 @@ class SystemSettingSeeder extends Seeder
                 'Whether email verification is required for new user registrations'
             );
         }
+
+        // Currency setting for unified currency display
+        if (!SystemSetting::where('key', 'currency')->exists()) {
+            SystemSetting::set(
+                'currency',
+                'PHP',
+                'string',
+                'Currency code for the system (PHP, USD, EUR, etc.)'
+            );
+        }
+
+        // Currency symbol setting
+        if (!SystemSetting::where('key', 'currency_symbol')->exists()) {
+            SystemSetting::set(
+                'currency_symbol',
+                '₱',
+                'string',
+                'Currency symbol to display (₱, $, €, etc.)'
+            );
+        }
     }
 }

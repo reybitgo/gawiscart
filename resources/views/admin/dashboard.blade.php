@@ -94,7 +94,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="fs-6 fw-semibold text-success">${{ number_format($totalBalance, 2) }}</div>
+                        <div class="fs-6 fw-semibold text-success">{{ currency($totalBalance) }}</div>
                         <div class="text-body-secondary">Total Balance</div>
                     </div>
                 </div>
@@ -148,7 +148,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="fs-6 fw-semibold text-purple">${{ number_format($monthlyVolume, 2) }}</div>
+                        <div class="fs-6 fw-semibold text-purple">{{ currency($monthlyVolume) }}</div>
                         <div class="text-body-secondary">Monthly Volume</div>
                     </div>
                 </div>

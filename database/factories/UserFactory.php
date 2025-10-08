@@ -24,11 +24,14 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'username' => fake()->unique()->userName(),
+            'fullname' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
+            'suspended_at' => null,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'sponsor_id' => null, // Can be overridden when creating factory instances
         ];
     }
 
@@ -39,6 +42,16 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user account should be suspended.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'suspended_at' => now(),
         ]);
     }
 }

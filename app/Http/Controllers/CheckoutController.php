@@ -8,6 +8,7 @@ use App\Services\CartService;
 use App\Services\WalletPaymentService;
 use App\Services\InputSanitizationService;
 use App\Services\FraudDetectionService;
+use App\Jobs\ProcessMLMCommissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -287,6 +288,35 @@ class CheckoutController extends Controller
 
             // Clear the cart
             $this->cartService->clear();
+
+            // Process MLM commissions immediately (sync) if order contains MLM packages
+            // Refresh order to load order items relationship
+            $order->load('orderItems.package');
+
+            // Check if any order items contain MLM packages
+            $hasMlmPackage = $order->orderItems->contains(function($orderItem) {
+                return $orderItem->package && $orderItem->package->is_mlm_package;
+            });
+
+            if ($hasMlmPackage) {
+                ProcessMLMCommissions::dispatchSync($order);
+
+                $mlmPackageNames = $order->orderItems
+                    ->filter(function($item) {
+                        return $item->package && $item->package->is_mlm_package;
+                    })
+                    ->pluck('package.name')
+                    ->join(', ');
+
+                Log::info('MLM Commission Processing Initiated', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'buyer_id' => $order->user_id,
+                    'buyer_username' => $order->user->username ?? 'unknown',
+                    'sponsor_id' => $order->user->sponsor_id ?? null,
+                    'mlm_packages' => $mlmPackageNames
+                ]);
+            }
 
             // Redirect to order confirmation
             return redirect()->route('checkout.confirmation', $order)

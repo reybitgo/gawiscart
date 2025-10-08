@@ -175,7 +175,7 @@ class WalletController extends Controller
 
         // Check if sender's wallet has sufficient balance (including charge)
         if ($senderWallet->balance < $totalAmount) {
-            return redirect()->back()->withErrors(['amount' => 'Insufficient balance. You need $' . number_format($totalAmount, 2) . ' (Transfer: $' . number_format($transferAmount, 2) . ' + Fee: $' . number_format($transferCharge, 2) . '). Your current balance is $' . number_format($senderWallet->balance, 2)]);
+            return redirect()->back()->withErrors(['amount' => 'Insufficient balance. You need ' . currency($totalAmount) . ' (Transfer: ' . currency($transferAmount) . ' + Fee: ' . currency($transferCharge) . '). Your current balance is ' . currency($senderWallet->balance)]);
         }
 
         // Check if sender's wallet is active
@@ -376,14 +376,14 @@ class WalletController extends Controller
         if ($availableBalance < $totalAmount) {
             $errorMessage = 'Insufficient available balance. ';
             if ($withdrawalFee > 0) {
-                $errorMessage .= 'Total required: $' . number_format($totalAmount, 2) . ' (Withdrawal: $' . number_format($withdrawalAmount, 2) . ' + Fee: $' . number_format($withdrawalFee, 2) . '). ';
+                $errorMessage .= 'Total required: ' . currency($totalAmount) . ' (Withdrawal: ' . currency($withdrawalAmount) . ' + Fee: ' . currency($withdrawalFee) . '). ';
             } else {
-                $errorMessage .= 'Total required: $' . number_format($withdrawalAmount, 2) . '. ';
+                $errorMessage .= 'Total required: ' . currency($withdrawalAmount) . '. ';
             }
             if ($pendingWithdrawals > 0) {
-                $errorMessage .= 'You have $' . number_format($pendingWithdrawals, 2) . ' in pending withdrawals. ';
+                $errorMessage .= 'You have ' . currency($pendingWithdrawals) . ' in pending withdrawals. ';
             }
-            $errorMessage .= 'Available balance: $' . number_format($availableBalance, 2) . '. Wallet balance: $' . number_format($wallet->balance, 2) . '.';
+            $errorMessage .= 'Available balance: ' . currency($availableBalance) . '. Wallet balance: ' . currency($wallet->balance) . '.';
 
             return redirect()->back()->withErrors(['amount' => $errorMessage]);
         }

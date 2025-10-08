@@ -175,17 +175,17 @@ class Order extends Model
 
     public function getFormattedTotalAttribute(): string
     {
-        return '$' . number_format($this->total_amount, 2);
+        return currency($this->total_amount);
     }
 
     public function getFormattedSubtotalAttribute(): string
     {
-        return '$' . number_format($this->subtotal, 2);
+        return currency($this->subtotal);
     }
 
     public function getFormattedTaxAmountAttribute(): string
     {
-        return '$' . number_format($this->tax_amount, 2);
+        return currency($this->tax_amount);
     }
 
     public function getTaxPercentageAttribute(): string

@@ -59,6 +59,71 @@
                     </div>
                 </div>
 
+                <!-- Currency Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-dollar') }}"></use>
+                            </svg>
+                            Currency Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="currency_symbol" class="form-label">Currency Symbol</label>
+                                <input type="text"
+                                       class="form-control @error('currency_symbol') is-invalid @enderror"
+                                       id="currency_symbol"
+                                       name="currency_symbol"
+                                       value="{{ old('currency_symbol', $settings['currency_symbol'] ?? '₱') }}"
+                                       maxlength="5"
+                                       required>
+                                @error('currency_symbol')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">
+                                    Symbol displayed before amounts (e.g., ₱, $, €, £, ¥)
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Preview: <strong><span id="currency_preview">{{ $settings['currency_symbol'] ?? '₱' }}</span>1,234.56</strong></small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="currency" class="form-label">Currency Code</label>
+                                <select class="form-select @error('currency') is-invalid @enderror"
+                                        id="currency"
+                                        name="currency"
+                                        required>
+                                    <option value="PHP" {{ ($settings['currency'] ?? 'PHP') === 'PHP' ? 'selected' : '' }}>PHP - Philippine Peso</option>
+                                    <option value="USD" {{ ($settings['currency'] ?? 'PHP') === 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
+                                    <option value="EUR" {{ ($settings['currency'] ?? 'PHP') === 'EUR' ? 'selected' : '' }}>EUR - Euro</option>
+                                    <option value="GBP" {{ ($settings['currency'] ?? 'PHP') === 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
+                                    <option value="JPY" {{ ($settings['currency'] ?? 'PHP') === 'JPY' ? 'selected' : '' }}>JPY - Japanese Yen</option>
+                                    <option value="AUD" {{ ($settings['currency'] ?? 'PHP') === 'AUD' ? 'selected' : '' }}>AUD - Australian Dollar</option>
+                                    <option value="CAD" {{ ($settings['currency'] ?? 'PHP') === 'CAD' ? 'selected' : '' }}>CAD - Canadian Dollar</option>
+                                    <option value="SGD" {{ ($settings['currency'] ?? 'PHP') === 'SGD' ? 'selected' : '' }}>SGD - Singapore Dollar</option>
+                                </select>
+                                @error('currency')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">
+                                    ISO currency code for the system
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            <strong>Note:</strong> Changing currency affects all prices, wallet balances, and transactions displayed throughout the system. This is for display purposes only and does not convert existing monetary values.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Authentication Settings -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -160,10 +225,37 @@
 document.addEventListener('DOMContentLoaded', function() {
     const taxRateInput = document.getElementById('tax_rate');
     const taxPercentageSpan = document.getElementById('tax_percentage');
+    const currencySymbolInput = document.getElementById('currency_symbol');
+    const currencyPreviewSpan = document.getElementById('currency_preview');
+    const currencySelect = document.getElementById('currency');
 
+    // Tax rate preview
     taxRateInput.addEventListener('input', function() {
         const percentage = (parseFloat(this.value) * 100).toFixed(1);
         taxPercentageSpan.textContent = percentage + '%';
+    });
+
+    // Currency symbol preview
+    currencySymbolInput.addEventListener('input', function() {
+        currencyPreviewSpan.textContent = this.value || '₱';
+    });
+
+    // Auto-update currency symbol when currency code changes
+    currencySelect.addEventListener('change', function() {
+        const currencySymbols = {
+            'PHP': '₱',
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'AUD': '$',
+            'CAD': '$',
+            'SGD': '$'
+        };
+
+        const symbol = currencySymbols[this.value] || '$';
+        currencySymbolInput.value = symbol;
+        currencyPreviewSpan.textContent = symbol;
     });
 });
 </script>

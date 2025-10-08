@@ -94,6 +94,18 @@
                             </svg>
                             Sample packages will be&nbsp;<strong>restored</strong>&nbsp;(preloaded e-commerce products)
                         </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <svg class="icon text-success me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-task') }}"></use>
+                            </svg>
+                            MLM settings will be&nbsp;<strong>restored</strong>&nbsp;with Phase 3 commission structure
+                        </li>
+                        <li class="list-group-item d-flex align-items-center bg-success bg-opacity-10">
+                            <svg class="icon text-success me-2 flex-shrink-0">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-media-play') }}"></use>
+                            </svg>
+                            <span>Queue worker will be&nbsp;<strong>started automatically</strong>&nbsp;in the background for commission processing</span>
+                        </li>
                     </ul>
 
                     @if($last_reset || $reset_count > 0)
@@ -113,15 +125,34 @@
                                 <strong>Admin Account:</strong><br>
                                 Email: admin@gawisherbal.com<br>
                                 Password: Admin123!@#<br>
-                                Balance: $1,000.00<br>
+                                Balance: {{ currency(1000) }} (Purchase)<br>
                                 <small class="text-muted">Complete profile with address</small>
                             </div>
                             <div class="col-md-6">
                                 <strong>Member Account:</strong><br>
                                 Email: member@gawisherbal.com<br>
                                 Password: Member123!@#<br>
-                                Balance: $100.00<br>
-                                <small class="text-muted">Complete delivery address for testing</small>
+                                Balance: {{ currency(1000) }} (Purchase)<br>
+                                <small class="text-muted">Complete delivery address + MLM referral code</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-primary">
+                        <div class="d-flex align-items-start">
+                            <svg class="icon text-primary me-3 mt-1 flex-shrink-0" style="width: 24px; height: 24px;">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-lightbulb') }}"></use>
+                            </svg>
+                            <div>
+                                <h6 class="mb-2">
+                                    <svg class="icon me-1">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-task') }}"></use>
+                                    </svg>
+                                    Automatic Background Processing
+                                </h6>
+                                <p class="mb-0 small">
+                                    The queue worker will start automatically during the reset process to handle background tasks such as MLM commission distribution, ensuring the system is fully operational immediately after reset.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -217,12 +248,32 @@
                         <li><strong>Current application settings preserved</strong> (tax rate, email verification after registration)</li>
                         <li><strong>All roles and permissions preserved</strong></li>
                         <li><strong>Sample packages restored to initial state</strong> (preloaded e-commerce products)</li>
-                        <li>Fresh wallets with initial balances ($1,000 & $100)</li>
+                        <li><strong>MLM settings restored</strong> with Phase 3 commission structure (5 levels)</li>
+                        <li>Fresh wallets with initial balances ($1,000 & $100) and segregated MLM/Purchase balances</li>
                         <li>Clean e-commerce system ready for new orders (26-status order lifecycle)</li>
                         <li>Return & refund system ready for testing (7-day return window)</li>
                         <li><strong>Fresh log files for clean debugging</strong></li>
                         <li><strong>Optimized performance with cleared caches</strong></li>
                     </ul>
+                </div>
+
+                <div class="alert alert-success mb-4">
+                    <h6 class="alert-heading mb-2">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-task') }}"></use>
+                        </svg>
+                        Automatic Background Processing:
+                    </h6>
+                    <div class="d-flex align-items-start">
+                        <svg class="icon text-success me-2 mt-1 flex-shrink-0">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                        </svg>
+                        <div>
+                            <p class="mb-0 small">
+                                Queue worker will start automatically in the background to handle asynchronous tasks including MLM commission distribution, ensuring all system features are fully operational immediately after reset.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
             </div>

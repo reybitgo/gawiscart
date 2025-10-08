@@ -42,17 +42,17 @@
 
                             <p class="lead text-muted">{{ $package->short_description }}</p>
 
-                            <div class="row mb-4">
+                            <div class="row mb-4 package-info-cards">
                                 <div class="col-6">
-                                    <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
-                                        <div class="h2 text-primary mb-0">{{ $package->formatted_price }}</div>
-                                        <small class="text-muted">Price</small>
+                                    <div class="text-center p-3 bg-primary bg-opacity-10 rounded h-100 d-flex flex-column justify-content-center">
+                                        <div class="text-primary mb-0 package-price-display">{{ $package->formatted_price }}</div>
+                                        <small class="text-muted d-block mt-1">Price</small>
                                     </div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                    <div class="text-center p-3 bg-success bg-opacity-10 rounded h-100 d-flex flex-column justify-content-center">
                                         <div class="h3 text-success mb-0">{{ number_format($package->points_awarded) }}</div>
-                                        <small class="text-muted">Points Awarded</small>
+                                        <small class="text-muted d-block mt-1">Points Awarded</small>
                                     </div>
                                 </div>
                             </div>
@@ -159,7 +159,7 @@
                 <div class="card-body">
                     <div class="row mb-2">
                         <div class="col-6 text-muted">Price:</div>
-                        <div class="col-6 fw-semibold">{{ $package->formatted_price }}</div>
+                        <div class="col-6 fw-semibold text-end" style="word-wrap: break-word; overflow-wrap: break-word;">{{ $package->formatted_price }}</div>
                     </div>
                     <div class="row mb-2">
                         <div class="col-6 text-muted">Points:</div>
@@ -235,6 +235,38 @@
 
 .prose p {
     margin-bottom: 1rem;
+}
+
+.package-price-display {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+@media (max-width: 576px) {
+    .package-price-display {
+        font-size: 1.1rem;
+    }
+}
+
+@media (min-width: 577px) and (max-width: 767px) {
+    .package-price-display {
+        font-size: 1.15rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .package-price-display {
+        font-size: 1.25rem;
+    }
+}
+
+.package-info-cards {
+    align-items: stretch;
+}
+
+.package-info-cards .col-6 {
+    display: flex;
 }
 </style>
 

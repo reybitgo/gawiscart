@@ -68,7 +68,7 @@
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="mb-3">
-                                            <label for="price" class="form-label">Price ($) <span class="text-danger">*</span></label>
+                                            <label for="price" class="form-label">Price ({{ currency_symbol() }}) <span class="text-danger">*</span></label>
                                             <input type="number" step="0.01" min="0.01" class="form-control @error('price') is-invalid @enderror"
                                                    id="price" name="price" value="{{ old('price', $package->price) }}" required>
                                             @error('price')

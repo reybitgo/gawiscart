@@ -181,9 +181,9 @@ class WalletPaymentService
             return [
                 'valid' => false,
                 'message' => sprintf(
-                    'Insufficient balance. Required: $%s, Available: $%s',
-                    number_format($amount, 2),
-                    number_format($wallet->balance, 2)
+                    'Insufficient balance. Required: %s, Available: %s',
+                    currency($amount),
+                    currency($wallet->balance)
                 ),
                 'code' => 'INSUFFICIENT_BALANCE',
                 'required_amount' => $amount,
@@ -210,13 +210,12 @@ class WalletPaymentService
 
         return [
             'current_balance' => $currentBalance,
-            'formatted_balance' => '$' . number_format($currentBalance, 2),
+            'formatted_balance' => currency($currentBalance),
             'order_amount' => $orderAmount,
-            'formatted_order_amount' => '$' . number_format($orderAmount, 2),
+            'formatted_order_amount' => currency($orderAmount),
             'remaining_balance' => $validation['valid'] ? $validation['remaining_after_payment'] : 0,
-            'formatted_remaining_balance' => '$' . number_format(
-                $validation['valid'] ? $validation['remaining_after_payment'] : 0,
-                2
+            'formatted_remaining_balance' => currency(
+                $validation['valid'] ? $validation['remaining_after_payment'] : 0
             ),
             'can_pay' => $validation['valid'],
             'validation_message' => $validation['message'],

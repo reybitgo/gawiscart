@@ -34,7 +34,7 @@
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Current Balance</h5>
-                <h2 class="display-4 fw-bold">${{ number_format(auth()->user()->wallet ? auth()->user()->wallet->balance : 0, 2) }}</h2>
+                <h2 class="display-4 fw-bold">{{ currency(auth()->user()->wallet ? auth()->user()->wallet->balance : 0) }}</h2>
                 <p class="mb-0">Available for withdrawal and transfers</p>
             </div>
         </div>
@@ -53,12 +53,12 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(25)">$25</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(50)">$50</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(100)">$100</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(250)">$250</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(500)">$500</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(1000)">$1,000</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(25)">{{ currency_symbol() }}25</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(50)">{{ currency_symbol() }}50</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(100)">{{ currency_symbol() }}100</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(250)">{{ currency_symbol() }}250</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(500)">{{ currency_symbol() }}500</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="setAmount(1000)">{{ currency_symbol() }}1,000</button>
                 </div>
             </div>
         </div>
@@ -83,19 +83,19 @@
                             <div class="mb-3">
                                 <label for="amount" class="form-label">
                                     <svg class="icon me-2">
-                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-dollar') }}"></use>
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-thick-bottom') }}"></use>
                                     </svg>
                                     Deposit Amount
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">{{ currency_symbol() }}</span>
                                     <input type="number" name="amount" id="amount" class="form-control"
                                            placeholder="0.00" min="1" max="10000" step="0.01" required
                                            value="{{ old('amount') }}">
-                                    <span class="input-group-text">USD</span>
+                                    <span class="input-group-text">{{ currency_code() }}</span>
                                 </div>
                                 <div class="form-text">
-                                    Minimum: $1.00 | Maximum: $10,000.00
+                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(10000) }}
                                 </div>
                             </div>
                         </div>

@@ -29,7 +29,7 @@
         <div class="card text-white bg-success-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">${{ number_format($wallet->balance, 2) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($wallet->balance) }}</div>
                     <div>Current Balance</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -44,7 +44,7 @@
         <div class="card text-white bg-info-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">${{ number_format($totalDeposits, 2) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($totalDeposits) }}</div>
                     <div>Total Deposits</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -59,7 +59,7 @@
         <div class="card text-white bg-warning-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">${{ number_format($totalWithdrawals, 2) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($totalWithdrawals) }}</div>
                     <div>Total Withdrawals</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -83,6 +83,43 @@
                 <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-star') }}"></use>
                 </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MLM Balance Widget -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        @include('components.mlm-balance-widget')
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="cil-people"></i> MLM Network Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Direct Referrals</label>
+                        <h4 class="mb-0">{{ auth()->user()->referrals()->count() }}</h4>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="text-muted small">Total Earnings</label>
+                        <h4 class="mb-0 text-success">{{ currency(auth()->user()->wallet->mlm_balance ?? 0) }}</h4>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <a href="{{ route('referral.index') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="cil-share"></i> My Referral Link
+                    </a>
+                    <a href="{{ route('member.register.show') }}" class="btn btn-sm btn-primary">
+                        <i class="cil-user-plus"></i> Register Member
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -249,9 +286,9 @@
                         @elseif($transaction->type === 'transfer_charge') text-warning
                         @else text-danger @endif">
                         @if($transaction->type === 'deposit' || $transaction->type === 'transfer_in')
-                            +${{ number_format($transaction->amount, 2) }}
+                            +{{ currency($transaction->amount) }}
                         @else
-                            -${{ number_format($transaction->amount, 2) }}
+                            -{{ currency($transaction->amount) }}
                         @endif
                     </div>
                     <span class="badge
@@ -473,10 +510,10 @@
                                 {{ date('M Y', mktime(0, 0, 0, $monthly->month, 1, $monthly->year)) }}
                             </td>
                             <td class="text-success fw-semibold">
-                                ${{ number_format($monthly->deposits, 2) }}
+                                {{ currency($monthly->deposits) }}
                             </td>
                             <td class="text-danger fw-semibold">
-                                ${{ number_format($monthly->withdrawals, 2) }}
+                                {{ currency($monthly->withdrawals) }}
                             </td>
                             <td class="fw-semibold">
                                 {{ $monthly->count }}

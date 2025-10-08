@@ -345,7 +345,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center">
-                    <h4 class="text-success">${{ number_format($user->wallet->balance, 2) }}</h4>
+                    <h4 class="text-success">{{ currency($user->wallet->balance) }}</h4>
                     <p class="text-body-secondary">Current Balance</p>
                 </div>
                 <hr>
@@ -358,12 +358,12 @@
                     </div>
                     <div class="col-4">
                         <div class="border-end">
-                            <div class="fs-6 fw-semibold">${{ number_format($user->transactions()->where('type', 'deposit')->where('status', 'completed')->sum('amount'), 0) }}</div>
+                            <div class="fs-6 fw-semibold">{{ currency($user->transactions()->where('type', 'deposit')->where('status', 'completed')->sum('amount')) }}</div>
                             <div class="text-uppercase text-body-secondary" style="font-size: 0.7rem;">In</div>
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="fs-6 fw-semibold">${{ number_format($user->transactions()->where('type', 'withdraw')->where('status', 'completed')->sum('amount'), 0) }}</div>
+                        <div class="fs-6 fw-semibold">{{ currency($user->transactions()->where('type', 'withdraw')->where('status', 'completed')->sum('amount')) }}</div>
                         <div class="text-uppercase text-body-secondary" style="font-size: 0.7rem;">Out</div>
                     </div>
                 </div>
@@ -380,9 +380,39 @@
                 <svg class="icon icon-lg me-2">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-shield-alt') }}"></use>
                 </svg>
-                <strong>Account Security</strong>
+                <strong>Account Status</strong>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <strong>MLM Status</strong>
+                        <div class="text-body-secondary small">Commission eligibility</div>
+                    </div>
+                    <div>
+                        @if($user->isActive())
+                            <span class="badge bg-success">
+                                <svg class="icon me-1">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
+                                </svg>
+                                Active
+                            </span>
+                        @else
+                            <span class="badge bg-secondary">
+                                Inactive
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                @if(!$user->isActive())
+                    <div class="alert alert-info mb-3">
+                        <div class="d-flex align-items-start">
+                            <svg class="icon me-2 flex-shrink-0">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            <small>Purchase a package to activate your account and start earning MLM commissions from your downline.</small>
+                        </div>
+                    </div>
+                @endif
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <strong>Email Verification</strong>

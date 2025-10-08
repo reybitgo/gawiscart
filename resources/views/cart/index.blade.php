@@ -99,7 +99,7 @@
 
                                     <!-- Unit Price -->
                                     <div class="text-center me-4" style="min-width: 80px;">
-                                        <div class="fw-semibold">${{ number_format($item['price'], 2) }}</div>
+                                        <div class="fw-semibold">{{ currency($item['price']) }}</div>
                                     </div>
 
                                     <!-- Quantity Controls -->
@@ -123,7 +123,7 @@
 
                                     <!-- Total Price -->
                                     <div class="text-center me-auto">
-                                        <div class="fw-bold">${{ number_format($item['price'] * $item['quantity'], 2) }}</div>
+                                        <div class="fw-bold">{{ currency($item['price'] * $item['quantity']) }}</div>
                                     </div>
 
                                     <!-- Remove Button - Isolated on far right -->
@@ -153,14 +153,14 @@
                                                         </a>
                                                     </h6>
                                                     <div class="text-muted small">{{ $item['points_awarded'] }} points each</div>
-                                                    <div class="fw-semibold">${{ number_format($item['price'], 2) }} each</div>
+                                                    <div class="fw-semibold">{{ currency($item['price']) }} each</div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <!-- Total Price & Delete -->
                                         <div class="col-4 text-end">
-                                            <div class="fw-bold mb-2">${{ number_format($item['price'] * $item['quantity'], 2) }}</div>
+                                            <div class="fw-bold mb-2">{{ currency($item['price'] * $item['quantity']) }}</div>
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem({{ $item['package_id'] }})" title="Remove item">
                                                 <svg class="icon">
                                                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-trash') }}"></use>
@@ -207,18 +207,18 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal ({{ $cartSummary['item_count'] }} items)</span>
-                            <span>${{ number_format($cartSummary['subtotal'], 2) }}</span>
+                            <span>{{ currency($cartSummary['subtotal']) }}</span>
                         </div>
                         @if($cartSummary['show_tax'])
                         <div class="d-flex justify-content-between mb-2">
                             <span>Tax ({{ number_format($cartSummary['tax_rate'] * 100, 1) }}%)</span>
-                            <span>${{ number_format($cartSummary['tax_amount'], 2) }}</span>
+                            <span>{{ currency($cartSummary['tax_amount']) }}</span>
                         </div>
                         @endif
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
                             <strong>Total</strong>
-                            <strong class="text-primary">${{ number_format($cartSummary['total'], 2) }}</strong>
+                            <strong class="text-primary">{{ currency($cartSummary['total']) }}</strong>
                         </div>
                         <div class="alert alert-info">
                             <svg class="icon me-2">

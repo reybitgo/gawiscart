@@ -16,9 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ApplyDatabaseConfig::class,
         ]);
 
-        // Add cart middleware to web group
+        // Add cart middleware and suspended user check to web group
         $middleware->web(append: [
             \App\Http\Middleware\CartMiddleware::class,
+            \App\Http\Middleware\CheckSuspendedUser::class,
         ]);
 
         $middleware->alias([

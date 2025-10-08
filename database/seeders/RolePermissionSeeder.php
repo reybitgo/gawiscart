@@ -60,6 +60,7 @@ class RolePermissionSeeder extends Seeder
                 'email' => 'admin@ewallet.com',
                 'password' => Hash::make('Admin123!@#'),
                 'email_verified_at' => now(),
+                'suspended_at' => null,
             ]
         );
         $admin->assignRole('admin');
@@ -73,6 +74,7 @@ class RolePermissionSeeder extends Seeder
                 'email' => 'member@ewallet.com',
                 'password' => Hash::make('Member123!@#'),
                 'email_verified_at' => now(),
+                'suspended_at' => null,
             ]
         );
         $member->assignRole('member');

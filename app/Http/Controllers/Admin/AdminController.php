@@ -250,9 +250,120 @@ class AdminController extends Controller
 
     public function users()
     {
-        $users = User::with('roles')->paginate(15);
+        $users = User::with(['roles', 'wallet'])->paginate(15);
 
         return view('admin.users', compact('users'));
+    }
+
+    public function editUser(User $user)
+    {
+        return view('admin.users-edit', compact('user'));
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $request->validate([
+            'username' => 'required|string|max:255|unique:users,username,' . $user->id,
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'fullname' => 'nullable|string|max:255',
+            'role' => 'required|exists:roles,name',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Update user details
+            $user->update([
+                'username' => $request->username,
+                'email' => $request->email,
+                'fullname' => $request->fullname,
+            ]);
+
+            // Update role (remove all existing roles and assign new one)
+            $user->syncRoles([$request->role]);
+
+            DB::commit();
+
+            return redirect()->route('admin.users')
+                ->with('success', 'User updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error updating user: ' . $e->getMessage());
+        }
+    }
+
+    public function suspendUser(User $user)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Check if user is admin
+            if ($user->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot suspend admin users'
+                ], 403);
+            }
+
+            // Mark user as suspended
+            $user->update(['suspended_at' => now()]);
+
+            // Suspend user's wallet
+            if ($user->wallet) {
+                $user->wallet->update(['is_active' => false]);
+            }
+
+            // Terminate all active sessions for this user
+            DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User account suspended successfully. They have been logged out and will not be able to login.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error suspending user: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function activateUser(User $user)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Remove suspension
+            $user->update(['suspended_at' => null]);
+
+            // Activate user's wallet
+            if ($user->wallet) {
+                $user->wallet->update(['is_active' => true]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User account activated successfully. They can now login.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error activating user: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function approveTransaction(Request $request, $id)

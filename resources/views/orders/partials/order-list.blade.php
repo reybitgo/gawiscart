@@ -61,7 +61,7 @@
             <!-- Order Details -->
             <div class="col-6 col-md-3">
                 <div>
-                    <div class="fw-semibold">${{ number_format($order->total_amount, 2) }}</div>
+                    <div class="fw-semibold">{{ currency($order->total_amount) }}</div>
                     <small class="text-muted d-block">{{ $order->getTotalItemsCount() }} items</small>
                     @if($order->points_awarded > 0)
                         <div class="text-warning small">

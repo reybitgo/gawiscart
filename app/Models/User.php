@@ -34,6 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'delivery_time_preference',
         'sponsor_id',
         'referral_code',
+        'suspended_at',
     ];
 
     /**
@@ -57,6 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'suspended_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -118,6 +120,19 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Check if user is active (has purchased at least one package)
+     * Active users are eligible for MLM commissions
+     *
+     * @return bool
+     */
+    public function isActive()
+    {
+        return $this->orders()
+            ->whereIn('payment_status', ['paid'])
+            ->exists();
+    }
+
+    /**
      * Get the sponsor (upline) of this user
      */
     public function sponsor()
@@ -166,6 +181,17 @@ class User extends Authenticatable implements MustVerifyEmail
                 if ($user->id && self::wouldCreateCircularReference($user->id, $user->sponsor_id)) {
                     throw new \InvalidArgumentException('Circular sponsor reference detected. The selected sponsor is already in your downline network.');
                 }
+            }
+        });
+
+        // Automatically create wallet for new user
+        static::created(function ($user) {
+            if (!$user->wallet) {
+                $user->wallet()->create([
+                    'user_id' => $user->id,
+                    'mlm_balance' => 0.00,
+                    'purchase_balance' => 0.00,
+                ]);
             }
         });
     }

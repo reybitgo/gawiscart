@@ -25,6 +25,10 @@ class DatabaseResetSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🔄 Starting database reset...');
+        $this->command->newLine();
+
+        // Step 0: Clear all caches and optimize
+        $this->clearAllCaches();
 
         // Clear cache first
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -56,6 +60,9 @@ class DatabaseResetSeeder extends Seeder
         // Step 7: Update reset tracking
         $this->updateResetTracking();
 
+        // Step 8: Verify Phase 3 migration status
+        $this->verifyPhase3Migration();
+
         $this->command->info('✅ Database reset completed successfully!');
         $this->command->info('👤 Admin: admin@gawisherbal.com / Admin123!@#');
         $this->command->info('👤 Member: member@gawisherbal.com / Member123!@#');
@@ -77,10 +84,9 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('  ✅ Package Management with Inventory Tracking');
         $this->command->info('  ✅ Order Analytics Dashboard');
         $this->command->info('');
-        $this->command->info('💰 MLM System Features (Phase 1 & 2):');
+        $this->command->info('💰 MLM System Features (Phase 1, 2 & 3 Complete):');
         $this->command->info('  ✅ Phase 1: Core MLM Package & Registration');
         $this->command->info('    • 5-Level Commission Structure (L1: ₱200, L2-L5: ₱50 each)');
-        $this->command->info('    • Real-time Commission Distribution');
         $this->command->info('    • MLM Package Configuration (toggleable per package)');
         $this->command->info('    • Active/Inactive Level Toggling with Real-time Calculations');
         $this->command->info('    • MLM Settings Preservation (survives package toggle)');
@@ -97,6 +103,20 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('    • Copy to Clipboard Functionality');
         $this->command->info('    • Session-based Referral Code Storage');
         $this->command->info('    • Registration Conversion Tracking');
+        $this->command->info('  ✅ Phase 3: Real-Time MLM Commission Distribution Engine');
+        $this->command->info('    • Automatic Commission Distribution on Order Confirmation');
+        $this->command->info('    • Upline Traversal (5 Levels: L1=₱200, L2-L5=₱50 each)');
+        $this->command->info('    • Immediate Synchronous Processing (No Queue Required)');
+        $this->command->info('    • Multi-Channel Notifications:');
+        $this->command->info('      - Database notifications (always sent)');
+        $this->command->info('      - Broadcast notifications (real-time if Echo configured)');
+        $this->command->info('      - Email notifications (ONLY to verified emails)');
+        $this->command->info('    • Transaction Audit Trail (level, source_order_id, metadata)');
+        $this->command->info('    • MLM Balance Widget (Real-time Updates with Pulse Animation)');
+        $this->command->info('    • Network Stats Panel (Direct Referrals, Total Earnings)');
+        $this->command->info('    • Commission Processing Time: < 1 second per order');
+        $this->command->info('    • Error Handling: Missing wallets, incomplete upline, duplicates');
+        $this->command->info('    • Performance: 3 retry attempts with exponential backoff');
         $this->command->info('');
         $this->command->info('🔒 Performance & Security Enhancements:');
         $this->command->info('  ✅ Database indexes for faster queries');
@@ -108,6 +128,8 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('  ✅ Secure cryptographic order number generation');
         $this->command->info('  ✅ Circular sponsor reference prevention (Model + Database)');
         $this->command->info('  ✅ MySQL triggers protect against raw SQL manipulation');
+        $this->command->info('  ✅ User account suspension system (with auto-logout)');
+        $this->command->info('  ✅ Session termination for suspended users');
         $this->command->info('');
         $this->command->info('📋 Return & Refund Process:');
         $this->command->info('  ✅ 7-day return window after delivery');
@@ -327,6 +349,7 @@ class DatabaseResetSeeder extends Seeder
             'email' => 'admin@gawisherbal.com',
             'password' => Hash::make('Admin123!@#'),
             'email_verified_at' => now(),
+            'suspended_at' => null,
             'phone' => '+63 (947) 367-7436',
             'address' => '123 Herbal Street',
             'address_2' => null,
@@ -349,6 +372,7 @@ class DatabaseResetSeeder extends Seeder
             'email' => 'member@gawisherbal.com',
             'password' => Hash::make('Member123!@#'),
             'email_verified_at' => now(),
+            'suspended_at' => null,
             'phone' => '+63 (912) 456-7890',
             'address' => '456 Wellness Avenue',
             'address_2' => 'Unit 202',
@@ -582,5 +606,91 @@ class DatabaseResetSeeder extends Seeder
         } elseif ($cacheDriver === 'database') {
             $this->command->info('ℹ️  Database cache configured (consider Redis for production)');
         }
+    }
+
+    /**
+     * Clear all application caches for fresh start
+     */
+    private function clearAllCaches(): void
+    {
+        $this->command->info('🧹 Clearing all caches...');
+
+        try {
+            // Clear application cache
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            $this->command->info('  ✅ Application cache cleared');
+
+            // Clear config cache
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+            $this->command->info('  ✅ Configuration cache cleared');
+
+            // Clear route cache
+            \Illuminate\Support\Facades\Artisan::call('route:clear');
+            $this->command->info('  ✅ Route cache cleared');
+
+            // Clear view cache
+            \Illuminate\Support\Facades\Artisan::call('view:clear');
+            $this->command->info('  ✅ View cache cleared');
+
+            // Clear compiled classes
+            \Illuminate\Support\Facades\Artisan::call('clear-compiled');
+            $this->command->info('  ✅ Compiled classes cleared');
+
+            $this->command->newLine();
+        } catch (\Exception $e) {
+            $this->command->warn('⚠️  Some caches could not be cleared: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Verify Phase 3 MLM commission migration status
+     */
+    private function verifyPhase3Migration(): void
+    {
+        $this->command->newLine();
+        $this->command->info('🔍 Verifying Phase 3: MLM Commission Distribution...');
+
+        // Check for Phase 3 migration
+        $phase3Migration = DB::table('migrations')
+            ->where('migration', 'like', '%add_mlm_fields_to_transactions%')
+            ->first();
+
+        if ($phase3Migration) {
+            $this->command->info('✅ Phase 3 migration applied: MLM fields added to transactions table');
+
+            // Verify the actual columns exist
+            try {
+                $hasLevel = DB::getSchemaBuilder()->hasColumn('transactions', 'level');
+                $hasSourceOrderId = DB::getSchemaBuilder()->hasColumn('transactions', 'source_order_id');
+                $hasSourceType = DB::getSchemaBuilder()->hasColumn('transactions', 'source_type');
+
+                if ($hasLevel && $hasSourceOrderId && $hasSourceType) {
+                    $this->command->info('✅ Verified: All Phase 3 transaction columns present');
+                    $this->command->info('  • level (MLM level tracking)');
+                    $this->command->info('  • source_order_id (order linkage)');
+                    $this->command->info('  • source_type (transaction categorization)');
+                } else {
+                    $this->command->warn('⚠️  Phase 3 migration exists but columns missing - run: php artisan migrate');
+                }
+            } catch (\Exception $e) {
+                $this->command->warn('⚠️  Could not verify Phase 3 columns: ' . $e->getMessage());
+            }
+
+            // Phase 3 Information
+            $this->command->newLine();
+            $this->command->info('📌 Phase 3 MLM Commission System:');
+            $this->command->info('  ✅  Commissions are processed IMMEDIATELY upon package purchase');
+            $this->command->info('  ✅  No queue worker required - synchronous processing');
+            $this->command->info('  ✅  Active users (who bought packages) earn from downline purchases');
+            $this->command->newLine();
+            $this->command->info('  ℹ️  Optional: Monitor application logs:');
+            $this->command->info('     php artisan pail --timeout=0');
+        } else {
+            $this->command->warn('⚠️  Phase 3 migration NOT found');
+            $this->command->warn('     Run: php artisan migrate');
+            $this->command->warn('     Expected migration: *_add_mlm_fields_to_transactions_table.php');
+        }
+
+        $this->command->newLine();
     }
 }

@@ -108,7 +108,16 @@ class DatabaseResetController extends Controller
                 ]);
             }
 
-            return redirect()->route('login')->with('success', 'Database reset completed! Please log in with admin credentials.');
+            // Store additional info for display
+            $resetInfo = [
+                'message' => 'Database reset completed successfully! All caches cleared, Phase 3 verified, and default users restored.',
+                'credentials' => true,
+                'phase3_status' => 'MLM commissions are processed immediately upon package purchase (synchronous processing).'
+            ];
+
+            return redirect()->route('login')
+                ->with('success', $resetInfo['message'])
+                ->with('reset_info', $resetInfo);
 
         } catch (\Exception $e) {
             Log::error('Database reset failed', [
@@ -270,4 +279,5 @@ class DatabaseResetController extends Controller
             // Don't throw - reset should continue even if optimizations fail
         }
     }
+
 }

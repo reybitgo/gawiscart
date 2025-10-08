@@ -79,7 +79,7 @@
         <div class="card text-white bg-info-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div id="total-value" class="fs-4 fw-semibold">${{ number_format($pendingTransactions->sum('amount'), 2) }}</div>
+                    <div id="total-value" class="fs-4 fw-semibold">{{ currency($pendingTransactions->sum('amount')) }}</div>
                     <div>Total Value</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -187,12 +187,12 @@
                                 <div class="fw-semibold">{{ $transaction->user->fullname ?? $transaction->user->username }}</div>
                                 <div class="text-body-secondary">{{ $transaction->user->email }}</div>
                                 @if($transaction->user->wallet)
-                                    <div class="text-body-secondary small">Balance: ${{ number_format($transaction->user->wallet->balance, 2) }}</div>
+                                    <div class="text-body-secondary small">Balance: {{ currency($transaction->user->wallet->balance) }}</div>
                                 @endif
                             </td>
                             <td>
                                 <div class="fw-semibold {{ $transaction->type === 'deposit' ? 'text-success' : 'text-danger' }}">
-                                    {{ $transaction->type === 'withdrawal' ? '-' : '+' }}${{ number_format($transaction->amount, 2) }}
+                                    {{ $transaction->type === 'withdrawal' ? '-' : '+' }}{{ currency($transaction->amount) }}
                                 </div>
                                 <div class="text-body-secondary small">{{ ucfirst($transaction->payment_method ?? 'N/A') }}</div>
                             </td>

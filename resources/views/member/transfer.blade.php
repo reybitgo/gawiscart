@@ -34,7 +34,7 @@
         <div class="card bg-success-gradient text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Available Balance</h5>
-                <h2 class="display-4 fw-bold">${{ number_format($wallet->balance, 2) }}</h2>
+                <h2 class="display-4 fw-bold">{{ currency($wallet->balance) }}</h2>
                 <p class="mb-0">
                     <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-danger' }}">
                         {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}
@@ -95,7 +95,7 @@
                     @foreach([10, 25, 50, 100, 250, 500] as $quickAmount)
                         @if($wallet->balance >= $quickAmount)
                             <button type="button" class="btn btn-outline-primary" onclick="setAmount({{ $quickAmount }})">
-                                ${{ $quickAmount }}
+                                {{ currency_symbol() }}{{ $quickAmount }}
                             </button>
                         @endif
                     @endforeach
@@ -165,19 +165,19 @@
                             <div class="mb-3">
                                 <label for="amount" class="form-label">
                                     <svg class="icon me-2">
-                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-dollar') }}"></use>
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-thick-right') }}"></use>
                                     </svg>
                                     Transfer Amount
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">{{ currency_symbol() }}</span>
                                     <input type="number" name="amount" id="amount" class="form-control"
                                            placeholder="0.00" min="1" max="{{ min($wallet->balance, 10000) }}" step="0.01" required
                                            value="{{ old('amount') }}">
-                                    <span class="input-group-text">USD</span>
+                                    <span class="input-group-text">{{ currency_code() }}</span>
                                 </div>
                                 <div class="form-text">
-                                    Minimum: $1.00 | Maximum: ${{ number_format(min($wallet->balance, 10000), 2) }}
+                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->balance, 10000)) }}
                                 </div>
                             </div>
                         </div>
@@ -209,15 +209,15 @@
                             <div class="row text-center">
                                 <div class="col-4">
                                     <div class="text-body-secondary small">Transfer Amount</div>
-                                    <div class="fw-bold" id="transfer-amount-display">$0.00</div>
+                                    <div class="fw-bold" id="transfer-amount-display">{{ currency_symbol() }}0.00</div>
                                 </div>
                                 <div class="col-4">
                                     <div class="text-body-secondary small">Transfer Fee</div>
-                                    <div class="fw-bold text-warning" id="transfer-fee-display">$0.00</div>
+                                    <div class="fw-bold text-warning" id="transfer-fee-display">{{ currency_symbol() }}0.00</div>
                                 </div>
                                 <div class="col-4">
                                     <div class="text-body-secondary small">Total Deducted</div>
-                                    <div class="fw-bold text-primary" id="total-amount-display">$0.00</div>
+                                    <div class="fw-bold text-primary" id="total-amount-display">{{ currency_symbol() }}0.00</div>
                                 </div>
                             </div>
                             <hr>
@@ -328,9 +328,9 @@
             const fee = calculateTransferFee(amount);
             const total = amount + fee;
 
-            document.getElementById('transfer-amount-display').textContent = '$' + amount.toFixed(2);
-            document.getElementById('transfer-fee-display').textContent = '$' + fee.toFixed(2);
-            document.getElementById('total-amount-display').textContent = '$' + total.toFixed(2);
+            document.getElementById('transfer-amount-display').textContent = '{{ currency_symbol() }}' + amount.toFixed(2);
+            document.getElementById('transfer-fee-display').textContent = '{{ currency_symbol() }}' + fee.toFixed(2);
+            document.getElementById('total-amount-display').textContent = '{{ currency_symbol() }}' + total.toFixed(2);
             document.getElementById('transfer-fee-info').classList.remove('d-none');
         } else {
             document.getElementById('transfer-fee-info').classList.add('d-none');

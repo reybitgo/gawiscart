@@ -51,12 +51,12 @@
                                     @endif
                                     <div class="d-flex align-items-center text-sm">
                                         <span class="me-3">Quantity: <strong>{{ $item['quantity'] }}</strong></span>
-                                        <span class="me-3">Unit Price: <strong>${{ number_format($item['price'], 2) }}</strong></span>
+                                        <span class="me-3">Unit Price: <strong>{{ currency($item['price']) }}</strong></span>
                                         <span class="text-primary">Points: <strong>{{ number_format($item['points_awarded'] * $item['quantity']) }}</strong></span>
                                     </div>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-bold h5 mb-0">${{ number_format($item['price'] * $item['quantity'], 2) }}</div>
+                                    <div class="fw-bold h5 mb-0">{{ currency($item['price'] * $item['quantity']) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -409,11 +409,19 @@
                         </div>
 
                         @if(!$walletSummary['can_pay'])
-                            <div class="alert alert-warning">
-                                <svg class="icon me-2">
-                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            <div class="alert alert-warning d-flex align-items-start">
+                                <svg class="icon me-2 flex-shrink-0">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
                                 </svg>
-                                <strong>Insufficient Balance:</strong> You need to add funds to your wallet before you can complete this purchase. Please contact support to add funds to your wallet.
+                                <div>
+                                    <strong>Insufficient Balance:</strong> Your wallet balance is too low to complete this purchase.
+                                    <a href="{{ route('wallet.deposit') }}" class="btn btn-sm btn-warning ms-2">
+                                        <svg class="icon me-1">
+                                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-plus') }}"></use>
+                                        </svg>
+                                        Deposit Funds
+                                    </a>
+                                </div>
                             </div>
                         @endif
 
@@ -464,18 +472,18 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal ({{ $cartSummary['item_count'] }} items)</span>
-                        <span>${{ number_format($cartSummary['subtotal'], 2) }}</span>
+                        <span>{{ currency($cartSummary['subtotal']) }}</span>
                     </div>
                     @if($cartSummary['show_tax'])
                     <div class="d-flex justify-content-between mb-2">
                         <span>Tax ({{ number_format($cartSummary['tax_rate'] * 100, 1) }}%)</span>
-                        <span>${{ number_format($cartSummary['tax_amount'], 2) }}</span>
+                        <span>{{ currency($cartSummary['tax_amount']) }}</span>
                     </div>
                     @endif
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <strong>Total</strong>
-                        <strong class="text-primary h5">${{ number_format($cartSummary['total'], 2) }}</strong>
+                        <strong class="text-primary h5">{{ currency($cartSummary['total']) }}</strong>
                     </div>
 
                     <!-- Points Summary -->

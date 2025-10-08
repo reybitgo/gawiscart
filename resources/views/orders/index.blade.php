@@ -57,7 +57,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="fs-4 fw-semibold">${{ number_format($stats['total_spent'], 2) }}</div>
+                            <div class="fs-4 fw-semibold">{{ currency($stats['total_spent']) }}</div>
                             <div>Total Spent</div>
                         </div>
                         <svg class="icon icon-3xl">

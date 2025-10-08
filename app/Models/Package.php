@@ -95,7 +95,7 @@ class Package extends Model
 
     public function getFormattedPriceAttribute()
     {
-        return '$' . number_format($this->price, 2);
+        return currency($this->price);
     }
 
     public function isAvailable()

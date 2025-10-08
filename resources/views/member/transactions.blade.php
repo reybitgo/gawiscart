@@ -34,7 +34,7 @@
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Current Balance</h5>
-                <h2 class="display-4 fw-bold">${{ number_format($wallet->balance, 2) }}</h2>
+                <h2 class="display-4 fw-bold">{{ currency($wallet->balance) }}</h2>
                 <p class="mb-0">
                     <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-warning text-dark' }}">
                         {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}

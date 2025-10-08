@@ -114,6 +114,10 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
         ->middleware('ewallet.security:system_settings')
         ->name('system.settings');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::post('/users/{user}/suspend', [AdminController::class, 'suspendUser'])->name('users.suspend');
+    Route::post('/users/{user}/activate', [AdminController::class, 'activateUser'])->name('users.activate');
 
     // Transaction Approval Routes
     Route::post('/transactions/{id}/approve', [AdminController::class, 'approveTransaction'])

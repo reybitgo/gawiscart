@@ -34,7 +34,7 @@
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Wallet Balance</h5>
-                <h2 class="display-5 fw-bold">${{ number_format($wallet->balance, 2) }}</h2>
+                <h2 class="display-5 fw-bold">{{ currency($wallet->balance) }}</h2>
                 <p class="mb-0">
                     <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-warning text-dark' }}">
                         {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}
@@ -47,11 +47,11 @@
         <div class="card {{ $availableBalance > 0 ? 'bg-success-gradient' : 'bg-warning-gradient' }} text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Available for Withdrawal</h5>
-                <h2 class="display-5 fw-bold">${{ number_format($availableBalance, 2) }}</h2>
+                <h2 class="display-5 fw-bold">{{ currency($availableBalance) }}</h2>
                 @if($pendingWithdrawals > 0)
                     <p class="mb-0 small">
                         <span class="badge bg-light text-dark">
-                            ${{ number_format($pendingWithdrawals, 2) }} pending approval
+                            {{ currency($pendingWithdrawals) }} pending approval
                         </span>
                     </p>
                 @else
@@ -86,7 +86,7 @@
                         @if($availableBalance >= $quickAmount)
                             @php $hasQuickAmounts = true; @endphp
                             <button type="button" class="btn btn-outline-danger" onclick="setAmount({{ $quickAmount }})">
-                                ${{ $quickAmount }}
+                                {{ currency_symbol() }}{{ $quickAmount }}
                             </button>
                         @endif
                     @endforeach
@@ -94,9 +94,9 @@
                     @if(!$hasQuickAmounts)
                         <div class="text-center text-muted">
                             <i class="icon-info me-2"></i>
-                            No quick amounts available. Available balance: ${{ number_format($availableBalance, 2) }}
+                            No quick amounts available. Available balance: {{ currency($availableBalance) }}
                             @if($pendingWithdrawals > 0)
-                                <br><small>You have ${{ number_format($pendingWithdrawals, 2) }} in pending withdrawals</small>
+                                <br><small>You have {{ currency($pendingWithdrawals) }} in pending withdrawals</small>
                             @endif
                         </div>
                     @endif
@@ -135,19 +135,19 @@
                             <div class="mb-3">
                                 <label for="amount" class="form-label">
                                     <svg class="icon me-2">
-                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-dollar') }}"></use>
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-thick-top') }}"></use>
                                     </svg>
                                     Withdrawal Amount
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">{{ currency_symbol() }}</span>
                                     <input type="number" name="amount" id="amount" class="form-control"
                                            placeholder="0.00" min="1" max="{{ min($wallet->balance, 10000) }}" step="0.01" required
                                            value="{{ old('amount') }}">
-                                    <span class="input-group-text">USD</span>
+                                    <span class="input-group-text">{{ currency_code() }}</span>
                                 </div>
                                 <div class="form-text">
-                                    Minimum: $1.00 | Maximum: ${{ number_format(min($wallet->balance, 10000), 2) }}
+                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->balance, 10000)) }}
                                 </div>
                             </div>
                         </div>
@@ -201,19 +201,19 @@
                                             <div class="col-md-4">
                                                 <div class="d-flex justify-content-between">
                                                     <span>Withdrawal Amount:</span>
-                                                    <span id="withdrawal-amount-display">$0.00</span>
+                                                    <span id="withdrawal-amount-display">{{ currency_symbol() }}0.00</span>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="d-flex justify-content-between">
                                                     <span>Processing Fee:</span>
-                                                    <span id="fee-amount-display">$0.00</span>
+                                                    <span id="fee-amount-display">{{ currency_symbol() }}0.00</span>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="d-flex justify-content-between border-top pt-2">
                                                     <strong>Total Deducted:</strong>
-                                                    <strong id="total-amount-display">$0.00</strong>
+                                                    <strong id="total-amount-display">{{ currency_symbol() }}0.00</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -230,18 +230,18 @@
                                                         @if($hasMinFee || $hasMaxFee)
                                                             (
                                                             @if($hasMinFee)
-                                                                Min: ${{ number_format($withdrawalFeeSettings['minimum_fee'], 2) }}
+                                                                Min: {{ currency($withdrawalFeeSettings['minimum_fee']) }}
                                                             @endif
                                                             @if($hasMinFee && $hasMaxFee)
                                                                 ,
                                                             @endif
                                                             @if($hasMaxFee)
-                                                                Max: ${{ number_format($withdrawalFeeSettings['maximum_fee'], 2) }}
+                                                                Max: {{ currency($withdrawalFeeSettings['maximum_fee']) }}
                                                             @endif
                                                             )
                                                         @endif
                                                     @else
-                                                        Fixed fee of ${{ number_format($withdrawalFeeSettings['fee_value'], 2) }}
+                                                        Fixed fee of {{ currency($withdrawalFeeSettings['fee_value']) }}
                                                     @endif
                                                 </small>
                                             </div>
@@ -442,9 +442,9 @@
         const totalAmount = amount + fee;
 
         // Update display
-        document.getElementById('withdrawal-amount-display').textContent = '$' + amount.toFixed(2);
-        document.getElementById('fee-amount-display').textContent = '$' + fee.toFixed(2);
-        document.getElementById('total-amount-display').textContent = '$' + totalAmount.toFixed(2);
+        document.getElementById('withdrawal-amount-display').textContent = '{{ currency_symbol() }}' + amount.toFixed(2);
+        document.getElementById('fee-amount-display').textContent = '{{ currency_symbol() }}' + fee.toFixed(2);
+        document.getElementById('total-amount-display').textContent = '{{ currency_symbol() }}' + totalAmount.toFixed(2);
 
         // Show breakdown
         document.getElementById('fee-breakdown').classList.remove('d-none');

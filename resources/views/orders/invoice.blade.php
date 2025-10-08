@@ -255,7 +255,7 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Amount Paid:</span>
-                <span>${{ number_format($order->metadata['payment']['amount_paid'] ?? $order->total_amount, 2) }}</span>
+                <span>{{ currency($order->metadata['payment']['amount_paid'] ?? $order->total_amount) }}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Payment Status:</span>

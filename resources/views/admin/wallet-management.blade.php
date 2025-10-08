@@ -34,7 +34,7 @@
         <div class="card text-white bg-success-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">${{ number_format($totalBalance, 2) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($totalBalance) }}</div>
                     <div>Total Wallet Balance</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -62,7 +62,7 @@
         <div class="card text-white bg-danger-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">${{ number_format($todayWithdrawals ?? 0, 2) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($todayWithdrawals ?? 0) }}</div>
                     <div>Today's Withdrawals</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -167,7 +167,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-semibold">${{ number_format($user->wallet ? $user->wallet->balance : 0, 2) }}</div>
+                                <div class="fw-semibold">{{ currency($user->wallet ? $user->wallet->balance : 0) }}</div>
                                 @if($user->wallet && isset($user->wallet->last_transaction_at))
                                     <div class="text-body-secondary">Last activity: {{ $user->wallet->last_transaction_at->diffForHumans() }}</div>
                                 @else
@@ -179,7 +179,7 @@
                                     @php $lastTransaction = $user->transactions->first(); @endphp
                                     <div class="fw-semibold">
                                         {{ ucfirst($lastTransaction->type) }}:
-                                        {{ $lastTransaction->type === 'deposit' ? '+' : '-' }}${{ number_format($lastTransaction->amount, 2) }}
+                                        {{ $lastTransaction->type === 'deposit' ? '+' : '-' }}{{ currency($lastTransaction->amount) }}
                                     </div>
                                     <div class="text-body-secondary">{{ $lastTransaction->created_at->diffForHumans() }}</div>
                                 @else
@@ -250,7 +250,7 @@
                     </div>
                     <div class="text-end">
                         <div class="fw-semibold {{ $transaction->type === 'deposit' ? 'text-success' : 'text-danger' }}">
-                            {{ $transaction->type === 'deposit' ? '+' : '-' }}${{ number_format($transaction->amount, 2) }}
+                            {{ $transaction->type === 'deposit' ? '+' : '-' }}{{ currency($transaction->amount) }}
                         </div>
                         <span class="badge
                             @if($transaction->status == 'approved') bg-success
@@ -368,12 +368,12 @@
                                     <div class="fw-semibold">{{ $transaction->user->fullname ?? $transaction->user->username }}</div>
                                     <div class="text-body-secondary">{{ $transaction->user->email }}</div>
                                     @if($transaction->user->wallet)
-                                        <div class="text-body-secondary small">Balance: ${{ number_format($transaction->user->wallet->balance, 2) }}</div>
+                                        <div class="text-body-secondary small">Balance: {{ currency($transaction->user->wallet->balance) }}</div>
                                     @endif
                                 </td>
                                 <td>
                                     <div class="fw-semibold {{ $transaction->type === 'deposit' ? 'text-success' : 'text-danger' }}">
-                                        {{ $transaction->type === 'withdrawal' ? '-' : '+' }}${{ number_format($transaction->amount, 2) }}
+                                        {{ $transaction->type === 'withdrawal' ? '-' : '+' }}{{ currency($transaction->amount) }}
                                     </div>
                                 </td>
                                 <td>

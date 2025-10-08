@@ -112,4 +112,66 @@ class Wallet extends Model
         $this->increment('purchase_balance', $amount);
         $this->update(['last_transaction_at' => now()]);
     }
+
+    /**
+     * Deduct from combined balance (purchase first, then MLM)
+     * Used for package purchases
+     */
+    public function deductCombinedBalance(float $amount): bool
+    {
+        if ($this->total_balance < $amount) {
+            return false;
+        }
+
+        \DB::beginTransaction();
+        try {
+            $remaining = $amount;
+
+            // Deduct from purchase balance first
+            if ($this->purchase_balance > 0) {
+                $purchaseDeduction = min($this->purchase_balance, $remaining);
+                $this->decrement('purchase_balance', $purchaseDeduction);
+                $remaining -= $purchaseDeduction;
+            }
+
+            // Deduct remaining from MLM balance if needed
+            if ($remaining > 0 && $this->mlm_balance >= $remaining) {
+                $this->decrement('mlm_balance', $remaining);
+            }
+
+            $this->update(['last_transaction_at' => now()]);
+            \DB::commit();
+            return true;
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Failed to deduct combined balance', [
+                'wallet_id' => $this->id,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get MLM balance summary
+     */
+    public function getMLMBalanceSummary(): array
+    {
+        return [
+            'mlm_balance' => (float) $this->mlm_balance,
+            'purchase_balance' => (float) $this->purchase_balance,
+            'total_balance' => $this->total_balance,
+            'withdrawable_balance' => $this->withdrawable_balance
+        ];
+    }
+
+    /**
+     * Check if user can withdraw specific amount
+     */
+    public function canWithdraw(float $amount): bool
+    {
+        return $this->mlm_balance >= $amount;
+    }
 }

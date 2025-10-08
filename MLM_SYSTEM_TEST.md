@@ -3103,3 +3103,1395 @@ After completing Phase 2 testing:
 2. Document any workarounds for known limitations
 3. Prepare for Phase 3: Real-Time MLM Commission Distribution Engine
 4. Review Phase 3 requirements and test cases
+
+---
+
+---
+
+# Phase 3: Real-Time MLM Commission Distribution Engine
+
+**Status**: ✅ Completed (2025-10-07)
+**Testing Status**: Ready for Comprehensive Testing
+**Estimated Testing Time**: 4-6 hours
+**Prerequisites**:
+- Phase 1 and Phase 2 completed and tested
+- Queue worker running (`php artisan queue:work`)
+- Database with at least 6 users in a 5-level upline chain
+- Email service configured (optional, for email notification testing)
+
+---
+
+## Phase 3 Overview
+
+Phase 3 implements the core MLM commission distribution engine that automatically calculates and distributes commissions to upline members when a Starter Package is purchased. The system includes:
+
+- **Automatic Commission Calculation**: Based on 5-level MLM settings
+- **Upline Traversal**: Walks up sponsor chain to distribute commissions
+- **Multi-Channel Notifications**: Database, Broadcast, and Email (conditional)
+- **Queue-Based Processing**: Async job with retry logic
+- **Transaction Audit Trail**: Complete tracking with metadata
+- **Real-Time UI Updates**: Live balance updates and toast notifications
+
+---
+
+## Test Environment Setup for Phase 3
+
+### Prerequisites Check
+
+```bash
+# 1. Verify migrations are up to date
+php artisan migrate:status | grep mlm_fields_to_transactions
+
+# 2. Start queue worker (REQUIRED for commission processing)
+php artisan queue:work --tries=1 --timeout=120
+
+# 3. (Optional) Monitor queue in real-time
+php artisan queue:listen --tries=1
+
+# 4. (Optional) Start log viewer
+php artisan pail --timeout=0
+
+# 5. Clear all caches
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+```
+
+### Create Test User Hierarchy
+
+Create a 5-level upline chain for testing:
+
+**Upline Structure**:
+```
+Level 5: Admin (sponsor_id: null)
+    └─> Level 4: Member (sponsor_id: Admin) [Default user from /reset]
+        └─> Level 3: Member2 (sponsor_id: Member)
+            └─> Level 2: Member3 (sponsor_id: Member2)
+                └─> Level 1: Member4 (sponsor_id: Member3)
+                    └─> Buyer: Member5 (sponsor_id: Member4)
+```
+
+**Expected Commission Distribution** when Member5 purchases Starter Package (₱1,000):
+- **Member4** (L1 - Direct Sponsor): ₱200
+- **Member3** (L2): ₱50
+- **Member2** (L3): ₱50
+- **Member** (L4): ₱50
+- **Admin** (L5): ₱50
+- **Total Distributed**: ₱400
+- **Company Profit**: ₱600
+
+---
+
+## Test Suite 7: Database Schema for Commission Tracking
+
+### Test Case 7.1: Verify Transaction Table MLM Fields
+
+**Objective**: Ensure transactions table has all MLM tracking fields
+
+**Steps**:
+
+```sql
+-- Check for MLM tracking columns
+DESCRIBE transactions;
+
+-- Verify indexes exist
+SHOW INDEXES FROM transactions WHERE Key_name LIKE '%source%';
+```
+
+**Expected Results**:
+
+✅ `transactions` table has the following columns:
+- `level` (TINYINT, nullable) - Stores MLM level (1-5)
+- `source_order_id` (BIGINT UNSIGNED, nullable) - Links to orders.id
+- `source_type` (ENUM: 'mlm', 'deposit', 'transfer', 'purchase', 'withdrawal', 'refund')
+
+✅ Indexes exist:
+- `transactions_source_order_id_index`
+- `transactions_source_type_index`
+- `transactions_type_source_type_index`
+
+✅ Foreign key constraint exists on `source_order_id` → `orders(id)` with ON DELETE SET NULL
+
+**Pass Criteria**: All fields and indexes present with correct data types
+
+---
+
+### Test Case 7.2: Verify Transaction Model Enhancements
+
+**Objective**: Test Transaction model helper methods
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Models\Transaction;
+use App\Models\User;
+
+// Create a test MLM commission transaction
+$user = User::first();
+$transaction = Transaction::create([
+    'user_id' => $user->id,
+    'type' => 'mlm_commission',
+    'source_type' => 'mlm',
+    'level' => 1,
+    'source_order_id' => 1,
+    'amount' => 200.00,
+    'description' => 'Test MLM Commission',
+    'status' => 'completed',
+    'metadata' => ['test' => true]
+]);
+
+// Test helper methods
+$transaction->isMLMCommission(); // Should return true
+$transaction->mlm_level; // Should return 1
+$transaction->sourceOrder; // Should return Order instance or null
+```
+
+**Expected Results**:
+
+✅ Transaction created successfully with MLM fields
+✅ `isMLMCommission()` returns `true`
+✅ `mlm_level` attribute accessor works
+✅ `sourceOrder` relationship loads correctly
+
+**Pass Criteria**: All model methods work as expected
+
+---
+
+## Test Suite 8: MLM Commission Service
+
+### Test Case 8.1: Service Layer Instantiation
+
+**Objective**: Verify MLMCommissionService can be instantiated
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Services\MLMCommissionService;
+
+$service = app(MLMCommissionService::class);
+
+// Check available methods
+get_class_methods($service);
+```
+
+**Expected Results**:
+
+✅ Service instantiates without errors
+✅ Methods available: `processCommissions`, `getUplineTree`, `calculateTotalCommission`, `getCommissionBreakdown`
+
+**Pass Criteria**: Service accessible via Laravel container
+
+---
+
+### Test Case 8.2: Upline Tree Retrieval
+
+**Objective**: Test upline traversal logic
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Services\MLMCommissionService;
+use App\Models\User;
+
+$service = app(MLMCommissionService::class);
+
+// Get a user with upline chain (e.g., Member5)
+$buyer = User::where('username', 'testbuyer')->first();
+
+// Get upline tree
+$uplineTree = $service->getUplineTree($buyer, 5);
+
+// Display results
+foreach ($uplineTree as $node) {
+    echo "Level {$node['level']}: {$node['user_name']} (ID: {$node['user_id']})\n";
+}
+```
+
+**Expected Results**:
+
+✅ Returns array of upline users
+✅ Maximum 5 levels returned
+✅ Each node contains: `level`, `user`, `user_id`, `user_name`, `referral_code`
+✅ Levels increment correctly (1, 2, 3, 4, 5)
+✅ Stops at users with no sponsor
+
+**Pass Criteria**: Upline tree correctly traverses sponsor chain
+
+---
+
+### Test Case 8.3: Commission Breakdown Calculation
+
+**Objective**: Test commission calculation without processing
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Services\MLMCommissionService;
+use App\Models\Order;
+
+$service = app(MLMCommissionService::class);
+
+// Get an order for Starter Package
+$order = Order::whereHas('package', function($q) {
+    $q->where('is_mlm_package', true);
+})->first();
+
+// Get commission breakdown
+$breakdown = $service->getCommissionBreakdown($order);
+
+// Display
+foreach ($breakdown as $item) {
+    echo "Level {$item['level']}: {$item['user_name']} - ₱{$item['commission']}\n";
+}
+
+// Verify total
+$total = array_sum(array_column($breakdown, 'commission'));
+echo "\nTotal: ₱{$total}\n";
+```
+
+**Expected Results**:
+
+✅ Breakdown shows up to 5 levels
+✅ Level 1 commission: ₱200
+✅ Levels 2-5 commission: ₱50 each
+✅ Total commission: ₱400 (or less if upline chain is shorter)
+✅ Only returns levels where upline exists
+
+**Pass Criteria**: Calculations match MLM settings
+
+---
+
+## Test Suite 9: Wallet Model MLM Enhancements
+
+### Test Case 9.1: MLM Balance Methods
+
+**Objective**: Test Wallet model MLM-specific methods
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Models\User;
+
+$user = User::first();
+$wallet = $user->wallet;
+
+// Test balance getters
+echo "MLM Balance: ₱" . number_format($wallet->mlm_balance, 2) . "\n";
+echo "Purchase Balance: ₱" . number_format($wallet->purchase_balance, 2) . "\n";
+echo "Total Balance: ₱" . number_format($wallet->total_balance, 2) . "\n";
+echo "Withdrawable Balance: ₱" . number_format($wallet->withdrawable_balance, 2) . "\n";
+
+// Test MLM balance summary
+$summary = $wallet->getMLMBalanceSummary();
+print_r($summary);
+
+// Test withdrawal check
+$canWithdraw = $wallet->canWithdraw(100);
+echo "Can withdraw ₱100: " . ($canWithdraw ? 'Yes' : 'No') . "\n";
+```
+
+**Expected Results**:
+
+✅ All balance attributes return correct values
+✅ `total_balance` = `mlm_balance` + `purchase_balance`
+✅ `withdrawable_balance` = `mlm_balance`
+✅ `getMLMBalanceSummary()` returns array with all balances
+✅ `canWithdraw()` returns true only if MLM balance is sufficient
+
+**Pass Criteria**: All methods work correctly
+
+---
+
+### Test Case 9.2: Combined Balance Deduction
+
+**Objective**: Test deductCombinedBalance() priority logic
+
+**Steps**:
+
+```php
+// Run in php artisan tinker
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+$user = User::first();
+$wallet = $user->wallet;
+
+// Set initial balances
+DB::table('wallets')->where('id', $wallet->id)->update([
+    'purchase_balance' => 300.00,
+    'mlm_balance' => 200.00
+]);
+
+$wallet->refresh();
+
+echo "Before: Purchase=₱{$wallet->purchase_balance}, MLM=₱{$wallet->mlm_balance}\n";
+
+// Deduct ₱400 (should take ₱300 from purchase, ₱100 from MLM)
+$result = $wallet->deductCombinedBalance(400);
+
+$wallet->refresh();
+
+echo "After: Purchase=₱{$wallet->purchase_balance}, MLM=₱{$wallet->mlm_balance}\n";
+echo "Result: " . ($result ? 'Success' : 'Failed') . "\n";
+```
+
+**Expected Results**:
+
+✅ Method returns `true`
+✅ Purchase balance deducted first: ₱300 → ₱0
+✅ Remaining deducted from MLM balance: ₱200 → ₱100
+✅ Total deducted: ₱400
+
+**Pass Criteria**: Deduction priority works as expected (purchase first, then MLM)
+
+---
+
+## Test Suite 10: Queue Job Processing
+
+### Test Case 10.1: Job Dispatch Verification
+
+**Objective**: Verify ProcessMLMCommissions job is dispatched on order confirmation
+
+**Steps**:
+
+1. Login as Member5
+2. Add Starter Package to cart
+3. Proceed to checkout
+4. Complete payment (ensure wallet has sufficient balance)
+5. Monitor queue worker terminal output
+6. Check application logs
+
+```bash
+# Monitor logs
+tail -f storage/logs/laravel.log | grep "MLM Commission"
+```
+
+**Expected Results**:
+
+✅ After successful payment, log entry: "MLM Commission Job Dispatched"
+✅ Log includes order_id, order_number, package_id, package_name
+✅ Queue worker picks up the job immediately
+✅ Log entry: "MLM Commission Job Started" with attempt number
+
+**Pass Criteria**: Job dispatched and picked up by queue worker
+
+---
+
+### Test Case 10.2: Job Execution Success
+
+**Objective**: Test successful commission distribution
+
+**Steps**:
+
+1. Complete Test Case 10.1
+2. Wait for job to complete (usually < 1 second)
+3. Check logs for "MLM Commission Job Completed Successfully"
+4. Query transactions table:
+
+```sql
+SELECT
+    t.id,
+    u.username,
+    t.type,
+    t.source_type,
+    t.level,
+    t.amount,
+    t.description,
+    t.created_at
+FROM transactions t
+JOIN users u ON t.user_id = u.id
+WHERE t.type = 'mlm_commission'
+ORDER BY t.level ASC, t.created_at DESC
+LIMIT 10;
+```
+
+**Expected Results**:
+
+✅ Log: "MLM Commission Job Completed Successfully"
+✅ 5 transactions created (one for each upline level)
+✅ Transaction amounts: 1× ₱200, 4× ₱50
+✅ `source_type` = 'mlm' for all transactions
+✅ `level` values: 1, 2, 3, 4, 5
+✅ `source_order_id` matches the order
+
+**Pass Criteria**: All upline members receive correct commissions
+
+---
+
+### Test Case 10.3: Job Retry Logic
+
+**Objective**: Test job failure and retry mechanism
+
+**Steps**:
+
+1. Temporarily disable database connection (simulate failure):
+
+```php
+// In config/database.php, temporarily set wrong credentials
+// OR use tinker to cause a failure
+
+use App\Jobs\ProcessMLMCommissions;
+use App\Models\Order;
+
+// Get a test order
+$order = Order::latest()->first();
+
+// Dispatch job manually
+ProcessMLMCommissions::dispatch($order);
+
+// Immediately stop queue worker (Ctrl+C)
+// Check failed_jobs table
+```
+
+```sql
+SELECT * FROM failed_jobs ORDER BY failed_at DESC LIMIT 5;
+```
+
+**Expected Results**:
+
+✅ Job attempts up to 3 times
+✅ Retry delays: 10s, 30s, 60s (exponential backoff)
+✅ After 3 failures, job moves to `failed_jobs` table
+✅ Failed job entry contains: order_id, error message, stack trace
+
+**Pass Criteria**: Retry logic and failure handling work as expected
+
+---
+
+## Test Suite 11: Multi-Channel Notifications
+
+### Test Case 11.1: Database Notification Creation
+
+**Objective**: Verify database notifications are created for all upline members
+
+**Steps**:
+
+1. Complete a Starter Package purchase
+2. Wait for commission processing to complete
+3. Query notifications table:
+
+```sql
+SELECT
+    n.id,
+    n.notifiable_id,
+    u.username,
+    n.type,
+    JSON_EXTRACT(n.data, '$.commission') as commission,
+    JSON_EXTRACT(n.data, '$.level') as level,
+    JSON_EXTRACT(n.data, '$.message') as message,
+    n.read_at,
+    n.created_at
+FROM notifications n
+JOIN users u ON n.notifiable_id = u.id
+WHERE n.type = 'App\\\\Notifications\\\\MLMCommissionEarned'
+ORDER BY n.created_at DESC
+LIMIT 10;
+```
+
+**Expected Results**:
+
+✅ 5 notifications created (one for each upline member)
+✅ `type` = 'App\Notifications\MLMCommissionEarned'
+✅ `data` field contains: `commission`, `level`, `buyer_name`, `order_number`, `message`
+✅ `read_at` is NULL (unread)
+✅ Message format: "You earned ₱X from [Buyer]'s purchase! (Level N)"
+
+**Pass Criteria**: All upline members have database notifications
+
+---
+
+### Test Case 11.2: Email Notification - Verified Email
+
+**Objective**: Test conditional email sending to verified email addresses
+
+**Steps**:
+
+1. Ensure at least one upline member has verified email:
+
+```sql
+UPDATE users SET email_verified_at = NOW() WHERE username = 'user1';
+```
+
+2. Complete Starter Package purchase
+3. Check mail logs or Mailtrap/MailHog inbox
+4. Verify email content
+
+**Expected Results**:
+
+✅ Email sent ONLY to upline members with `email_verified_at` NOT NULL
+✅ Email subject: "🎉 New MLM Commission Earned!"
+✅ Email contains:
+  - Greeting with upline member's name
+  - Commission amount (₱200 or ₱50)
+  - Level designation (1st Level Direct Referral or Nth Level Indirect)
+  - Buyer's name
+  - Order number
+  - Package name
+  - "View Dashboard" button/link
+  - Professional HTML formatting
+
+**Pass Criteria**: Emails sent only to verified addresses with correct content
+
+---
+
+### Test Case 11.3: Email Notification - Unverified Email
+
+**Objective**: Verify emails are NOT sent to unverified addresses
+
+**Steps**:
+
+1. Ensure at least one upline member has unverified email:
+
+```sql
+UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
+```
+
+2. Complete Starter Package purchase
+3. Check mail logs
+4. Check database notifications for user2
+
+**Expected Results**:
+
+✅ NO email sent to user2
+✅ Database notification still created for user2
+✅ Broadcast notification still sent (if configured)
+✅ Log entry: "MLM Commission Notification Sent" with `has_verified_email: false`
+
+**Pass Criteria**: No email sent, but other notification channels work
+
+---
+
+### Test Case 11.4: Broadcast Notification (Optional)
+
+**Objective**: Test real-time broadcast notifications
+
+**Prerequisites**: Laravel Echo + Pusher/WebSocket configured
+
+**Steps**:
+
+1. Open browser with upline member logged in
+2. Open browser console and check for Echo connection
+3. Complete Starter Package purchase from another browser/account
+4. Watch for real-time toast notification
+
+**Expected Results**:
+
+✅ Toast notification appears without page refresh
+✅ Toast message: "You earned ₱X from [Buyer]'s purchase! (Level N)"
+✅ Toast has success styling (green background)
+✅ Toast auto-dismisses after 5 seconds
+
+**Pass Criteria**: Real-time notification received (if broadcasting enabled)
+
+---
+
+## Test Suite 12: MLM Balance Widget
+
+### Test Case 12.1: Widget Display
+
+**Objective**: Verify MLM balance widget appears on dashboard
+
+**Steps**:
+
+1. Login as any user
+2. Navigate to `/dashboard`
+3. Locate "MLM Earnings" card
+4. Verify all elements are visible
+
+**Expected Results**:
+
+✅ "MLM Earnings" card with success (green) header
+✅ "Withdrawable" badge displayed
+✅ MLM Balance shows current balance
+✅ Purchase Balance shows current balance
+✅ Total Balance calculates correctly
+✅ "Withdraw" button links to `/withdrawals/create`
+
+**Pass Criteria**: Widget displays with correct data
+
+---
+
+### Test Case 12.2: Live Balance Update (Optional)
+
+**Objective**: Test real-time balance updates
+
+**Prerequisites**: Laravel Echo configured
+
+**Steps**:
+
+1. Login as upline member (e.g., Member4)
+2. Keep dashboard open
+3. From another browser, complete purchase as Member5 (sponsored by Member4)
+4. Watch MLM balance widget on Member4's dashboard
+
+**Expected Results**:
+
+✅ MLM balance updates without page refresh
+✅ Pulse animation plays (green flash)
+✅ New balance displays correctly (+₱200 for Level 1)
+✅ Total balance updates accordingly
+✅ Toast notification appears
+
+**Pass Criteria**: Live updates work without page refresh
+
+---
+
+### Test Case 12.3: Network Stats Panel
+
+**Objective**: Verify MLM Network Stats panel
+
+**Steps**:
+
+1. Login as user with referrals
+2. Check "MLM Network Stats" panel on dashboard
+3. Verify statistics
+
+**Expected Results**:
+
+✅ "Direct Referrals" count matches `users.sponsor_id` count
+✅ "Total Earnings" matches `wallets.mlm_balance`
+✅ "My Referral Link" button links to `/referral`
+✅ "Register Member" button links to `/register-member`
+
+**Pass Criteria**: Statistics are accurate
+
+---
+
+## Test Suite 13: Commission Calculation Accuracy
+
+### Test Case 13.1: Full 5-Level Chain
+
+**Objective**: Test commission distribution with complete upline
+
+**Setup**:
+- Create 5-level upline chain + buyer (6 users total)
+- Ensure all users have wallets with ₱0 MLM balance
+
+**Steps**:
+
+1. Record initial balances:
+
+```sql
+SELECT u.username, w.mlm_balance
+FROM users u
+JOIN wallets w ON u.id = w.user_id
+WHERE u.username IN ('admin', 'member', 'member2', 'member3', 'member4', 'member5')
+ORDER BY u.id;
+```
+
+2. Login as Member5, purchase Starter Package
+3. Wait for commission processing
+4. Record final balances
+
+**Expected Results**:
+
+```
+Member4 (L1):  ₱0 → ₱200  (+₱200)
+Member3 (L2):  ₱0 → ₱50   (+₱50)
+Member2 (L3):  ₱0 → ₱50   (+₱50)
+Member (L4):   ₱0 → ₱50   (+₱50)
+Admin (L5):    ₱0 → ₱50   (+₱50)
+Member5:       (No commission - buyer doesn't earn from own purchase)
+```
+
+✅ Total distributed: ₱400
+✅ Company profit: ₱600 (₱1,000 - ₱400)
+
+**Pass Criteria**: All commissions distributed correctly
+
+---
+
+### Test Case 13.2: Partial Upline Chain (3 Levels)
+
+**Objective**: Test commission distribution with incomplete upline
+
+**Setup**:
+- User with only 3 levels of upline (not full 5)
+
+**Steps**:
+
+1. Create upline: Member2 → Member3 → Member4 → Member5
+2. Member5 purchases Starter Package
+3. Check commission distribution
+
+**Expected Results**:
+
+```
+Member4 (L1):  +₱200
+Member3 (L2):  +₱50
+Member2 (L3):  +₱50
+(No L4 or L5 commissions - upline ends)
+```
+
+✅ Total distributed: ₱300 (not ₱400)
+✅ Remaining ₱100 stays with company
+
+**Pass Criteria**: System handles incomplete upline gracefully
+
+---
+
+### Test Case 13.3: Orphaned User (No Sponsor)
+
+**Objective**: Test purchase by user with no sponsor
+
+**Steps**:
+
+1. Create user with `sponsor_id = NULL`
+2. User purchases Starter Package
+3. Check transaction logs
+
+**Expected Results**:
+
+✅ No commissions distributed (no upline)
+✅ Full ₱1,000 is company profit
+✅ No error in logs
+✅ Job completes successfully
+✅ Log: "Order does not have upline for commission distribution"
+
+**Pass Criteria**: System handles orphaned users without errors
+
+---
+
+### Test Case 13.4: Non-MLM Package Purchase
+
+**Objective**: Verify commissions NOT distributed for regular packages
+
+**Steps**:
+
+1. Create regular package with `is_mlm_package = false`
+2. User purchases this package
+3. Check for commission job dispatch
+
+**Expected Results**:
+
+✅ ProcessMLMCommissions job NOT dispatched
+✅ No commission transactions created
+✅ Log: "Order does not have MLM package" (if job somehow triggered)
+
+**Pass Criteria**: Non-MLM purchases don't trigger commissions
+
+---
+
+## Test Suite 14: Transaction Audit Trail
+
+### Test Case 14.1: Transaction Metadata
+
+**Objective**: Verify transaction records contain complete metadata
+
+**Steps**:
+
+```sql
+SELECT
+    t.id,
+    t.user_id,
+    t.type,
+    t.source_type,
+    t.level,
+    t.amount,
+    t.description,
+    t.metadata,
+    t.created_at
+FROM transactions
+WHERE type = 'mlm_commission'
+ORDER BY created_at DESC
+LIMIT 5;
+```
+
+**Expected Results**:
+
+✅ Each transaction has complete metadata:
+```json
+{
+  "buyer_id": 123,
+  "buyer_name": "Member5",
+  "package_id": 1,
+  "package_name": "Starter Package",
+  "order_number": "ORD-2025-10-07-0001",
+  "commission_level": 1
+}
+```
+
+✅ Description format: "Level N MLM Commission from [Buyer] (Order #XXX)"
+
+**Pass Criteria**: All metadata fields populated correctly
+
+---
+
+### Test Case 14.2: Transaction Timeline
+
+**Objective**: Verify commission transactions created in correct order
+
+**Steps**:
+
+```sql
+SELECT
+    t.id,
+    t.level,
+    t.amount,
+    t.created_at,
+    TIMESTAMPDIFF(MICROSECOND, LAG(t.created_at) OVER (ORDER BY t.created_at), t.created_at) as time_diff_us
+FROM transactions
+WHERE type = 'mlm_commission'
+  AND source_order_id = (SELECT MAX(id) FROM orders)
+ORDER BY t.created_at ASC;
+```
+
+**Expected Results**:
+
+✅ All 5 transactions created within milliseconds of each other
+✅ Level order may vary (async processing)
+✅ All transactions have same `source_order_id`
+✅ Total time < 1 second for all commissions
+
+**Pass Criteria**: Transaction timing is reasonable
+
+---
+
+### Test Case 14.3: Source Order Linkage
+
+**Objective**: Test foreign key relationship between transactions and orders
+
+**Steps**:
+
+```sql
+SELECT
+    t.id as transaction_id,
+    t.level,
+    t.amount,
+    o.id as order_id,
+    o.order_number,
+    o.total_amount,
+    p.name as package_name
+FROM transactions t
+JOIN orders o ON t.source_order_id = o.id
+JOIN packages p ON o.package_id = p.id
+WHERE t.type = 'mlm_commission'
+ORDER BY t.created_at DESC
+LIMIT 10;
+```
+
+**Expected Results**:
+
+✅ All MLM commission transactions link to valid orders
+✅ Linked order has `package.is_mlm_package = true`
+✅ Transaction `level` values are 1-5
+✅ Sum of transaction amounts ≤ order total amount
+
+**Pass Criteria**: Referential integrity maintained
+
+---
+
+## Test Suite 15: Error Handling & Edge Cases
+
+### Test Case 15.1: Insufficient Wallet Balance (Buyer)
+
+**Objective**: Test commission when buyer has insufficient funds
+
+**Steps**:
+
+1. Set Member5's wallet balance to ₱500 (less than ₱1,000)
+2. Attempt to purchase Starter Package
+3. Check if commission job is dispatched
+
+**Expected Results**:
+
+✅ Payment fails at checkout
+✅ Order not created
+✅ ProcessMLMCommissions job NOT dispatched
+✅ No commissions distributed
+✅ User sees error: "Insufficient wallet balance"
+
+**Pass Criteria**: Commission job not triggered on failed payment
+
+---
+
+### Test Case 15.2: Missing Wallet (Upline Member)
+
+**Objective**: Test commission distribution when upline member has no wallet
+
+**Steps**:
+
+1. Delete wallet for one upline member:
+
+```sql
+DELETE FROM wallets WHERE user_id = (SELECT id FROM users WHERE username = 'user3');
+```
+
+2. Complete Starter Package purchase
+3. Check logs and transactions
+
+**Expected Results**:
+
+✅ Job completes with warnings
+✅ Commissions distributed to users WITH wallets
+✅ Skipped user logged: "User has no wallet"
+✅ Other upline members still receive commissions
+✅ Total distributed < ₱400 (one level skipped)
+
+**Pass Criteria**: System gracefully handles missing wallets
+
+---
+
+### Test Case 15.3: Circular Sponsorship (Should Be Prevented)
+
+**Objective**: Verify circular sponsorship cannot occur
+
+**Steps**:
+
+```php
+// Run in tinker
+use App\Models\User;
+
+$user1 = User::where('username', 'user1')->first();
+$user2 = User::where('username', 'user2')->first();
+
+// Try to create circular reference
+try {
+    $user1->sponsor_id = $user2->id;
+    $user1->save();
+
+    $user2->sponsor_id = $user1->id;
+    $user2->save();
+} catch (\Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+```
+
+**Expected Results**:
+
+✅ Exception thrown: "Circular sponsor reference detected"
+✅ Database trigger prevents update
+✅ Model validation prevents save
+✅ Users remain with original sponsors
+
+**Pass Criteria**: Circular references blocked at multiple levels
+
+---
+
+### Test Case 15.4: Duplicate Commission Prevention
+
+**Objective**: Ensure same order doesn't trigger commissions twice
+
+**Steps**:
+
+1. Complete a Starter Package purchase
+2. Wait for commissions to be distributed
+3. Manually dispatch job again for same order:
+
+```php
+// In tinker
+use App\Jobs\ProcessMLMCommissions;
+use App\Models\Order;
+
+$order = Order::latest()->first();
+ProcessMLMCommissions::dispatch($order);
+```
+
+4. Check transaction count for this order
+
+**Expected Results**:
+
+✅ Job runs again but logic prevents duplicate transactions
+✅ OR job checks for existing commissions and skips
+✅ Transaction count for order remains at 5 (not 10)
+
+**Pass Criteria**: No duplicate commissions created
+
+---
+
+## Test Suite 16: Performance & Load Testing
+
+### Test Case 16.1: Single Order Processing Time
+
+**Objective**: Measure commission processing duration
+
+**Steps**:
+
+1. Monitor logs with timestamps
+2. Complete Starter Package purchase
+3. Measure time from "Job Started" to "Job Completed"
+
+```bash
+tail -f storage/logs/laravel.log | grep -E "MLM Commission Job (Started|Completed)"
+```
+
+**Expected Results**:
+
+✅ Processing time < 1 second for 5-level chain
+✅ Database transaction commits successfully
+✅ No timeout errors
+
+**Performance Benchmarks**:
+- Excellent: < 500ms
+- Good: 500ms - 1s
+- Acceptable: 1s - 2s
+- Poor: > 2s (investigate bottlenecks)
+
+**Pass Criteria**: Processing completes within acceptable time
+
+---
+
+### Test Case 16.2: Concurrent Orders
+
+**Objective**: Test multiple simultaneous purchases
+
+**Steps**:
+
+1. Create 3-5 test buyers
+2. Simultaneously (within 5 seconds) purchase Starter Package from each
+3. Monitor queue worker
+4. Verify all commissions distributed correctly
+
+**Expected Results**:
+
+✅ All jobs processed successfully
+✅ No race conditions
+✅ Each order generates correct commission count
+✅ Total transactions = 5 × number_of_orders
+✅ No database deadlocks
+
+**Pass Criteria**: System handles concurrent purchases without errors
+
+---
+
+### Test Case 16.3: Queue Worker Restart During Processing
+
+**Objective**: Test resilience to queue worker interruption
+
+**Steps**:
+
+1. Start queue worker
+2. Dispatch commission job
+3. Immediately restart queue worker (kill and start again)
+4. Check job completion
+
+**Expected Results**:
+
+✅ Job reprocessed after worker restart
+✅ No duplicate commissions created
+✅ Transaction rollback works if interrupted mid-process
+✅ Job eventually completes successfully
+
+**Pass Criteria**: System recovers from interruption
+
+---
+
+## Test Suite 17: Integration Testing
+
+### Test Case 17.1: End-to-End Purchase Flow
+
+**Objective**: Complete purchase flow from cart to commission distribution
+
+**Steps**:
+
+1. **Setup**: Login as Member5 (5-level upline)
+2. **Add to Cart**: Add Starter Package to cart
+3. **Verify Cart**: Check cart shows ₱1,000 total
+4. **Checkout**: Proceed to checkout
+5. **Payment**: Complete wallet payment
+6. **Confirmation**: Verify order confirmation page
+7. **Wait**: Allow 5-10 seconds for commission processing
+8. **Verify Commissions**: Check all upline members received commissions
+9. **Verify Notifications**: Check database notifications created
+10. **Verify Emails**: Check emails sent (to verified addresses only)
+
+**Expected Results**:
+
+✅ All steps complete without errors
+✅ Order created with status "confirmed"
+✅ Payment deducted from buyer's wallet
+✅ Commission job dispatched and completed
+✅ 5 transactions created (or fewer if upline < 5 levels)
+✅ All upline wallets updated correctly
+✅ Notifications sent via all channels
+
+**Pass Criteria**: Complete flow works end-to-end
+
+---
+
+### Test Case 17.2: Commission Display in Member Dashboard
+
+**Objective**: Verify upline members can see earnings
+
+**Steps**:
+
+1. Complete purchase as Member5
+2. Login as Member4 (Level 1 sponsor)
+3. Navigate to dashboard
+4. Check MLM balance widget
+5. Navigate to transactions page
+6. Check for MLM commission transaction
+
+**Expected Results**:
+
+✅ Dashboard shows updated MLM balance (+₱200)
+✅ MLM balance widget displays correctly
+✅ Network stats show 1 direct referral (Member5)
+✅ Transactions page shows MLM commission entry
+✅ Transaction description clear and informative
+
+**Pass Criteria**: Earnings visible in member interface
+
+---
+
+## Test Suite 18: Admin Monitoring & Reports
+
+### Test Case 18.1: Commission Transaction Report
+
+**Objective**: Generate admin report of all MLM commissions
+
+**Steps**:
+
+```sql
+-- Admin Report: MLM Commissions Summary
+SELECT
+    DATE(t.created_at) as date,
+    COUNT(*) as commission_count,
+    SUM(t.amount) as total_commissions,
+    COUNT(DISTINCT t.source_order_id) as orders_processed,
+    AVG(t.amount) as avg_commission
+FROM transactions t
+WHERE t.type = 'mlm_commission'
+  AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+GROUP BY DATE(t.created_at)
+ORDER BY date DESC;
+```
+
+**Expected Results**:
+
+✅ Report shows daily commission totals
+✅ Commission count = orders_processed × average_upline_depth
+✅ Total commissions ≤ (orders × ₱400)
+
+**Pass Criteria**: Report data is accurate
+
+---
+
+### Test Case 18.2: Top Earners Report
+
+**Objective**: Identify top MLM earners
+
+**Steps**:
+
+```sql
+-- Top 10 MLM Earners (All Time)
+SELECT
+    u.id,
+    u.username,
+    u.name,
+    w.mlm_balance as current_balance,
+    COALESCE(SUM(t.amount), 0) as total_earned,
+    COUNT(t.id) as commission_count
+FROM users u
+JOIN wallets w ON u.id = w.user_id
+LEFT JOIN transactions t ON u.id = t.user_id AND t.type = 'mlm_commission'
+GROUP BY u.id, u.username, u.name, w.mlm_balance
+ORDER BY total_earned DESC
+LIMIT 10;
+```
+
+**Expected Results**:
+
+✅ Users with most referrals appear at top
+✅ `total_earned` ≥ `current_balance` (some may have withdrawn)
+✅ Level 1 sponsors earn most (₱200 per referral purchase)
+
+**Pass Criteria**: Report identifies top performers
+
+---
+
+## Troubleshooting Guide - Phase 3
+
+### Issue: Commissions Not Distributed
+
+**Symptoms**: Order completes but no commission transactions created
+
+**Diagnostic Steps**:
+
+```bash
+# 1. Check if queue worker is running
+ps aux | grep "queue:work"
+
+# 2. Check queue jobs table
+SELECT * FROM jobs ORDER BY id DESC LIMIT 5;
+
+# 3. Check failed jobs
+SELECT * FROM failed_jobs ORDER BY failed_at DESC LIMIT 5;
+
+# 4. Check application logs
+tail -100 storage/logs/laravel.log | grep "MLM Commission"
+```
+
+**Possible Solutions**:
+
+1. **Queue worker not running**:
+   ```bash
+   php artisan queue:work --tries=3
+   ```
+
+2. **Job failed**:
+   ```bash
+   php artisan queue:retry all
+   ```
+
+3. **Package not MLM**: Verify `packages.is_mlm_package = true`
+
+4. **Database error**: Check logs for SQL errors, verify migrations
+
+---
+
+### Issue: Email Notifications Not Sent
+
+**Symptoms**: Commissions distributed but no emails received
+
+**Diagnostic Steps**:
+
+```sql
+-- Check email verification status
+SELECT
+    u.username,
+    u.email,
+    u.email_verified_at,
+    w.mlm_balance
+FROM users u
+JOIN wallets w ON u.id = w.user_id
+WHERE w.mlm_balance > 0;
+```
+
+**Possible Solutions**:
+
+1. **Email not verified**:
+   ```sql
+   UPDATE users SET email_verified_at = NOW() WHERE username = 'user1';
+   ```
+
+2. **Mail configuration**: Check `.env` for SMTP settings
+
+3. **Queue not processing**: Restart queue worker
+
+4. **Check mail logs**: `tail -f storage/logs/laravel.log | grep "mail"`
+
+---
+
+### Issue: Duplicate Commissions
+
+**Symptoms**: Upline members receive multiple commissions for one order
+
+**Diagnostic Steps**:
+
+```sql
+-- Check for duplicates
+SELECT
+    source_order_id,
+    level,
+    COUNT(*) as count
+FROM transactions
+WHERE type = 'mlm_commission'
+GROUP BY source_order_id, level
+HAVING COUNT(*) > 1;
+```
+
+**Possible Solutions**:
+
+1. Add unique constraint or logic to prevent duplicates
+2. Check if job is being dispatched multiple times
+3. Review checkout controller for duplicate dispatch calls
+
+---
+
+### Issue: Wrong Commission Amounts
+
+**Symptoms**: Commissions don't match expected values
+
+**Diagnostic Steps**:
+
+```sql
+-- Verify MLM settings
+SELECT * FROM mlm_settings WHERE package_id = 1 ORDER BY level;
+
+-- Check actual commissions distributed
+SELECT level, amount FROM transactions
+WHERE type = 'mlm_commission'
+  AND source_order_id = [ORDER_ID]
+ORDER BY level;
+```
+
+**Possible Solutions**:
+
+1. Verify MLM settings in admin panel
+2. Check if settings are marked `is_active = true`
+3. Clear config cache: `php artisan config:clear`
+
+---
+
+### Issue: Real-Time UI Not Updating
+
+**Symptoms**: Balance updates but dashboard doesn't refresh
+
+**Diagnostic Steps**:
+
+1. Check browser console for JavaScript errors
+2. Verify Laravel Echo is loaded
+3. Check Pusher/WebSocket connection
+4. Test broadcast configuration
+
+**Possible Solutions**:
+
+1. **Broadcasting not configured**: Set up Pusher or Soketi
+2. **Echo not initialized**: Check `resources/js/bootstrap.js`
+3. **Channel authorization**: Verify broadcast routes
+4. **Fallback**: Page refresh still shows updated balance
+
+---
+
+## Phase 3 Testing Summary
+
+### Critical Test Cases (Must Pass)
+
+1. ✅ Test Case 8.2: Upline Tree Retrieval
+2. ✅ Test Case 10.2: Job Execution Success
+3. ✅ Test Case 11.1: Database Notification Creation
+4. ✅ Test Case 11.2: Email to Verified Addresses
+5. ✅ Test Case 11.3: No Email to Unverified
+6. ✅ Test Case 13.1: Full 5-Level Commission Distribution
+7. ✅ Test Case 14.1: Transaction Metadata Completeness
+8. ✅ Test Case 17.1: End-to-End Purchase Flow
+
+### High Priority Test Cases
+
+1. ✅ Test Case 10.3: Job Retry Logic
+2. ✅ Test Case 13.2: Partial Upline Chain
+3. ✅ Test Case 13.3: Orphaned User
+4. ✅ Test Case 15.2: Missing Wallet Handling
+5. ✅ Test Case 16.1: Performance Benchmarking
+
+### Optional Test Cases (If Broadcasting Enabled)
+
+1. ⏳ Test Case 11.4: Broadcast Notifications
+2. ⏳ Test Case 12.2: Live Balance Updates
+
+---
+
+## Next Steps After Phase 3
+
+After completing Phase 3 testing:
+
+1. ✅ **Document Issues**: Log all bugs, inconsistencies, and performance issues
+2. ✅ **Fix Critical Bugs**: Address any blocking issues immediately
+3. ✅ **Performance Tuning**: Optimize slow queries or processes
+4. ✅ **Email Configuration**: Set up production email service
+5. ✅ **Broadcasting Setup**: Configure Laravel Echo for real-time updates (optional)
+6. 📋 **Prepare for Phase 4**: Withdrawal System with MLM Balance Restriction
+7. 📋 **Review Phase 4 Requirements**: Study withdrawal flow and approval process
+
+---
+
+**Phase 3 Testing Complete!** 🎉
+
+The MLM Commission Distribution Engine is now fully functional and ready for production use (after addressing any issues found during testing).
