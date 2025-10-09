@@ -308,8 +308,8 @@ class DatabaseResetSeeder extends Seeder
             // Store wallet data if exists
             if ($user->wallet) {
                 $existingWallets[$user->email] = [
-                    'balance' => $user->wallet->balance,
-                    'reserved_balance' => $user->wallet->reserved_balance,
+                    'mlm_balance' => $user->wallet->mlm_balance,
+                    'purchase_balance' => $user->wallet->purchase_balance,
                 ];
             }
         }
@@ -486,10 +486,8 @@ class DatabaseResetSeeder extends Seeder
             Wallet::updateOrCreate(
                 ['user_id' => $admin->id],
                 [
-                    'balance' => 0.00, // Legacy balance (will be deprecated)
                     'mlm_balance' => 0.00, // MLM earnings (withdrawable)
                     'purchase_balance' => 1000.00, // Purchase credits
-                    'reserved_balance' => 0.00,
                     'is_active' => true
                 ]
             );
@@ -500,10 +498,8 @@ class DatabaseResetSeeder extends Seeder
             Wallet::updateOrCreate(
                 ['user_id' => $member->id],
                 [
-                    'balance' => 0.00, // Legacy balance (will be deprecated)
                     'mlm_balance' => 0.00, // MLM earnings (withdrawable)
                     'purchase_balance' => 1000.00, // Purchase credits (₱1,000 for Starter Package)
-                    'reserved_balance' => 0.00,
                     'is_active' => true
                 ]
             );

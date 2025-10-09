@@ -174,8 +174,8 @@ class WalletController extends Controller
         $totalAmount = $transferAmount + $transferCharge;
 
         // Check if sender's wallet has sufficient balance (including charge)
-        if ($senderWallet->balance < $totalAmount) {
-            return redirect()->back()->withErrors(['amount' => 'Insufficient balance. You need ' . currency($totalAmount) . ' (Transfer: ' . currency($transferAmount) . ' + Fee: ' . currency($transferCharge) . '). Your current balance is ' . currency($senderWallet->balance)]);
+        if ($senderWallet->total_balance < $totalAmount) {
+            return redirect()->back()->withErrors(['amount' => 'Insufficient balance. You need ' . currency($totalAmount) . ' (Transfer: ' . currency($transferAmount) . ' + Fee: ' . currency($transferCharge) . '). Your current balance is ' . currency($senderWallet->total_balance)]);
         }
 
         // Check if sender's wallet is active
@@ -198,7 +198,7 @@ class WalletController extends Controller
                 }
 
                 // Re-check balance after locking (another transaction might have changed it)
-                if ($senderWallet->balance < $totalAmount) {
+                if ($senderWallet->total_balance < $totalAmount) {
                     throw new \Exception('Insufficient balance after lock');
                 }
 
@@ -265,11 +265,9 @@ class WalletController extends Controller
                 ]);
 
                 // Update wallet balances
-                $senderWallet->decrement('balance', $totalAmount); // Deduct transfer amount + charge
-                $senderWallet->update(['last_transaction_at' => now()]);
+                $senderWallet->deductCombinedBalance($totalAmount); // Deduct transfer amount + charge
 
-                $recipientWallet->increment('balance', $transferAmount); // Recipient gets only transfer amount
-                $recipientWallet->update(['last_transaction_at' => now()]);
+                $recipientWallet->addPurchaseBalance($transferAmount); // Recipient gets transfer as purchase balance
             });
 
             $message = 'Transfer of $' . number_format($transferAmount, 2) . ' to ' . ($recipient->username ?: $recipient->email) . ' completed successfully!';
@@ -299,7 +297,7 @@ class WalletController extends Controller
             ->where('status', 'pending')
             ->sum('amount');
 
-        $availableBalance = $wallet->balance - $pendingWithdrawals;
+        $availableBalance = $wallet->total_balance - $pendingWithdrawals;
 
         // Get payment method settings
         $paymentSettings = [
@@ -371,7 +369,7 @@ class WalletController extends Controller
             ->sum('amount');
 
         // Check if user's wallet has sufficient balance including pending withdrawals
-        $availableBalance = $wallet->balance - $pendingWithdrawals;
+        $availableBalance = $wallet->total_balance - $pendingWithdrawals;
 
         if ($availableBalance < $totalAmount) {
             $errorMessage = 'Insufficient available balance. ';
@@ -383,7 +381,7 @@ class WalletController extends Controller
             if ($pendingWithdrawals > 0) {
                 $errorMessage .= 'You have ' . currency($pendingWithdrawals) . ' in pending withdrawals. ';
             }
-            $errorMessage .= 'Available balance: ' . currency($availableBalance) . '. Wallet balance: ' . currency($wallet->balance) . '.';
+            $errorMessage .= 'Available balance: ' . currency($availableBalance) . '. Wallet balance: ' . currency($wallet->total_balance) . '.';
 
             return redirect()->back()->withErrors(['amount' => $errorMessage]);
         }
@@ -457,8 +455,8 @@ class WalletController extends Controller
                         ]
                     ]);
 
-                    // Immediately deduct the fee from wallet balance
-                    $wallet->decrement('balance', $withdrawalFee);
+                    // Immediately deduct the fee from wallet balance (uses combined balance)
+                    $wallet->deductCombinedBalance($withdrawalFee);
                 }
 
                 // For manual processing, don't deduct withdrawal amount until approved

@@ -8,8 +8,6 @@ class Wallet extends Model
 {
     protected $fillable = [
         'user_id',
-        'balance',
-        'reserved_balance',
         'is_active',
         'last_transaction_at',
         'mlm_balance',
@@ -17,8 +15,6 @@ class Wallet extends Model
     ];
 
     protected $casts = [
-        'balance' => 'decimal:2',
-        'reserved_balance' => 'decimal:2',
         'is_active' => 'boolean',
         'last_transaction_at' => 'datetime',
         'mlm_balance' => 'decimal:2',
@@ -35,22 +31,23 @@ class Wallet extends Model
         return $this->hasMany(\App\Models\Transaction::class, 'user_id', 'user_id');
     }
 
+    /**
+     * Add balance (deprecated - use addPurchaseBalance or addMLMIncome instead)
+     * This method is kept for backward compatibility with withdrawal rejections
+     */
     public function addBalance($amount)
     {
-        $this->balance += $amount;
-        $this->last_transaction_at = now();
-        $this->save();
+        // For backward compatibility, add to purchase balance
+        $this->addPurchaseBalance($amount);
     }
 
+    /**
+     * Subtract balance (deprecated - use deductCombinedBalance instead)
+     * This method is kept for backward compatibility
+     */
     public function subtractBalance($amount)
     {
-        if ($this->balance >= $amount) {
-            $this->balance -= $amount;
-            $this->last_transaction_at = now();
-            $this->save();
-            return true;
-        }
-        return false;
+        return $this->deductCombinedBalance($amount);
     }
 
     /**

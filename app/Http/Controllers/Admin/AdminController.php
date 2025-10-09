@@ -29,7 +29,7 @@ class AdminController extends Controller
         $permissionCount = Permission::count();
 
         // Financial statistics
-        $totalBalance = Wallet::sum('balance');
+        $totalBalance = Wallet::sum('mlm_balance') + Wallet::sum('purchase_balance');
         $pendingTransactions = Transaction::where('status', 'pending')->count();
         $todayTransactions = Transaction::whereDate('created_at', today())->count();
         $approvedTransactions = Transaction::where('status', 'approved')->count();
@@ -79,7 +79,7 @@ class AdminController extends Controller
             $query->where('name', 'member');
         })->paginate(20);
 
-        $totalBalance = Wallet::sum('balance');
+        $totalBalance = Wallet::sum('mlm_balance') + Wallet::sum('purchase_balance');
         $totalWallets = Wallet::count();
         $activeWallets = Wallet::where('is_active', true)->count();
         $recentTransactions = Transaction::with('user')->latest()->limit(10)->get();
@@ -404,7 +404,7 @@ class AdminController extends Controller
             if ($transaction->type === 'withdrawal') {
                 $wallet = $transaction->user->getOrCreateWallet();
                 // Deduct the withdrawal amount (fee was already deducted upon submission)
-                $wallet->decrement('balance', $transaction->amount);
+                $wallet->deductCombinedBalance($transaction->amount);
             }
 
             // Note: For withdrawals, fee transactions are already auto-approved during request
@@ -1331,7 +1331,9 @@ class AdminController extends Controller
                     'fullname' => $transaction->user->fullname,
                     'email' => $transaction->user->email,
                     'wallet' => $transaction->user->wallet ? [
-                        'balance' => $transaction->user->wallet->balance
+                        'mlm_balance' => $transaction->user->wallet->mlm_balance,
+                        'purchase_balance' => $transaction->user->wallet->purchase_balance,
+                        'total_balance' => $transaction->user->wallet->total_balance
                     ] : null
                 ]
             ]

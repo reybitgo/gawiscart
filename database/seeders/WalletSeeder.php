@@ -18,16 +18,16 @@ class WalletSeeder extends Seeder
         User::whereDoesntHave('wallet')->each(function ($user) {
             Wallet::create([
                 'user_id' => $user->id,
-                'balance' => 0.00,
-                'reserved_balance' => 0.00,
+                'mlm_balance' => 0.00,
+                'purchase_balance' => 0.00,
                 'is_active' => true,
             ]);
         });
 
-        // Give the test member some initial balance
+        // Give the test member some initial purchase balance
         $testMember = User::where('email', 'member@example.com')->first();
         if ($testMember && $testMember->wallet) {
-            $testMember->wallet->update(['balance' => 1000.00]);
+            $testMember->wallet->update(['purchase_balance' => 1000.00]);
         }
     }
 }

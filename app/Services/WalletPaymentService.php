@@ -25,7 +25,7 @@ class WalletPaymentService
             return true;
         }
 
-        return $wallet->balance < $amount;
+        return $wallet->total_balance < $amount;
     }
 
     /**
@@ -34,7 +34,7 @@ class WalletPaymentService
     public function getBalance(User $user): float
     {
         $wallet = $user->wallet;
-        return $wallet ? $wallet->balance : 0.00;
+        return $wallet ? $wallet->total_balance : 0.00;
     }
 
     /**
@@ -60,7 +60,7 @@ class WalletPaymentService
             }
 
             // Check sufficient balance with locked row
-            if ($wallet->balance < $order->total_amount) {
+            if ($wallet->total_balance < $order->total_amount) {
                 throw new \Exception('Insufficient wallet balance');
             }
 
@@ -76,17 +76,26 @@ class WalletPaymentService
                     'order_id' => $order->id,
                     'order_number' => $order->order_number,
                     'payment_type' => 'order_payment',
-                    'wallet_balance_before' => $wallet->balance,
+                    'wallet_balance_before' => $wallet->total_balance,
+                    'mlm_balance_before' => $wallet->mlm_balance,
+                    'purchase_balance_before' => $wallet->purchase_balance,
                 ],
             ]);
 
-            // Deduct amount from wallet
-            $wallet->subtractBalance($order->total_amount);
+            // Deduct amount from wallet (purchase balance first, then MLM)
+            if (!$wallet->deductCombinedBalance($order->total_amount)) {
+                throw new \Exception('Failed to deduct wallet balance');
+            }
+
+            // Refresh wallet to get updated balances
+            $wallet->refresh();
 
             // Update transaction metadata with final balance
             $transaction->update([
                 'metadata' => array_merge($transaction->metadata, [
-                    'wallet_balance_after' => $wallet->balance,
+                    'wallet_balance_after' => $wallet->total_balance,
+                    'mlm_balance_after' => $wallet->mlm_balance,
+                    'purchase_balance_after' => $wallet->purchase_balance,
                 ])
             ]);
 
@@ -123,7 +132,7 @@ class WalletPaymentService
                 'success' => true,
                 'message' => 'Payment processed successfully',
                 'transaction' => $transaction,
-                'remaining_balance' => $wallet->balance,
+                'remaining_balance' => $wallet->total_balance,
             ];
 
         } catch (\Exception $e) {
@@ -177,25 +186,25 @@ class WalletPaymentService
             ];
         }
 
-        if ($wallet->balance < $amount) {
+        if ($wallet->total_balance < $amount) {
             return [
                 'valid' => false,
                 'message' => sprintf(
                     'Insufficient balance. Required: %s, Available: %s',
                     currency($amount),
-                    currency($wallet->balance)
+                    currency($wallet->total_balance)
                 ),
                 'code' => 'INSUFFICIENT_BALANCE',
                 'required_amount' => $amount,
-                'available_balance' => $wallet->balance,
+                'available_balance' => $wallet->total_balance,
             ];
         }
 
         return [
             'valid' => true,
             'message' => 'Payment validation successful',
-            'available_balance' => $wallet->balance,
-            'remaining_after_payment' => $wallet->balance - $amount,
+            'available_balance' => $wallet->total_balance,
+            'remaining_after_payment' => $wallet->total_balance - $amount,
         ];
     }
 
@@ -205,7 +214,7 @@ class WalletPaymentService
     public function getPaymentSummary(User $user, float $orderAmount): array
     {
         $wallet = $user->wallet;
-        $currentBalance = $wallet ? $wallet->balance : 0;
+        $currentBalance = $wallet ? $wallet->total_balance : 0;
         $validation = $this->validatePayment($user, $orderAmount);
 
         return [
@@ -257,17 +266,24 @@ class WalletPaymentService
                     'order_id' => $order->id,
                     'order_number' => $order->order_number,
                     'refund_type' => 'order_cancellation',
-                    'wallet_balance_before' => $wallet->balance,
+                    'wallet_balance_before' => $wallet->total_balance,
+                    'mlm_balance_before' => $wallet->mlm_balance,
+                    'purchase_balance_before' => $wallet->purchase_balance,
                 ],
             ]);
 
-            // Add amount back to wallet
-            $wallet->addBalance($order->total_amount);
+            // Add refund amount to purchase balance
+            $wallet->addPurchaseBalance($order->total_amount);
+
+            // Refresh wallet to get updated balances
+            $wallet->refresh();
 
             // Update transaction metadata with final balance
             $transaction->update([
                 'metadata' => array_merge($transaction->metadata, [
-                    'wallet_balance_after' => $wallet->balance,
+                    'wallet_balance_after' => $wallet->total_balance,
+                    'mlm_balance_after' => $wallet->mlm_balance,
+                    'purchase_balance_after' => $wallet->purchase_balance,
                 ])
             ]);
 
@@ -287,7 +303,7 @@ class WalletPaymentService
                 'success' => true,
                 'message' => 'Refund processed successfully',
                 'transaction' => $transaction,
-                'new_balance' => $wallet->balance,
+                'new_balance' => $wallet->total_balance,
             ];
 
         } catch (\Exception $e) {
