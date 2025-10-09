@@ -72,6 +72,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('🛒 Order history cleared (ready for new orders)');
         $this->command->info('↩️  Return requests cleared (ready for new returns)');
         $this->command->info('🔗 Referral clicks cleared (ready for new tracking)');
+        $this->command->info('📊 Activity logs cleared (fresh audit trail)');
         $this->command->info('🔢 User IDs reset to sequential (1, 2)');
         $this->command->info('📍 Complete profile data for admin and member');
         $this->command->info('');
@@ -118,6 +119,22 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('    • Error Handling: Missing wallets, incomplete upline, duplicates');
         $this->command->info('    • Performance: 3 retry attempts with exponential backoff');
         $this->command->info('');
+        $this->command->info('📊 Activity Logging & Audit System:');
+        $this->command->info('  ✅ Comprehensive Database-backed Activity Logs');
+        $this->command->info('    • MLM Commission Tracking (every commission logged)');
+        $this->command->info('    • Wallet Transaction Logging (deposits, withdrawals, transfers)');
+        $this->command->info('    • Order Payment & Refund Logging');
+        $this->command->info('    • Admin Action Logging (approvals, rejections)');
+        $this->command->info('    • Security Event Tracking');
+        $this->command->info('    • Filter by Type: MLM Commission, Wallet, Order, Security, Transaction, System');
+        $this->command->info('    • Filter by Level: DEBUG, INFO, WARNING, ERROR, CRITICAL');
+        $this->command->info('    • Search Functionality across logs');
+        $this->command->info('    • Export to CSV/JSON for reporting');
+        $this->command->info('    • Automatic Metadata Storage (JSON format)');
+        $this->command->info('    • Full Relationship Tracking (User, Transaction, Order)');
+        $this->command->info('    • Performance Optimized (8 database indexes)');
+        $this->command->info('    • Access: /admin/logs');
+        $this->command->info('');
         $this->command->info('🔒 Performance & Security Enhancements:');
         $this->command->info('  ✅ Database indexes for faster queries');
         $this->command->info('  ✅ Eager loading to eliminate N+1 queries');
@@ -154,6 +171,10 @@ class DatabaseResetSeeder extends Seeder
 
         // Disable foreign key checks for proper truncation
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // Clear activity logs (audit trail - can be fully reset)
+        DB::table('activity_logs')->truncate();
+        $this->command->info('✅ Cleared all activity logs (audit trail reset)');
 
         // Clear referral clicks first (foreign key dependency on users)
         DB::table('referral_clicks')->truncate();

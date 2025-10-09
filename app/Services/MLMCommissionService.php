@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\MlmSetting;
 use App\Models\Wallet;
 use App\Models\Transaction;
+use App\Models\ActivityLog;
 use App\Notifications\MLMCommissionEarned;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -174,6 +175,17 @@ class MLMCommissionService
                     'commission_level' => $level
                 ]
             ]);
+
+            // Log commission to activity log (database)
+            ActivityLog::logMLMCommission(
+                recipient: $user,
+                amount: $amount,
+                level: $level,
+                buyer: $buyer,
+                order: $order,
+                packageId: $package ? $package->id : null,
+                packageName: $package ? $package->name : null
+            );
 
             Log::info('MLM Commission Credited', [
                 'recipient_id' => $user->id,

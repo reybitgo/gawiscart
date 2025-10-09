@@ -142,6 +142,88 @@ if ($user->hasVerifiedEmail()) {
 2. Priority deduction: Purchase Balance first, then MLM Balance
 3. Maintains withdrawable funds for users
 
+### E-Commerce Payment Integration (Updated 2025-10-09)
+
+**WalletPaymentService** has been fully integrated with the dual-balance system:
+
+#### Payment Processing
+```php
+// app/Services/WalletPaymentService.php
+public function processPayment(Order $order): array
+{
+    $wallet = $order->user->wallet;
+
+    // Check total balance (mlm_balance + purchase_balance)
+    if ($wallet->total_balance < $order->total_amount) {
+        throw new \Exception('Insufficient wallet balance');
+    }
+
+    // Deduct using combined balance (purchase first, then MLM)
+    if (!$wallet->deductCombinedBalance($order->total_amount)) {
+        throw new \Exception('Failed to deduct wallet balance');
+    }
+
+    // Create payment transaction record
+    Transaction::create([
+        'user_id' => $order->user_id,
+        'type' => 'payment',
+        'amount' => $order->total_amount,
+        'status' => 'completed',
+        'metadata' => [
+            'order_id' => $order->id,
+            'mlm_balance_before' => $wallet->mlm_balance,
+            'purchase_balance_before' => $wallet->purchase_balance,
+        ]
+    ]);
+
+    return ['success' => true];
+}
+```
+
+#### Refund Processing
+```php
+// Refunds go to purchase_balance (not withdrawable)
+public function refundPayment(Order $order): array
+{
+    $wallet = $order->user->wallet;
+
+    // Add refund to purchase balance
+    $wallet->addPurchaseBalance($order->total_amount);
+
+    // Create refund transaction
+    Transaction::create([
+        'user_id' => $order->user_id,
+        'type' => 'refund',
+        'amount' => $order->total_amount,
+        'status' => 'completed',
+        'metadata' => [
+            'order_id' => $order->id,
+            'refund_type' => 'order_cancellation',
+        ]
+    ]);
+
+    return ['success' => true];
+}
+```
+
+#### Deposit Processing
+```php
+// Admin approves deposit → goes to purchase_balance
+if ($transaction->type === 'deposit') {
+    $wallet = $transaction->user->getOrCreateWallet();
+    $wallet->addPurchaseBalance($transaction->amount);
+}
+```
+
+#### Transfer Processing
+```php
+// Sender: Deducts from combined balance
+$senderWallet->deductCombinedBalance($totalAmount);
+
+// Recipient: Receives in purchase balance
+$recipientWallet->addPurchaseBalance($transferAmount);
+```
+
 ---
 
 ## Implementation Phases
@@ -213,19 +295,45 @@ ADD COLUMN max_mlm_levels TINYINT UNSIGNED DEFAULT 5;
 
 **Modify Table**: `wallets`
 ```sql
+-- Phase 1: Add new balance columns (COMPLETED)
 ALTER TABLE wallets
-ADD COLUMN mlm_balance DECIMAL(10,2) DEFAULT 0.00 AFTER balance,
+ADD COLUMN mlm_balance DECIMAL(10,2) DEFAULT 0.00 AFTER user_id,
 ADD COLUMN purchase_balance DECIMAL(10,2) DEFAULT 0.00 AFTER mlm_balance;
 
--- Migrate existing balance to purchase_balance
-UPDATE wallets SET purchase_balance = balance, balance = 0;
+-- Phase 2: Migrate existing balances (COMPLETED - 2025-10-09)
+UPDATE wallets
+SET purchase_balance = purchase_balance + balance,
+    balance = 0
+WHERE balance > 0;
+
+-- Phase 3: Drop legacy columns (COMPLETED - 2025-10-09)
+ALTER TABLE wallets
+DROP COLUMN balance,
+DROP COLUMN reserved_balance;
 ```
 
-#### Migration Files to Create
-- `YYYY_MM_DD_000001_create_mlm_settings_table.php`
-- `YYYY_MM_DD_000002_add_mlm_fields_to_users_table.php`
-- `YYYY_MM_DD_000003_add_mlm_fields_to_packages_table.php`
-- `YYYY_MM_DD_000004_add_segregated_balances_to_wallets_table.php`
+**Final Wallet Structure** (As of 2025-10-09):
+```sql
+-- Wallets table now only uses dual-balance system
+CREATE TABLE wallets (
+    id BIGINT UNSIGNED PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL UNIQUE,
+    mlm_balance DECIMAL(10,2) DEFAULT 0.00,      -- MLM commission earnings (withdrawable)
+    purchase_balance DECIMAL(10,2) DEFAULT 0.00, -- Deposit funds (for purchases only)
+    is_active BOOLEAN DEFAULT TRUE,
+    last_transaction_at TIMESTAMP NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+#### Migration Files (All Created ✅)
+- ✅ `2025_10_04_135212_add_segregated_balances_to_wallets_table.php` - Added mlm_balance and purchase_balance columns
+- ✅ `2025_10_09_090034_migrate_old_balance_to_purchase_balance.php` - Migrated legacy balance data
+- ✅ `2025_10_09_090518_drop_old_balance_columns_from_wallets_table.php` - Removed balance and reserved_balance columns
+- ✅ `YYYY_MM_DD_create_mlm_settings_table.php` - Created mlm_settings table
+- ✅ `YYYY_MM_DD_add_mlm_fields_to_users_table.php` - Added sponsor_id and referral_code
+- ✅ `YYYY_MM_DD_add_mlm_fields_to_packages_table.php` - Added is_mlm_package and max_mlm_levels
 
 #### Models to Modify/Create
 
@@ -287,22 +395,42 @@ public static function generateReferralCode(): string
 
 **Modify Model**: `app/Models/Wallet.php`
 ```php
-// Add MLM balance methods
+// Fillable attributes (UPDATED - 2025-10-09: Removed balance, reserved_balance)
+protected $fillable = [
+    'user_id',
+    'is_active',
+    'last_transaction_at',
+    'mlm_balance',
+    'purchase_balance',
+];
+
+// Casts (UPDATED - 2025-10-09: Removed balance, reserved_balance)
+protected $casts = [
+    'is_active' => 'boolean',
+    'last_transaction_at' => 'datetime',
+    'mlm_balance' => 'decimal:2',
+    'purchase_balance' => 'decimal:2',
+];
+
+// Get total available balance (MLM + Purchase)
 public function getTotalBalanceAttribute(): float
 {
-    return $this->mlm_balance + $this->purchase_balance;
+    return (float) ($this->mlm_balance + $this->purchase_balance);
 }
 
+// Get withdrawable balance (MLM only)
 public function getWithdrawableBalanceAttribute(): float
 {
-    return $this->mlm_balance;
+    return (float) $this->mlm_balance;
 }
 
+// Add MLM income to wallet
 public function addMLMIncome(float $amount, string $description, int $level, int $sourceOrderId): bool
 {
     DB::beginTransaction();
     try {
         $this->increment('mlm_balance', $amount);
+        $this->update(['last_transaction_at' => now()]);
 
         Transaction::create([
             'wallet_id' => $this->id,
@@ -320,8 +448,88 @@ public function addMLMIncome(float $amount, string $description, int $level, int
         return true;
     } catch (\Exception $e) {
         DB::rollBack();
+        Log::error('Failed to add MLM income', [
+            'wallet_id' => $this->id,
+            'amount' => $amount,
+            'error' => $e->getMessage()
+        ]);
         return false;
     }
+}
+
+// Add purchase balance (deposits, transfers)
+public function addPurchaseBalance(float $amount): void
+{
+    $this->increment('purchase_balance', $amount);
+    $this->update(['last_transaction_at' => now()]);
+}
+
+// Deduct from combined balance (purchase first, then MLM)
+// Used for package purchases
+public function deductCombinedBalance(float $amount): bool
+{
+    if ($this->total_balance < $amount) {
+        return false;
+    }
+
+    DB::beginTransaction();
+    try {
+        $remaining = $amount;
+
+        // Deduct from purchase balance first
+        if ($this->purchase_balance > 0) {
+            $purchaseDeduction = min($this->purchase_balance, $remaining);
+            $this->decrement('purchase_balance', $purchaseDeduction);
+            $remaining -= $purchaseDeduction;
+        }
+
+        // Deduct remaining from MLM balance if needed
+        if ($remaining > 0 && $this->mlm_balance >= $remaining) {
+            $this->decrement('mlm_balance', $remaining);
+        }
+
+        $this->update(['last_transaction_at' => now()]);
+        DB::commit();
+        return true;
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Failed to deduct combined balance', [
+            'wallet_id' => $this->id,
+            'amount' => $amount,
+            'error' => $e->getMessage()
+        ]);
+        return false;
+    }
+}
+
+// Get MLM balance summary
+public function getMLMBalanceSummary(): array
+{
+    return [
+        'mlm_balance' => (float) $this->mlm_balance,
+        'purchase_balance' => (float) $this->purchase_balance,
+        'total_balance' => $this->total_balance,
+        'withdrawable_balance' => $this->withdrawable_balance
+    ];
+}
+
+// Check if user can withdraw specific amount
+public function canWithdraw(float $amount): bool
+{
+    return $this->mlm_balance >= $amount;
+}
+
+// DEPRECATED methods (kept for backward compatibility)
+// These now delegate to the new balance methods
+public function addBalance($amount)
+{
+    $this->addPurchaseBalance($amount);
+}
+
+public function subtractBalance($amount)
+{
+    return $this->deductCombinedBalance($amount);
 }
 ```
 
@@ -1447,8 +1655,8 @@ class CheckoutController extends Controller
 
         // After order is confirmed and payment successful
         if ($order->status === 'confirmed' && $order->payment_status === 'paid') {
-            // Dispatch MLM commission processing (async via queue)
-            \App\Jobs\ProcessMLMCommissions::dispatch($order);
+            // Process MLM commissions immediately (synchronous)
+            \App\Jobs\ProcessMLMCommissions::dispatchSync($order);
         }
 
         return view('checkout.confirmation', compact('order'));
@@ -1456,7 +1664,9 @@ class CheckoutController extends Controller
 }
 ```
 
-#### Queue Job Creation
+#### Commission Processing Job
+
+**Note**: This job is executed **synchronously** using `dispatchSync()`, not queued. No queue worker is required.
 
 **Create Job**: `app/Jobs/ProcessMLMCommissions.php`
 ```php
@@ -1597,7 +1807,7 @@ Best regards,
 ```
 
 #### Testing Checklist
-- [ ] Order confirmation triggers MLM commission job
+- [ ] Order confirmation triggers MLM commission processing (synchronous)
 - [ ] Commission traverses exactly 5 levels upline
 - [ ] Level 1 receives ₱200, Levels 2-5 receive ₱50 each
 - [ ] MLM balance updates correctly for all upline members
@@ -1607,7 +1817,7 @@ Best regards,
 - [ ] **Email NOT sent to unverified email addresses**
 - [ ] Email contains correct commission amount and level information
 - [ ] Dashboard displays updated MLM balance without refresh
-- [ ] Queue job handles failures gracefully (retry logic)
+- [ ] Commission processing handles errors gracefully (transaction rollback)
 - [ ] Commission only processes for MLM packages
 - [ ] No duplicate commissions for same order
 
@@ -1616,7 +1826,7 @@ Best regards,
 2. ✅ Automatic commission distribution on order confirmation
 3. ✅ Real-time notifications (database + broadcast)
 4. ✅ **Email notifications (conditional on email verification)**
-5. ✅ Queue job for async commission processing
+5. ✅ Synchronous commission processing (via dispatchSync)
 6. ✅ Transaction audit trail with level tracking
 7. ✅ Real-time UI updates for MLM balance
 8. ✅ MLM balance widget component with live updates
@@ -1628,7 +1838,7 @@ Best regards,
 - `database/migrations/2025_10_07_105237_add_mlm_fields_to_transactions_table.php` - Adds MLM tracking fields to transactions
 - `app/Services/MLMCommissionService.php` - Complete commission processing service with upline traversal
 - `app/Notifications/MLMCommissionEarned.php` - Multi-channel notification (database + broadcast + conditional email)
-- `app/Jobs/ProcessMLMCommissions.php` - Async queue job with retry logic and comprehensive logging
+- `app/Jobs/ProcessMLMCommissions.php` - Commission processing job (executed synchronously) with comprehensive logging
 - `resources/views/components/mlm-balance-widget.blade.php` - Real-time MLM balance display with live updates
 
 **Files Modified**:
@@ -1667,7 +1877,7 @@ Best regards,
 ```
 CheckoutController::process()
     └─> Payment successful
-        └─> ProcessMLMCommissions::dispatch($order)  // Queued Job
+        └─> ProcessMLMCommissions::dispatchSync($order)  // Synchronous Execution
             └─> MLMCommissionService::processCommissions($order)
                 ├─> Traverse upline (up to 5 levels)
                 ├─> MlmSetting::getCommissionForLevel($packageId, $level)
@@ -1684,8 +1894,8 @@ CheckoutController::process()
 1. User completes checkout for Starter Package
 2. `WalletPaymentService::processPayment()` succeeds
 3. Cart cleared, order status = "confirmed", payment_status = "paid"
-4. `ProcessMLMCommissions` job dispatched to queue
-5. Job executes `MLMCommissionService::processCommissions($order)`
+4. `ProcessMLMCommissions::dispatchSync()` executes immediately (no queue)
+5. MLMCommissionService processes commissions synchronously
 6. Service walks up sponsor chain:
    - **Level 1** (Direct sponsor): ₱200 credited to `mlm_balance`
    - **Level 2** (Sponsor's sponsor): ₱50 credited to `mlm_balance`
@@ -1716,7 +1926,7 @@ public function via($notifiable): array
 - ✅ Migration runs successfully without errors
 - ✅ Service layer created with proper error handling
 - ✅ Notification system created with conditional email logic
-- ✅ Queue job created with retry mechanism
+- ✅ Synchronous commission processing implemented (dispatchSync)
 - ✅ CheckoutController integration completed
 - ✅ Wallet model enhanced with MLM methods
 - ✅ Dashboard widget created with real-time updates
@@ -1724,16 +1934,16 @@ public function via($notifiable): array
 **Testing Pending**:
 - ⏳ End-to-end commission distribution (5-level upline chain)
 - ⏳ Email notification verification (verified vs unverified emails)
-- ⏳ Queue job retry logic
+- ⏳ Error handling and transaction rollback
 - ⏳ Real-time UI updates (requires Laravel Echo configuration)
 - ⏳ Transaction audit trail verification
 
 **Notes**:
-- **Queue Worker Required**: Commission processing is async. Run `php artisan queue:work` to process jobs.
+- **No Queue Worker Required**: Commission processing is synchronous (dispatchSync).
 - **Broadcasting Optional**: Real-time UI updates require Laravel Echo + Pusher/WebSocket configuration.
 - **Email Configuration Required**: Set up SMTP/mail service in `.env` for email notifications.
-- **Commission Processing Time**: Typically completes in < 1 second for 5-level chain.
-- **Duplicate Prevention**: Job uses order_id and checks for existing transactions to prevent duplicate commissions.
+- **Commission Processing Time**: Typically completes in < 1 second for 5-level chain (blocks user redirect).
+- **Duplicate Prevention**: Transaction rollback prevents duplicate commissions on errors.
 
 ---
 
@@ -1793,22 +2003,21 @@ private function verifyPhase3Migration(): void
 - ✅ `source_order_id` column exists in `transactions` table
 - ✅ `source_type` column exists in `transactions` table
 
-**3. Queue Worker Setup Instructions**
-After reset, the command displays required and optional commands:
+**3. Optional Monitoring Commands**
+After reset, the command displays optional monitoring commands:
 
 ```
-📌 Phase 3 Requirements:
-  ⚠️  Queue worker MUST be running for commission distribution:
-     php artisan queue:work --tries=3 --timeout=120
-
-  ℹ️  Optional: Monitor queue in real-time:
-     php artisan queue:listen --tries=1
+📌 Phase 3 Notes:
+  ℹ️  Commission processing is synchronous (no queue worker needed)
 
   ℹ️  Optional: Monitor application logs:
      php artisan pail --timeout=0
+
+  ℹ️  Optional: View commission processing in real-time:
+     tail -f storage/logs/laravel.log | grep "MLM Commission"
 ```
 
-**Benefit**: Admins know exactly what commands to run after reset!
+**Benefit**: Admins know monitoring options available!
 
 **4. Login Page Success Modal**
 After successful reset and redirect to login page, a professional modal automatically appears:
@@ -1819,7 +2028,7 @@ After successful reset and redirect to login page, a professional modal automati
 - 🔑 Default credentials card with color-coded badges:
   - `[Admin]` admin@gawisherbal.com / Admin123!@#
   - `[Member]` member@gawisherbal.com / Member123!@#
-- ⚠️ Phase 3 queue worker reminder in warning box
+- ℹ️ Phase 3 info: Synchronous commission processing (no queue worker needed)
 - 🔘 "Got it!" button to dismiss modal
 - 🔒 Static backdrop (cannot dismiss by clicking outside)
 
@@ -1830,7 +2039,7 @@ return redirect()->route('login')
     ->with('success', 'Database reset completed successfully! All caches cleared...')
     ->with('reset_info', [
         'credentials' => true,
-        'phase3_reminder' => 'php artisan queue:work --tries=3 --timeout=120'
+        'phase3_note' => 'Commission processing is synchronous (dispatchSync)'
     ]);
 ```
 
@@ -1881,16 +2090,10 @@ return redirect()->route('login')
 # Step 1: Run reset command
 php artisan db:seed --class=DatabaseResetSeeder
 
-# Step 2: Start queue worker (REQUIRED for Phase 3)
-php artisan queue:work --tries=3 --timeout=120
-
-# Step 3: Optional - Monitor queue (in separate terminal)
-php artisan queue:listen --tries=1
-
-# Step 4: Optional - Monitor logs (in separate terminal)
+# Step 2: Optional - Monitor logs (in separate terminal)
 php artisan pail --timeout=0
 
-# Step 5: Access application
+# Step 3: Access application
 # Navigate to: http://coreui_laravel_deploy.test/login
 ```
 
@@ -2468,7 +2671,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/withdrawals')->name('ad
   - ✅ MLMCommissionService with upline traversal (5 levels)
   - ✅ Automatic commission distribution on order confirmation
   - ✅ Multi-channel notifications (database + broadcast + conditional email)
-  - ✅ Queue job with retry logic and exponential backoff
+  - ✅ Synchronous commission processing (dispatchSync)
   - ✅ Transaction audit trail with level tracking
   - ✅ MLM balance widget with real-time updates
   - ✅ CheckoutController integration
@@ -2494,7 +2697,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/withdrawals')->name('ad
 
 ### Best Practices
 1. **Database Transactions**: Always wrap commission distributions in DB transactions
-2. **Queue Jobs**: Use queues for commission processing to prevent timeout
+2. **Synchronous Processing**: Commission processing completes before user redirect (dispatchSync)
 3. **Logging**: Log all MLM transactions for audit trail
 4. **Validation**: Validate total commissions never exceed 40% of package price
 5. **Testing**: Write tests for each phase before moving to next
@@ -2663,7 +2866,7 @@ This document will be updated after each phase completion with:
 **Architecture Highlights**:
 ```
 Order Payment Success
-    └─> ProcessMLMCommissions::dispatch($order)  [Queued]
+    └─> ProcessMLMCommissions::dispatchSync($order)  [Synchronous]
         └─> MLMCommissionService::processCommissions($order)
             ├─> Traverse upline (5 levels max)
             ├─> Calculate commissions per level
@@ -2673,11 +2876,11 @@ Order Payment Success
 ```
 
 **Key Implementation Notes**:
-- Commission processing is fully async (doesn't block user checkout)
+- Commission processing is synchronous (completes before user redirect)
 - Email notifications respect email verification status (prevents spam/bounces)
 - Complete audit trail in transactions table with level tracking
 - Real-time UI updates require Laravel Echo + Pusher/WebSocket configuration
-- Queue worker must be running: `php artisan queue:work`
+- No queue worker required - uses dispatchSync for immediate processing
 
 ### 2025-10-06: Phase 2 Completion - Referral Link System & Auto-Fill Sponsor
 - ✅ **Referral Dashboard** (`/referral`):

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\User;
+use App\Models\ActivityLog;
 use App\Mail\DepositNotification;
 use App\Mail\WithdrawalNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -60,6 +61,18 @@ class WalletController extends Controller
                 'user_agent' => $request->userAgent(),
             ]
         ]);
+
+        // Log deposit request to activity log
+        ActivityLog::logWalletTransaction(
+            event: 'deposit_requested',
+            message: sprintf('%s requested deposit of ₱%s via %s',
+                $user->username ?? $user->fullname ?? 'User',
+                number_format($request->amount, 2),
+                $request->payment_method
+            ),
+            transaction: $transaction,
+            level: 'INFO'
+        );
 
         // Send email notification to all admin users with verified emails
         $adminUsers = User::role('admin')->get();
@@ -268,6 +281,29 @@ class WalletController extends Controller
                 $senderWallet->deductCombinedBalance($totalAmount); // Deduct transfer amount + charge
 
                 $recipientWallet->addPurchaseBalance($transferAmount); // Recipient gets transfer as purchase balance
+
+                // Log transfer operations
+                ActivityLog::logWalletTransaction(
+                    event: 'transfer_sent',
+                    message: sprintf('%s transferred ₱%s to %s',
+                        $sender->username ?? $sender->fullname ?? 'User',
+                        number_format($transferAmount, 2),
+                        $recipient->username ?? $recipient->fullname ?? 'User'
+                    ),
+                    transaction: $outgoingTransaction,
+                    level: 'INFO'
+                );
+
+                ActivityLog::logWalletTransaction(
+                    event: 'transfer_received',
+                    message: sprintf('%s received ₱%s from %s',
+                        $recipient->username ?? $recipient->fullname ?? 'User',
+                        number_format($transferAmount, 2),
+                        $sender->username ?? $sender->fullname ?? 'User'
+                    ),
+                    transaction: $incomingTransaction,
+                    level: 'INFO'
+                );
             });
 
             $message = 'Transfer of $' . number_format($transferAmount, 2) . ' to ' . ($recipient->username ?: $recipient->email) . ' completed successfully!';
@@ -462,6 +498,18 @@ class WalletController extends Controller
                 // For manual processing, don't deduct withdrawal amount until approved
                 // Just update last transaction time
                 $wallet->update(['last_transaction_at' => now()]);
+
+                // Log withdrawal request
+                ActivityLog::logWalletTransaction(
+                    event: 'withdrawal_requested',
+                    message: sprintf('%s requested withdrawal of ₱%s via %s',
+                        $user->username ?? $user->fullname ?? 'User',
+                        number_format($withdrawalAmount, 2),
+                        $paymentMethod
+                    ),
+                    transaction: $transaction,
+                    level: 'INFO'
+                );
             });
 
             // Send email notification to all admin users with verified emails

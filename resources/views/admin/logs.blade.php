@@ -55,6 +55,9 @@
                     <option value="all" {{ $logType == 'all' ? 'selected' : '' }}>All Types</option>
                     <option value="security" {{ $logType == 'security' ? 'selected' : '' }}>Security</option>
                     <option value="transaction" {{ $logType == 'transaction' ? 'selected' : '' }}>Transaction</option>
+                    <option value="mlm_commission" {{ $logType == 'mlm_commission' ? 'selected' : '' }}>MLM Commission</option>
+                    <option value="wallet" {{ $logType == 'wallet' ? 'selected' : '' }}>Wallet</option>
+                    <option value="order" {{ $logType == 'order' ? 'selected' : '' }}>Order</option>
                     <option value="system" {{ $logType == 'system' ? 'selected' : '' }}>System</option>
                 </select>
             </div>
@@ -82,8 +85,8 @@
         <div class="card text-white bg-primary-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ $logs->where('level', 'INFO')->count() }}</div>
-                    <div>Info Events</div>
+                    <div class="fs-4 fw-semibold">{{ collect($logs->items())->where('level', 'INFO')->count() }}</div>
+                    <div>Info Events (Page)</div>
                 </div>
                 <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
@@ -96,8 +99,8 @@
         <div class="card text-white bg-warning-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ $logs->where('level', 'WARNING')->count() }}</div>
-                    <div>Warnings</div>
+                    <div class="fs-4 fw-semibold">{{ collect($logs->items())->where('level', 'WARNING')->count() }}</div>
+                    <div>Warnings (Page)</div>
                 </div>
                 <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
@@ -110,8 +113,8 @@
         <div class="card text-white bg-danger-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ $logs->whereIn('level', ['ERROR', 'CRITICAL'])->count() }}</div>
-                    <div>Errors</div>
+                    <div class="fs-4 fw-semibold">{{ collect($logs->items())->whereIn('level', ['ERROR', 'CRITICAL'])->count() }}</div>
+                    <div>Errors (Page)</div>
                 </div>
                 <svg class="icon icon-3xl">
                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-x') }}"></use>
@@ -124,7 +127,7 @@
         <div class="card text-white bg-success-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ $logs->count() }}</div>
+                    <div class="fs-4 fw-semibold">{{ $logs->total() }}</div>
                     <div>Total Entries</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -144,7 +147,7 @@
         <strong>System Activity Log</strong>
         <small class="text-body-secondary ms-auto">
             @if($logs->count() > 0)
-                Showing {{ $logs->count() }} log entries
+                Showing {{ $logs->firstItem() }} to {{ $logs->lastItem() }} of {{ $logs->total() }} log entries
             @else
                 No log entries found matching the current filters
             @endif
@@ -182,7 +185,10 @@
                                             $typeColors = [
                                                 'security' => 'bg-danger',
                                                 'transaction' => 'bg-success',
-                                                'system' => 'bg-info'
+                                                'mlm_commission' => 'bg-primary',
+                                                'wallet' => 'bg-warning',
+                                                'order' => 'bg-info',
+                                                'system' => 'bg-secondary'
                                             ];
                                         @endphp
                                         <span class="badge {{ $typeColors[$log['type']] ?? 'bg-secondary' }} badge-sm">
@@ -230,6 +236,20 @@
                 @endforeach
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if($logs->hasPages())
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-body-secondary small">
+                        Showing {{ $logs->firstItem() }} to {{ $logs->lastItem() }} of {{ $logs->total() }} results
+                    </div>
+                    <div>
+                        {{ $logs->links() }}
+                    </div>
+                </div>
+            </div>
+        @endif
     @else
         <div class="card-body text-center py-5">
             <svg class="icon icon-xxl text-body-secondary mb-3">

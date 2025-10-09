@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Models\ActivityLog;
 use App\Mail\OrderPaymentConfirmed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -115,6 +116,23 @@ class WalletPaymentService
 
             // Credit points if configured
             $order->creditPoints();
+
+            // Log order payment
+            ActivityLog::logOrder(
+                event: 'order_paid',
+                message: sprintf('%s paid ₱%s for order #%s via e-wallet',
+                    $user->username ?? $user->fullname ?? 'User',
+                    number_format($order->total_amount, 2),
+                    $order->order_number
+                ),
+                order: $order,
+                level: 'INFO',
+                additionalMetadata: [
+                    'payment_method' => 'wallet',
+                    'transaction_id' => $transaction->id,
+                    'wallet_balance_after' => $wallet->total_balance,
+                ]
+            );
 
             DB::commit();
 
@@ -289,6 +307,23 @@ class WalletPaymentService
 
             // Update order payment status
             $order->update(['payment_status' => Order::PAYMENT_STATUS_REFUNDED]);
+
+            // Log order refund
+            ActivityLog::logOrder(
+                event: 'order_refunded',
+                message: sprintf('%s received refund of ₱%s for cancelled order #%s',
+                    $user->username ?? $user->fullname ?? 'User',
+                    number_format($order->total_amount, 2),
+                    $order->order_number
+                ),
+                order: $order,
+                level: 'INFO',
+                additionalMetadata: [
+                    'refund_method' => 'wallet',
+                    'transaction_id' => $transaction->id,
+                    'wallet_balance_after' => $wallet->total_balance,
+                ]
+            );
 
             DB::commit();
 

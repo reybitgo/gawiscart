@@ -2,17 +2,14 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\User;
 use App\Models\Order;
 
-class MLMCommissionEarned extends Notification implements ShouldQueue
+class MLMCommissionEarned extends Notification
 {
-    use Queueable;
 
     public $commission;
     public $level;
@@ -65,16 +62,25 @@ class MLMCommissionEarned extends Notification implements ShouldQueue
             ? '1st Level (Direct Referral)'
             : $this->level . 'th Level (Indirect Referral)';
 
+        // Get first MLM package from order items
+        $mlmPackage = $this->order->orderItems->first(function($item) {
+            return $item->package && $item->package->is_mlm_package;
+        });
+
+        $packageName = $mlmPackage && $mlmPackage->package
+            ? $mlmPackage->package->name
+            : 'Package';
+
         return (new MailMessage)
             ->subject('🎉 New MLM Commission Earned!')
-            ->greeting('Hello ' . $notifiable->name . '!')
+            ->greeting('Hello ' . ($notifiable->fullname ?? $notifiable->username) . '!')
             ->line("Great news! You've earned a commission from your network.")
             ->line('')
             ->line('**Commission Details:**')
             ->line('💰 **Amount:** ₱' . number_format($this->commission, 2))
             ->line('📊 **Level:** ' . $levelText)
-            ->line('👤 **From:** ' . $this->buyer->name)
-            ->line('📦 **Package:** ' . $this->order->package->name)
+            ->line('👤 **From:** ' . ($this->buyer->fullname ?? $this->buyer->username))
+            ->line('📦 **Package:** ' . $packageName)
             ->line('🧾 **Order Number:** ' . $this->order->order_number)
             ->line('')
             ->line('This commission has been credited to your **MLM Balance** (withdrawable).')
@@ -92,19 +98,35 @@ class MLMCommissionEarned extends Notification implements ShouldQueue
      */
     public function toArray($notifiable): array
     {
+        // Get first MLM package from order items
+        $mlmPackage = $this->order->orderItems->first(function($item) {
+            return $item->package && $item->package->is_mlm_package;
+        });
+
+        $packageName = $mlmPackage && $mlmPackage->package
+            ? $mlmPackage->package->name
+            : 'Package';
+
+        $buyerName = $this->buyer->fullname ?? $this->buyer->username;
+
+        $levelDisplay = $this->level == 1
+            ? '1st Level (Direct Referral)'
+            : $this->level . 'th Level';
+
         return [
             'type' => 'mlm_commission',
             'commission' => $this->commission,
             'level' => $this->level,
+            'level_display' => $levelDisplay,
             'buyer_id' => $this->buyer->id,
-            'buyer_name' => $this->buyer->name,
+            'buyer_name' => $buyerName,
             'order_id' => $this->order->id,
             'order_number' => $this->order->order_number,
-            'package_name' => $this->order->package->name,
+            'package_name' => $packageName,
             'message' => sprintf(
                 'You earned ₱%s from %s\'s purchase! (Level %d)',
                 number_format($this->commission, 2),
-                $this->buyer->name,
+                $buyerName,
                 $this->level
             )
         ];
@@ -118,16 +140,18 @@ class MLMCommissionEarned extends Notification implements ShouldQueue
      */
     public function toBroadcast($notifiable): BroadcastMessage
     {
+        $buyerName = $this->buyer->fullname ?? $this->buyer->username;
+
         return new BroadcastMessage([
             'type' => 'mlm_commission',
             'commission' => $this->commission,
             'level' => $this->level,
-            'buyer_name' => $this->buyer->name,
+            'buyer_name' => $buyerName,
             'order_number' => $this->order->order_number,
             'message' => sprintf(
                 'You earned ₱%s from %s\'s purchase! (Level %d)',
                 number_format($this->commission, 2),
-                $this->buyer->name,
+                $buyerName,
                 $this->level
             )
         ]);

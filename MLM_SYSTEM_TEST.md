@@ -193,7 +193,6 @@ ORDER BY id;
 SELECT
     u.username,
     u.email,
-    w.balance as legacy_balance,
     w.mlm_balance,
     w.purchase_balance,
     (w.mlm_balance + w.purchase_balance) as total_available
@@ -206,15 +205,14 @@ ORDER BY u.id;
 **Expected Results**:
 
 ```
-username | email                    | legacy_balance | mlm_balance | purchase_balance | total_available
----------|--------------------------|----------------|-------------|------------------|----------------
-admin    | admin@gawisherbal.com   | 0.00          | 0.00        | 1000.00         | 1000.00
-member   | member@gawisherbal.com  | 0.00          | 0.00        | 1000.00         | 1000.00
+username | email                    | mlm_balance | purchase_balance | total_available
+---------|--------------------------|-------------|------------------|----------------
+admin    | admin@gawisherbal.com   | 0.00        | 1000.00         | 1000.00
+member   | member@gawisherbal.com  | 0.00        | 1000.00         | 1000.00
 ```
 
 **Pass Criteria**:
 
--   ✅ Both users have ₱0 legacy balance (deprecated field)
 -   ✅ Both users have ₱0 MLM balance (no commissions earned yet)
 -   ✅ Both users have ₱1,000 purchase balance (can buy Starter Package)
 -   ✅ Total available = ₱1,000
@@ -1805,7 +1803,6 @@ ORDER BY u1.id;
 -- View all wallet balances
 SELECT
     u.username,
-    w.balance as legacy,
     w.mlm_balance,
     w.purchase_balance,
     (w.mlm_balance + w.purchase_balance) as total
@@ -2434,7 +2431,7 @@ WHERE u.username = 'testdirect';
 
 ## Test Suite 12: Sidebar Navigation & UI
 
-### Test Case 12.1: Verify Sidebar Link Exists
+### Test Case -1.1: Verify Sidebar Link Exists
 
 **Objective**: Ensure "My Referral Link" appears in sidebar
 
@@ -2456,7 +2453,7 @@ WHERE u.username = 'testdirect';
 
 ---
 
-### Test Case 12.2: Test Active State Highlighting
+### Test Case 11.2: Test Active State Highlighting
 
 **Objective**: Verify active state when on referral page
 
@@ -2475,7 +2472,7 @@ WHERE u.username = 'testdirect';
 
 ---
 
-### Test Case 12.3: Test Navigation Click
+### Test Case -1.3: Test Navigation Click
 
 **Objective**: Verify clicking sidebar link navigates correctly
 
@@ -2497,7 +2494,7 @@ WHERE u.username = 'testdirect';
 
 ## Test Suite 13: Edge Cases & Error Handling
 
-### Test Case 13.1: Test Expired Session
+### Test Case -1.1: Test Expired Session
 
 **Objective**: Verify behavior when session expires
 
@@ -2518,7 +2515,7 @@ WHERE u.username = 'testdirect';
 
 ---
 
-### Test Case 13.2: Test Invalid Referral Code in URL
+### Test Case -1.2: Test Invalid Referral Code in URL
 
 **Objective**: Verify handling of invalid referral code with server-side validation
 
@@ -2561,7 +2558,7 @@ WHERE u.username = 'testdirect';
 
 ---
 
-### Test Case 13.3: Test Referral Click Without User Agent
+### Test Case -1.3: Test Referral Click Without User Agent
 
 **Objective**: Verify tracking works without user agent (rare case)
 
@@ -2587,7 +2584,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ---
 
-### Test Case 13.4: Test Concurrent Referral Clicks
+### Test Case -1.4: Test Concurrent Referral Clicks
 
 **Objective**: Verify system handles multiple simultaneous clicks
 
@@ -2608,7 +2605,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ---
 
-### Test Case 13.5: Test Very Long User Agent String
+### Test Case -1.5: Test Very Long User Agent String
 
 **Objective**: Ensure long user agent strings don't break tracking
 
@@ -2631,7 +2628,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ## Test Suite 14: Security & Data Integrity
 
-### Test Case 14.1: Test SQL Injection in Referral Code
+### Test Case -1.1: Test SQL Injection in Referral Code
 
 **Objective**: Verify referral code is protected against SQL injection through parameterized queries and validation
 
@@ -2687,7 +2684,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ---
 
-### Test Case 14.2: Test XSS in Referral Code Display
+### Test Case -1.2: Test XSS in Referral Code Display
 
 **Objective**: Verify referral code output is escaped
 
@@ -2707,7 +2704,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ---
 
-### Test Case 14.3: Test CSRF Protection on Copy Actions
+### Test Case -1.3: Test CSRF Protection on Copy Actions
 
 **Objective**: Ensure copy actions don't expose CSRF tokens
 
@@ -2727,7 +2724,7 @@ curl -I "http://localhost:8000/register?ref=MEMBER_REFERRAL_CODE"
 
 ---
 
-### Test Case 14.4: Test Referral Code Uniqueness
+### Test Case -1.4: Test Referral Code Uniqueness
 
 **Objective**: Verify all referral codes are unique
 
@@ -2755,7 +2752,7 @@ HAVING count > 1;
 
 ---
 
-### Test Case 14.5: Test Unauthorized Access to Others' Referral Stats
+### Test Case -1.5: Test Unauthorized Access to Others' Referral Stats
 
 **Objective**: Ensure users can only see their own referral data
 
@@ -2779,7 +2776,7 @@ HAVING count > 1;
 
 ## Test Suite 15: Performance & Scalability
 
-### Test Case 15.1: Test Dashboard Load Time
+### Test Case -1.1: Test Dashboard Load Time
 
 **Objective**: Verify referral dashboard loads quickly
 
@@ -2800,7 +2797,7 @@ HAVING count > 1;
 
 ---
 
-### Test Case 15.2: Test Large Click History Performance
+### Test Case -1.2: Test Large Click History Performance
 
 **Objective**: Verify performance with many referral clicks
 
@@ -2839,7 +2836,7 @@ LIMIT 1000;
 
 ---
 
-### Test Case 15.3: Test Concurrent Dashboard Access
+### Test Case -1.3: Test Concurrent Dashboard Access
 
 **Objective**: Verify multiple users can access dashboard simultaneously
 
@@ -2863,7 +2860,7 @@ LIMIT 1000;
 
 ## Test Suite 16: Mobile & Responsive Design
 
-### Test Case 16.1: Test Mobile Dashboard Layout
+### Test Case -1.1: Test Mobile Dashboard Layout
 
 **Objective**: Verify referral dashboard is mobile-friendly
 
@@ -2887,7 +2884,7 @@ LIMIT 1000;
 
 ---
 
-### Test Case 16.2: Test QR Code Scanning from Mobile
+### Test Case -1.2: Test QR Code Scanning from Mobile
 
 **Objective**: Verify QR code scans correctly on mobile devices
 
@@ -2908,7 +2905,7 @@ LIMIT 1000;
 
 ---
 
-### Test Case 16.3: Test Social Share on Mobile
+### Test Case -1.3: Test Social Share on Mobile
 
 **Objective**: Verify social sharing works on mobile browsers
 
@@ -2929,9 +2926,9 @@ LIMIT 1000;
 
 ---
 
-## Test Suite 17: Integration Testing
+## Test Suite 16: Integration Testing
 
-### Test Case 17.1: Test End-to-End Referral Flow
+### Test Case -1.1: Test End-to-End Referral Flow
 
 **Objective**: Complete full referral cycle from link to registration
 
@@ -2957,7 +2954,7 @@ LIMIT 1000;
 
 ---
 
-### Test Case 17.2: Test Member Registration After Referral Click
+### Test Case -1.2: Test Member Registration After Referral Click
 
 **Objective**: Verify member registration works with referral tracking
 
@@ -2980,7 +2977,7 @@ LIMIT 1000;
 
 ---
 
-### Test Case 17.3: Test Referral Statistics After Multiple Registrations
+### Test Case -1.3: Test Referral Statistics After Multiple Registrations
 
 **Objective**: Verify statistics accuracy with multiple referrals
 
@@ -3115,7 +3112,6 @@ After completing Phase 2 testing:
 **Estimated Testing Time**: 4-6 hours
 **Prerequisites**:
 - Phase 1 and Phase 2 completed and tested
-- Queue worker running (`php artisan queue:work`)
 - Database with at least 6 users in a 5-level upline chain
 - Email service configured (optional, for email notification testing)
 
@@ -3128,7 +3124,7 @@ Phase 3 implements the core MLM commission distribution engine that automaticall
 - **Automatic Commission Calculation**: Based on 5-level MLM settings
 - **Upline Traversal**: Walks up sponsor chain to distribute commissions
 - **Multi-Channel Notifications**: Database, Broadcast, and Email (conditional)
-- **Queue-Based Processing**: Async job with retry logic
+- **Synchronous Processing**: Immediate commission distribution during checkout (using dispatchSync)
 - **Transaction Audit Trail**: Complete tracking with metadata
 - **Real-Time UI Updates**: Live balance updates and toast notifications
 
@@ -3142,16 +3138,10 @@ Phase 3 implements the core MLM commission distribution engine that automaticall
 # 1. Verify migrations are up to date
 php artisan migrate:status | grep mlm_fields_to_transactions
 
-# 2. Start queue worker (REQUIRED for commission processing)
-php artisan queue:work --tries=1 --timeout=120
-
-# 3. (Optional) Monitor queue in real-time
-php artisan queue:listen --tries=1
-
-# 4. (Optional) Start log viewer
+# 2. (Optional) Start log viewer to monitor commission processing
 php artisan pail --timeout=0
 
-# 5. Clear all caches
+# 3. Clear all caches
 php artisan cache:clear
 php artisan config:clear
 php artisan route:clear
@@ -3452,121 +3442,9 @@ echo "Result: " . ($result ? 'Success' : 'Failed') . "\n";
 
 ---
 
-## Test Suite 10: Queue Job Processing
+## Test Suite 10: Multi-Channel Notifications
 
-### Test Case 10.1: Job Dispatch Verification
-
-**Objective**: Verify ProcessMLMCommissions job is dispatched on order confirmation
-
-**Steps**:
-
-1. Login as Member5
-2. Add Starter Package to cart
-3. Proceed to checkout
-4. Complete payment (ensure wallet has sufficient balance)
-5. Monitor queue worker terminal output
-6. Check application logs
-
-```bash
-# Monitor logs
-tail -f storage/logs/laravel.log | grep "MLM Commission"
-```
-
-**Expected Results**:
-
-✅ After successful payment, log entry: "MLM Commission Job Dispatched"
-✅ Log includes order_id, order_number, package_id, package_name
-✅ Queue worker picks up the job immediately
-✅ Log entry: "MLM Commission Job Started" with attempt number
-
-**Pass Criteria**: Job dispatched and picked up by queue worker
-
----
-
-### Test Case 10.2: Job Execution Success
-
-**Objective**: Test successful commission distribution
-
-**Steps**:
-
-1. Complete Test Case 10.1
-2. Wait for job to complete (usually < 1 second)
-3. Check logs for "MLM Commission Job Completed Successfully"
-4. Query transactions table:
-
-```sql
-SELECT
-    t.id,
-    u.username,
-    t.type,
-    t.source_type,
-    t.level,
-    t.amount,
-    t.description,
-    t.created_at
-FROM transactions t
-JOIN users u ON t.user_id = u.id
-WHERE t.type = 'mlm_commission'
-ORDER BY t.level ASC, t.created_at DESC
-LIMIT 10;
-```
-
-**Expected Results**:
-
-✅ Log: "MLM Commission Job Completed Successfully"
-✅ 5 transactions created (one for each upline level)
-✅ Transaction amounts: 1× ₱200, 4× ₱50
-✅ `source_type` = 'mlm' for all transactions
-✅ `level` values: 1, 2, 3, 4, 5
-✅ `source_order_id` matches the order
-
-**Pass Criteria**: All upline members receive correct commissions
-
----
-
-### Test Case 10.3: Job Retry Logic
-
-**Objective**: Test job failure and retry mechanism
-
-**Steps**:
-
-1. Temporarily disable database connection (simulate failure):
-
-```php
-// In config/database.php, temporarily set wrong credentials
-// OR use tinker to cause a failure
-
-use App\Jobs\ProcessMLMCommissions;
-use App\Models\Order;
-
-// Get a test order
-$order = Order::latest()->first();
-
-// Dispatch job manually
-ProcessMLMCommissions::dispatch($order);
-
-// Immediately stop queue worker (Ctrl+C)
-// Check failed_jobs table
-```
-
-```sql
-SELECT * FROM failed_jobs ORDER BY failed_at DESC LIMIT 5;
-```
-
-**Expected Results**:
-
-✅ Job attempts up to 3 times
-✅ Retry delays: 10s, 30s, 60s (exponential backoff)
-✅ After 3 failures, job moves to `failed_jobs` table
-✅ Failed job entry contains: order_id, error message, stack trace
-
-**Pass Criteria**: Retry logic and failure handling work as expected
-
----
-
-## Test Suite 11: Multi-Channel Notifications
-
-### Test Case 11.1: Database Notification Creation
+### Test Case 10.1: Database Notification Creation
 
 **Objective**: Verify database notifications are created for all upline members
 
@@ -3606,7 +3484,7 @@ LIMIT 10;
 
 ---
 
-### Test Case 11.2: Email Notification - Verified Email
+### Test Case 10.2: Email Notification - Verified Email
 
 **Objective**: Test conditional email sending to verified email addresses
 
@@ -3640,7 +3518,7 @@ UPDATE users SET email_verified_at = NOW() WHERE username = 'user1';
 
 ---
 
-### Test Case 11.3: Email Notification - Unverified Email
+### Test Case 10.3: Email Notification - Unverified Email
 
 **Objective**: Verify emails are NOT sent to unverified addresses
 
@@ -3667,7 +3545,7 @@ UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
 
 ---
 
-### Test Case 11.4: Broadcast Notification (Optional)
+### Test Case 10.4: Broadcast Notification (Optional)
 
 **Objective**: Test real-time broadcast notifications
 
@@ -3691,9 +3569,9 @@ UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
 
 ---
 
-## Test Suite 12: MLM Balance Widget
+## Test Suite 11: MLM Balance Widget
 
-### Test Case 12.1: Widget Display
+### Test Case 11.1: Widget Display
 
 **Objective**: Verify MLM balance widget appears on dashboard
 
@@ -3717,7 +3595,7 @@ UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
 
 ---
 
-### Test Case 12.2: Live Balance Update (Optional)
+### Test Case 11.2: Live Balance Update (Optional)
 
 **Objective**: Test real-time balance updates
 
@@ -3742,7 +3620,7 @@ UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
 
 ---
 
-### Test Case 12.3: Network Stats Panel
+### Test Case 11.2: Network Stats Panel
 
 **Objective**: Verify MLM Network Stats panel
 
@@ -3763,9 +3641,9 @@ UPDATE users SET email_verified_at = NULL WHERE username = 'user2';
 
 ---
 
-## Test Suite 13: Commission Calculation Accuracy
+## Test Suite 12: Commission Calculation Accuracy
 
-### Test Case 13.1: Full 5-Level Chain
+### Test Case 12.1: Full 5-Level Chain
 
 **Objective**: Test commission distribution with complete upline
 
@@ -3807,7 +3685,7 @@ Member5:       (No commission - buyer doesn't earn from own purchase)
 
 ---
 
-### Test Case 13.2: Partial Upline Chain (3 Levels)
+### Test Case 12.2: Partial Upline Chain (3 Levels)
 
 **Objective**: Test commission distribution with incomplete upline
 
@@ -3836,7 +3714,7 @@ Member2 (L3):  +₱50
 
 ---
 
-### Test Case 13.3: Orphaned User (No Sponsor)
+### Test Case 12.3: Orphaned User (No Sponsor)
 
 **Objective**: Test purchase by user with no sponsor
 
@@ -3858,7 +3736,7 @@ Member2 (L3):  +₱50
 
 ---
 
-### Test Case 13.4: Non-MLM Package Purchase
+### Test Case 12.4: Non-MLM Package Purchase
 
 **Objective**: Verify commissions NOT distributed for regular packages
 
@@ -3878,9 +3756,9 @@ Member2 (L3):  +₱50
 
 ---
 
-## Test Suite 14: Transaction Audit Trail
+## Test Suite 13: Transaction Audit Trail
 
-### Test Case 14.1: Transaction Metadata
+### Test Case 13.1: Transaction Metadata
 
 **Objective**: Verify transaction records contain complete metadata
 
@@ -3923,7 +3801,7 @@ LIMIT 5;
 
 ---
 
-### Test Case 14.2: Transaction Timeline
+### Test Case 13.2: Transaction Timeline
 
 **Objective**: Verify commission transactions created in correct order
 
@@ -3953,7 +3831,7 @@ ORDER BY t.created_at ASC;
 
 ---
 
-### Test Case 14.3: Source Order Linkage
+### Test Case 13.3: Source Order Linkage
 
 **Objective**: Test foreign key relationship between transactions and orders
 
@@ -3987,9 +3865,9 @@ LIMIT 10;
 
 ---
 
-## Test Suite 15: Error Handling & Edge Cases
+## Test Suite 14: Error Handling & Edge Cases
 
-### Test Case 15.1: Insufficient Wallet Balance (Buyer)
+### Test Case 14.1: Insufficient Wallet Balance (Buyer)
 
 **Objective**: Test commission when buyer has insufficient funds
 
@@ -4011,7 +3889,7 @@ LIMIT 10;
 
 ---
 
-### Test Case 15.2: Missing Wallet (Upline Member)
+### Test Case 14.2: Missing Wallet (Upline Member)
 
 **Objective**: Test commission distribution when upline member has no wallet
 
@@ -4038,7 +3916,7 @@ DELETE FROM wallets WHERE user_id = (SELECT id FROM users WHERE username = 'user
 
 ---
 
-### Test Case 15.3: Circular Sponsorship (Should Be Prevented)
+### Test Case 14.3: Circular Sponsorship (Should Be Prevented)
 
 **Objective**: Verify circular sponsorship cannot occur
 
@@ -4074,7 +3952,7 @@ try {
 
 ---
 
-### Test Case 15.4: Duplicate Commission Prevention
+### Test Case 14.4: Duplicate Commission Prevention
 
 **Objective**: Ensure same order doesn't trigger commissions twice
 
@@ -4105,9 +3983,9 @@ ProcessMLMCommissions::dispatch($order);
 
 ---
 
-## Test Suite 16: Performance & Load Testing
+## Test Suite 15: Performance & Load Testing
 
-### Test Case 16.1: Single Order Processing Time
+### Test Case 15.1: Single Order Processing Time
 
 **Objective**: Measure commission processing duration
 
@@ -4137,7 +4015,7 @@ tail -f storage/logs/laravel.log | grep -E "MLM Commission Job (Started|Complete
 
 ---
 
-### Test Case 16.2: Concurrent Orders
+### Test Case 15.2: Concurrent Orders
 
 **Objective**: Test multiple simultaneous purchases
 
@@ -4160,31 +4038,11 @@ tail -f storage/logs/laravel.log | grep -E "MLM Commission Job (Started|Complete
 
 ---
 
-### Test Case 16.3: Queue Worker Restart During Processing
-
-**Objective**: Test resilience to queue worker interruption
-
-**Steps**:
-
-1. Start queue worker
-2. Dispatch commission job
-3. Immediately restart queue worker (kill and start again)
-4. Check job completion
-
-**Expected Results**:
-
-✅ Job reprocessed after worker restart
-✅ No duplicate commissions created
-✅ Transaction rollback works if interrupted mid-process
-✅ Job eventually completes successfully
-
-**Pass Criteria**: System recovers from interruption
-
 ---
 
-## Test Suite 17: Integration Testing
+## Test Suite 16: Integration Testing
 
-### Test Case 17.1: End-to-End Purchase Flow
+### Test Case 16.1: End-to-End Purchase Flow
 
 **Objective**: Complete purchase flow from cart to commission distribution
 
@@ -4206,7 +4064,7 @@ tail -f storage/logs/laravel.log | grep -E "MLM Commission Job (Started|Complete
 ✅ All steps complete without errors
 ✅ Order created with status "confirmed"
 ✅ Payment deducted from buyer's wallet
-✅ Commission job dispatched and completed
+✅ Commission processing completes synchronously (before redirect)
 ✅ 5 transactions created (or fewer if upline < 5 levels)
 ✅ All upline wallets updated correctly
 ✅ Notifications sent via all channels
@@ -4215,7 +4073,7 @@ tail -f storage/logs/laravel.log | grep -E "MLM Commission Job (Started|Complete
 
 ---
 
-### Test Case 17.2: Commission Display in Member Dashboard
+### Test Case 16.2: Commission Display in Member Dashboard
 
 **Objective**: Verify upline members can see earnings
 
@@ -4315,34 +4173,25 @@ LIMIT 10;
 **Diagnostic Steps**:
 
 ```bash
-# 1. Check if queue worker is running
-ps aux | grep "queue:work"
-
-# 2. Check queue jobs table
-SELECT * FROM jobs ORDER BY id DESC LIMIT 5;
-
-# 3. Check failed jobs
-SELECT * FROM failed_jobs ORDER BY failed_at DESC LIMIT 5;
-
-# 4. Check application logs
+# 1. Check application logs
 tail -100 storage/logs/laravel.log | grep "MLM Commission"
+
+# 2. Check if package is MLM-enabled
+SELECT id, name, is_mlm_package, max_mlm_levels FROM packages WHERE id = ?;
+
+# 3. Check MLM settings exist
+SELECT * FROM mlm_settings WHERE package_id = ? AND is_active = true;
 ```
 
 **Possible Solutions**:
 
-1. **Queue worker not running**:
-   ```bash
-   php artisan queue:work --tries=3
-   ```
+1. **Package not MLM**: Verify `packages.is_mlm_package = true`
 
-2. **Job failed**:
-   ```bash
-   php artisan queue:retry all
-   ```
+2. **No MLM settings**: Create commission settings in `mlm_settings` table
 
-3. **Package not MLM**: Verify `packages.is_mlm_package = true`
+3. **Database error**: Check logs for SQL errors, verify migrations
 
-4. **Database error**: Check logs for SQL errors, verify migrations
+4. **Transaction rollback**: Check for exceptions during commission processing
 
 ---
 
@@ -4373,9 +4222,9 @@ WHERE w.mlm_balance > 0;
 
 2. **Mail configuration**: Check `.env` for SMTP settings
 
-3. **Queue not processing**: Restart queue worker
+3. **Check mail logs**: `tail -f storage/logs/laravel.log | grep "mail"`
 
-4. **Check mail logs**: `tail -f storage/logs/laravel.log | grep "mail"`
+4. **Notification queued**: Check if notification is queued but not sent (mail queue issue)
 
 ---
 
@@ -4400,8 +4249,9 @@ HAVING COUNT(*) > 1;
 **Possible Solutions**:
 
 1. Add unique constraint or logic to prevent duplicates
-2. Check if job is being dispatched multiple times
-3. Review checkout controller for duplicate dispatch calls
+2. Check if commission processing is being called multiple times
+3. Review checkout controller for duplicate `dispatchSync()` calls
+4. Add idempotency check in MLMCommissionService
 
 ---
 

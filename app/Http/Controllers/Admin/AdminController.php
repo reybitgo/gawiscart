@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Models\ActivityLog;
 use App\Mail\DepositStatusNotification;
 use App\Mail\WithdrawalStatusNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -410,6 +411,19 @@ class AdminController extends Controller
             // Note: For withdrawals, fee transactions are already auto-approved during request
             // Only the withdrawal amount is deducted upon approval
 
+            // Log transaction approval
+            ActivityLog::logWalletTransaction(
+                event: $transaction->type === 'deposit' ? 'deposit_approved' : 'withdrawal_approved',
+                message: sprintf('Admin approved %s of ₱%s for %s (Ref: %s)',
+                    $transaction->type,
+                    number_format($transaction->amount, 2),
+                    $transaction->user->username ?? $transaction->user->fullname ?? 'User',
+                    $transaction->reference_number
+                ),
+                transaction: $transaction,
+                level: 'INFO'
+            );
+
             DB::commit();
 
             // Send email notification to user based on transaction type (only if email verified)
@@ -498,6 +512,20 @@ class AdminController extends Controller
                 // Note: Withdrawal fee remains deducted as it's a processing fee (non-refundable)
                 // The fee transaction is already marked as 'approved' during withdrawal request
             }
+
+            // Log transaction rejection
+            ActivityLog::logWalletTransaction(
+                event: $transaction->type === 'deposit' ? 'deposit_rejected' : 'withdrawal_rejected',
+                message: sprintf('Admin rejected %s of ₱%s for %s (Ref: %s) - Reason: %s',
+                    $transaction->type,
+                    number_format($transaction->amount, 2),
+                    $transaction->user->username ?? $transaction->user->fullname ?? 'User',
+                    $transaction->reference_number,
+                    $request->reason
+                ),
+                transaction: $transaction,
+                level: 'WARNING'
+            );
 
             DB::commit();
 
@@ -626,110 +654,44 @@ class AdminController extends Controller
         $search = $request->get('search', '');
         $level = $request->get('level', 'all');
 
-        // Simulate log data with different types and levels
-        $allLogs = collect([
-            [
-                'id' => 1,
-                'timestamp' => now()->subMinutes(5),
-                'level' => 'INFO',
-                'type' => 'security',
-                'message' => 'User login successful',
-                'user_id' => 2,
-                'ip_address' => '192.168.1.100',
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ],
-            [
-                'id' => 2,
-                'timestamp' => now()->subMinutes(12),
-                'level' => 'WARNING',
-                'type' => 'security',
-                'message' => 'Failed login attempt',
-                'user_id' => null,
-                'ip_address' => '203.0.113.45',
-                'user_agent' => 'curl/7.68.0'
-            ],
-            [
-                'id' => 3,
-                'timestamp' => now()->subMinutes(18),
-                'level' => 'INFO',
-                'type' => 'transaction',
-                'message' => 'Transaction approved: $1,500.00 withdrawal',
-                'user_id' => 1,
-                'ip_address' => '192.168.1.10',
-                'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-            ],
-            [
-                'id' => 4,
-                'timestamp' => now()->subMinutes(25),
-                'level' => 'ERROR',
-                'type' => 'system',
-                'message' => 'Database connection timeout',
-                'user_id' => null,
-                'ip_address' => 'localhost',
-                'user_agent' => 'Internal System'
-            ],
-            [
-                'id' => 5,
-                'timestamp' => now()->subHour(),
-                'level' => 'CRITICAL',
-                'type' => 'security',
-                'message' => 'Suspicious transaction blocked: $10,000.00',
-                'user_id' => 4,
-                'ip_address' => '198.51.100.23',
-                'user_agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G975F)'
-            ],
-            [
-                'id' => 6,
-                'timestamp' => now()->subHours(2),
-                'level' => 'INFO',
-                'type' => 'system',
-                'message' => 'Cache cleared successfully',
-                'user_id' => 1,
-                'ip_address' => '192.168.1.10',
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            ],
-            [
-                'id' => 7,
-                'timestamp' => now()->subHours(3),
-                'level' => 'WARNING',
-                'type' => 'transaction',
-                'message' => 'Large deposit flagged for review: $5,000.00',
-                'user_id' => 3,
-                'ip_address' => '192.168.1.50',
-                'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)'
-            ],
-            [
-                'id' => 8,
-                'timestamp' => now()->subHours(4),
-                'level' => 'DEBUG',
-                'type' => 'system',
-                'message' => 'Email notification sent successfully',
-                'user_id' => null,
-                'ip_address' => 'localhost',
-                'user_agent' => 'System Cron'
-            ]
-        ]);
+        // Query real activity logs from database
+        $query = ActivityLog::with(['user', 'transaction', 'order', 'relatedUser'])
+            ->orderBy('created_at', 'desc');
 
-        // Filter by log type
+        // Apply filters
         if ($logType !== 'all') {
-            $allLogs = $allLogs->where('type', $logType);
+            $query->where('type', $logType);
         }
 
-        // Filter by level
         if ($level !== 'all') {
-            $allLogs = $allLogs->where('level', $level);
+            $query->where('level', $level);
         }
 
-        // Search filter
         if (!empty($search)) {
-            $allLogs = $allLogs->filter(function ($log) use ($search) {
-                return stripos($log['message'], $search) !== false ||
-                       stripos($log['ip_address'], $search) !== false;
-            });
+            $query->search($search);
         }
 
-        // Sort by timestamp (newest first)
-        $logs = $allLogs->sortByDesc('timestamp')->values();
+        // Get paginated logs (15 per page)
+        $activityLogs = $query->paginate(15)->appends($request->query());
+
+        // Transform database records to match the view format
+        $logs = $activityLogs->through(function($log) {
+            return [
+                'id' => $log->id,
+                'timestamp' => $log->created_at,
+                'level' => $log->level,
+                'type' => $log->type,
+                'event' => $log->event,
+                'message' => $log->message,
+                'user_id' => $log->user_id,
+                'ip_address' => $log->ip_address ?? 'N/A',
+                'user_agent' => $log->user_agent ?? 'N/A',
+                'metadata' => $log->metadata,
+                'transaction_id' => $log->transaction_id,
+                'order_id' => $log->order_id,
+                'related_user_id' => $log->related_user_id,
+            ];
+        });
 
         return view('admin.logs', compact('logs', 'logType', 'search', 'level'));
     }
@@ -745,89 +707,9 @@ class AdminController extends Controller
             'search' => 'nullable|string'
         ]);
 
-        // Get the same logs data as in viewLogs method
-        $allLogs = collect([
-            [
-                'id' => 1,
-                'timestamp' => now()->subMinutes(5),
-                'level' => 'INFO',
-                'type' => 'security',
-                'message' => 'User login successful',
-                'user_id' => 2,
-                'ip_address' => '192.168.1.100',
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ],
-            [
-                'id' => 2,
-                'timestamp' => now()->subMinutes(12),
-                'level' => 'WARNING',
-                'type' => 'security',
-                'message' => 'Failed login attempt',
-                'user_id' => null,
-                'ip_address' => '203.0.113.45',
-                'user_agent' => 'curl/7.68.0'
-            ],
-            [
-                'id' => 3,
-                'timestamp' => now()->subMinutes(18),
-                'level' => 'INFO',
-                'type' => 'transaction',
-                'message' => 'Transaction approved: $1,500.00 withdrawal',
-                'user_id' => 1,
-                'ip_address' => '192.168.1.10',
-                'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-            ],
-            [
-                'id' => 4,
-                'timestamp' => now()->subMinutes(25),
-                'level' => 'ERROR',
-                'type' => 'system',
-                'message' => 'Database connection timeout',
-                'user_id' => null,
-                'ip_address' => 'localhost',
-                'user_agent' => 'Internal System'
-            ],
-            [
-                'id' => 5,
-                'timestamp' => now()->subHour(),
-                'level' => 'CRITICAL',
-                'type' => 'security',
-                'message' => 'Suspicious transaction blocked: $10,000.00',
-                'user_id' => 4,
-                'ip_address' => '198.51.100.23',
-                'user_agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G975F)'
-            ],
-            [
-                'id' => 6,
-                'timestamp' => now()->subHours(2),
-                'level' => 'INFO',
-                'type' => 'system',
-                'message' => 'Cache cleared successfully',
-                'user_id' => 1,
-                'ip_address' => '192.168.1.10',
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            ],
-            [
-                'id' => 7,
-                'timestamp' => now()->subHours(3),
-                'level' => 'WARNING',
-                'type' => 'transaction',
-                'message' => 'Large deposit flagged for review: $5,000.00',
-                'user_id' => 3,
-                'ip_address' => '192.168.1.50',
-                'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)'
-            ],
-            [
-                'id' => 8,
-                'timestamp' => now()->subHours(4),
-                'level' => 'DEBUG',
-                'type' => 'system',
-                'message' => 'Email notification sent successfully',
-                'user_id' => null,
-                'ip_address' => 'localhost',
-                'user_agent' => 'System Cron'
-            ]
-        ]);
+        // Query real activity logs from database with same filters
+        $query = ActivityLog::with(['user', 'transaction', 'order', 'relatedUser'])
+            ->orderBy('created_at', 'desc');
 
         // Apply filters
         $logType = $request->get('type', 'all');
@@ -835,21 +717,40 @@ class AdminController extends Controller
         $search = $request->get('search', '');
 
         if ($logType !== 'all') {
-            $allLogs = $allLogs->where('type', $logType);
+            $query->where('type', $logType);
         }
 
         if ($level !== 'all') {
-            $allLogs = $allLogs->where('level', $level);
+            $query->where('level', $level);
         }
 
         if (!empty($search)) {
-            $allLogs = $allLogs->filter(function ($log) use ($search) {
-                return stripos($log['message'], $search) !== false ||
-                       stripos($log['ip_address'], $search) !== false;
-            });
+            $query->search($search);
         }
 
-        $logs = $allLogs->sortByDesc('timestamp')->values();
+        // Get logs (up to 10000 for export)
+        $activityLogs = $query->limit(10000)->get();
+
+        // Transform for export
+        $logs = $activityLogs->map(function($log) {
+            return [
+                'id' => $log->id,
+                'timestamp' => $log->created_at,
+                'level' => $log->level,
+                'type' => $log->type,
+                'event' => $log->event,
+                'message' => $log->message,
+                'user_id' => $log->user_id,
+                'ip_address' => $log->ip_address ?? 'N/A',
+                'user_agent' => $log->user_agent ?? 'N/A',
+                'metadata' => $log->metadata,
+                'transaction_id' => $log->transaction_id,
+                'order_id' => $log->order_id,
+                'related_user_id' => $log->related_user_id,
+            ];
+        });
+
+        $logs = $logs->values();
         $format = $request->get('format');
         $timestamp = now()->format('Y-m-d_H-i-s');
 
@@ -949,9 +850,8 @@ class AdminController extends Controller
         $days = $request->get('days', 30);
         $cutoffDate = now()->subDays($days);
 
-        // In a real implementation, this would delete actual log files or database records
-        // For this demo, we'll simulate the deletion
-        $deletedCount = rand(50, 200); // Simulate deleted log count
+        // Delete old activity logs from database
+        $deletedCount = ActivityLog::where('created_at', '<', $cutoffDate)->delete();
 
         return response()->json([
             'success' => true,
