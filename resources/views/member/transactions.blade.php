@@ -30,12 +30,30 @@
 
 <!-- Wallet Overview -->
 <div class="row g-3 mb-4">
-    <div class="col-md-6">
+    <div class="col-md-4">
+        <div class="card bg-success-gradient text-white">
+            <div class="card-body text-center">
+                <h6 class="card-title">MLM Balance</h6>
+                <h3 class="fw-bold">{{ currency($wallet->mlm_balance) }}</h3>
+                <small class="opacity-75">Withdrawable</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
-                <h5 class="card-title">Current Balance</h5>
-                <h2 class="display-4 fw-bold">{{ currency($wallet->balance) }}</h2>
-                <p class="mb-0">
+                <h6 class="card-title">Purchase Balance</h6>
+                <h3 class="fw-bold">{{ currency($wallet->purchase_balance) }}</h3>
+                <small class="opacity-75">Transferable</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info-gradient text-white">
+            <div class="card-body text-center">
+                <h6 class="card-title">Total Balance</h6>
+                <h3 class="fw-bold">{{ currency($wallet->total_balance) }}</h3>
+                <p class="mb-0 mt-2">
                     <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-warning text-dark' }}">
                         {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}
                     </span>
@@ -43,8 +61,11 @@
             </div>
         </div>
     </div>
+</div>
 
-    <div class="col-md-6">
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
         <div class="card">
             <div class="card-header">
                 <svg class="icon me-2">
@@ -68,6 +89,14 @@
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-horizontal') }}"></use>
                         </svg>
                         Transfer
+                    </a>
+                    @endcan
+                    @can('transfer_funds')
+                    <a href="{{ route('wallet.convert') }}" class="btn btn-purple btn-sm">
+                        <svg class="icon me-1">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-vertical') }}"></use>
+                        </svg>
+                        Convert
                     </a>
                     @endcan
                     @can('withdraw_funds')
@@ -171,15 +200,17 @@
                     <td class="px-4 py-3">
                         <div class="d-flex align-items-center">
                             <div class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center {{
-                                $transaction->type == 'deposit' || $transaction->type == 'transfer_in' ? 'bg-success-subtle' :
+                                $transaction->type == 'deposit' || $transaction->type == 'transfer_in' || $transaction->type == 'balance_conversion' ? 'bg-success-subtle' :
                                 ($transaction->type == 'transfer_charge' || $transaction->type == 'withdrawal_fee' ? 'bg-warning-subtle' : 'bg-danger-subtle')
                             }}" style="width: 40px; height: 40px; min-width: 40px; flex-shrink: 0;">
                                 <svg class="icon {{
-                                    $transaction->type == 'deposit' || $transaction->type == 'transfer_in' ? 'text-success' :
+                                    $transaction->type == 'deposit' || $transaction->type == 'transfer_in' || $transaction->type == 'balance_conversion' ? 'text-success' :
                                     ($transaction->type == 'transfer_charge' || $transaction->type == 'withdrawal_fee' ? 'text-warning' : 'text-danger')
                                 }}">
                                     @if($transaction->type == 'deposit' || $transaction->type == 'transfer_in')
                                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-bottom') }}"></use>
+                                    @elseif($transaction->type == 'balance_conversion')
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-vertical') }}"></use>
                                     @elseif($transaction->type == 'transfer_out')
                                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-horizontal') }}"></use>
                                     @elseif($transaction->type == 'transfer_charge' || $transaction->type == 'withdrawal_fee')
@@ -199,6 +230,8 @@
                                         Transfer Fee
                                     @elseif($transaction->type == 'withdrawal_fee')
                                         Withdrawal Fee
+                                    @elseif($transaction->type == 'balance_conversion')
+                                        Balance Conversion
                                     @else
                                         {{ ucfirst($transaction->type) }}
                                     @endif
@@ -213,17 +246,25 @@
                         <span class="badge rounded-pill px-3 py-2 {{
                             $transaction->type == 'deposit' ? 'bg-success-subtle text-success' :
                             ($transaction->type == 'withdraw' ? 'bg-danger-subtle text-danger' :
-                            ($transaction->type == 'transfer_out' || $transaction->type == 'transfer_in' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning'))
+                            ($transaction->type == 'balance_conversion' ? 'bg-primary-subtle text-primary' :
+                            ($transaction->type == 'transfer_out' || $transaction->type == 'transfer_in' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning')))
                         }}">
                             {{ ucfirst(str_replace('_', ' ', $transaction->type)) }}
                         </span>
                     </td>
                     <td class="px-4 py-3">
                         <div class="fw-bold {{
-                            in_array($transaction->type, ['deposit', 'transfer_in']) ? 'text-success' :
-                            (in_array($transaction->type, ['transfer_charge', 'withdrawal_fee']) ? 'text-warning' : 'text-danger')
+                            $transaction->type == 'balance_conversion' ? 'text-primary' :
+                            (in_array($transaction->type, ['deposit', 'transfer_in']) ? 'text-success' :
+                            (in_array($transaction->type, ['transfer_charge', 'withdrawal_fee']) ? 'text-warning' : 'text-danger'))
                         }}">
-                            {{ in_array($transaction->type, ['deposit', 'transfer_in']) ? '+' : '-' }}
+                            @if($transaction->type == 'balance_conversion')
+                                <svg class="icon me-1" style="width: 14px; height: 14px;">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-vertical') }}"></use>
+                                </svg>
+                            @else
+                                {{ in_array($transaction->type, ['deposit', 'transfer_in']) ? '+' : '-' }}
+                            @endif
                             <span class="fs-6">${{ number_format($transaction->amount, 2) }}</span>
                         </div>
                     </td>
@@ -293,8 +334,28 @@
 
 @push('styles')
 <style>
+.bg-success-gradient {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
 .bg-primary-gradient {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.bg-info-gradient {
+    background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+}
+
+.btn-purple {
+    background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    border-color: #6f42c1;
+    color: white;
+}
+
+.btn-purple:hover {
+    background: linear-gradient(135deg, #5a32a3 0%, #d91a72 100%);
+    border-color: #5a32a3;
+    color: white;
 }
 
 .bg-success-subtle {

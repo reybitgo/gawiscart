@@ -167,7 +167,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ currency($user->wallet ? $user->wallet->balance : 0) }}</div>
+                                <div class="fw-semibold">{{ currency($user->wallet ? $user->wallet->total_balance : 0) }}</div>
                                 @if($user->wallet && isset($user->wallet->last_transaction_at))
                                     <div class="text-body-secondary">Last activity: {{ $user->wallet->last_transaction_at->diffForHumans() }}</div>
                                 @else
@@ -368,7 +368,7 @@
                                     <div class="fw-semibold">{{ $transaction->user->fullname ?? $transaction->user->username }}</div>
                                     <div class="text-body-secondary">{{ $transaction->user->email }}</div>
                                     @if($transaction->user->wallet)
-                                        <div class="text-body-secondary small">Balance: {{ currency($transaction->user->wallet->balance) }}</div>
+                                        <div class="text-body-secondary small">Balance: {{ currency($transaction->user->wallet->total_balance) }}</div>
                                     @endif
                                 </td>
                                 <td>
@@ -754,7 +754,7 @@ function populateTransactionDetailsModal(transaction) {
     // User information
     document.getElementById('detail-user-name').textContent = transaction.user.fullname || transaction.user.username;
     document.getElementById('detail-user-email').textContent = transaction.user.email;
-    document.getElementById('detail-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.balance).toFixed(2)}` : 'N/A';
+    document.getElementById('detail-user-balance').textContent = transaction.user.wallet ? `$${parseFloat(transaction.user.wallet.total_balance).toFixed(2)}` : 'N/A';
     document.getElementById('detail-user-id').textContent = transaction.user.id;
 
     // Description with contextual labeling

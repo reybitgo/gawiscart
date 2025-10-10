@@ -34,7 +34,7 @@
         <div class="card bg-primary-gradient text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Current Balance</h5>
-                <h2 class="display-4 fw-bold">{{ currency(auth()->user()->wallet ? auth()->user()->wallet->balance : 0) }}</h2>
+                <h2 class="display-4 fw-bold">{{ currency(auth()->user()->wallet ? auth()->user()->wallet->total_balance : 0) }}</h2>
                 <p class="mb-0">Available for withdrawal and transfers</p>
             </div>
         </div>

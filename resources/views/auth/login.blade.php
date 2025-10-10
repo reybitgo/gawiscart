@@ -134,7 +134,7 @@
                     <p class="mb-3">{{ session('success') }}</p>
 
                     @if (session('reset_info'))
-                        <div class="alert alert-info mb-3">
+                        <div class="alert alert-info mb-0">
                             <h6 class="alert-heading">
                                 <svg class="icon me-1">
                                     <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-user') }}"></use>
@@ -155,24 +155,6 @@
                                 <code class="text-dark">Member123!@#</code>
                             </div>
                         </div>
-
-                        @if (session('reset_info')['phase3_status'] ?? false)
-                            <div class="alert alert-success mb-0">
-                                <h6 class="alert-heading">
-                                    <svg class="icon me-1">
-                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-check-circle') }}"></use>
-                                    </svg>
-                                    Phase 3 Queue Worker Status
-                                </h6>
-                                <hr>
-                                <p class="mb-0 small">
-                                    <svg class="icon me-1 text-success">
-                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-task') }}"></use>
-                                    </svg>
-                                    {{ session('reset_info')['phase3_status'] }}
-                                </p>
-                            </div>
-                        @endif
                     @endif
                 </div>
                 <div class="modal-footer">

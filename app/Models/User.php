@@ -35,6 +35,12 @@ class User extends Authenticatable implements MustVerifyEmail
         'sponsor_id',
         'referral_code',
         'suspended_at',
+        'payment_preference',
+        'gcash_number',
+        'maya_number',
+        'pickup_location',
+        'other_payment_method',
+        'other_payment_details',
     ];
 
     /**

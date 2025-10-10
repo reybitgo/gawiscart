@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Mail;
 
 class WalletController extends Controller
 {
-    use AuthorizesRequests;
+    use AuthorizesRequests, \App\Http\Traits\HasPaginationLimit;
 
     public function deposit()
     {
@@ -186,9 +186,9 @@ class WalletController extends Controller
         $transferCharge = $this->calculateTransferCharge($transferAmount);
         $totalAmount = $transferAmount + $transferCharge;
 
-        // Check if sender's wallet has sufficient balance (including charge)
-        if ($senderWallet->total_balance < $totalAmount) {
-            return redirect()->back()->withErrors(['amount' => 'Insufficient balance. You need ' . currency($totalAmount) . ' (Transfer: ' . currency($transferAmount) . ' + Fee: ' . currency($transferCharge) . '). Your current balance is ' . currency($senderWallet->total_balance)]);
+        // Check if sender's wallet has sufficient PURCHASE balance (including charge) - only purchase balance can be transferred
+        if ($senderWallet->purchase_balance < $totalAmount) {
+            return redirect()->back()->withErrors(['amount' => 'Insufficient purchase balance. You need ' . currency($totalAmount) . ' (Transfer: ' . currency($transferAmount) . ' + Fee: ' . currency($transferCharge) . '). Your current purchase balance is ' . currency($senderWallet->purchase_balance) . '. Note: Only purchase balance can be transferred. Convert MLM balance to purchase balance first if needed.']);
         }
 
         // Check if sender's wallet is active
@@ -210,9 +210,9 @@ class WalletController extends Controller
                     $recipientWallet = $recipient->getOrCreateWallet();
                 }
 
-                // Re-check balance after locking (another transaction might have changed it)
-                if ($senderWallet->total_balance < $totalAmount) {
-                    throw new \Exception('Insufficient balance after lock');
+                // Re-check purchase balance after locking (another transaction might have changed it)
+                if ($senderWallet->purchase_balance < $totalAmount) {
+                    throw new \Exception('Insufficient purchase balance after lock');
                 }
 
                 // Create outgoing transaction for sender
@@ -277,8 +277,9 @@ class WalletController extends Controller
                     ])
                 ]);
 
-                // Update wallet balances
-                $senderWallet->deductCombinedBalance($totalAmount); // Deduct transfer amount + charge
+                // Update wallet balances - deduct both transfer amount and fee from purchase balance only
+                $senderWallet->decrement('purchase_balance', $totalAmount);
+                $senderWallet->update(['last_transaction_at' => now()]);
 
                 $recipientWallet->addPurchaseBalance($transferAmount); // Recipient gets transfer as purchase balance
 
@@ -333,7 +334,8 @@ class WalletController extends Controller
             ->where('status', 'pending')
             ->sum('amount');
 
-        $availableBalance = $wallet->total_balance - $pendingWithdrawals;
+        // IMPORTANT: Only MLM balance can be withdrawn (purchase balance from deposits/transfers cannot be withdrawn)
+        $availableBalance = $wallet->mlm_balance - $pendingWithdrawals;
 
         // Get payment method settings
         $paymentSettings = [
@@ -383,12 +385,32 @@ class WalletController extends Controller
         } elseif ($request->payment_method === 'Maya') {
             $validationRules['maya_number'] = 'required|string|max:11';
         } elseif ($request->payment_method === 'Cash') {
-            $validationRules['pickup_location'] = 'required|string|max:255';
+            $validationRules['pickup_location'] = 'nullable|string|max:255'; // Optional - defaults to office address
         } elseif ($request->payment_method === 'Others') {
             $validationRules['payment_details'] = 'required|string|max:1000';
         }
 
         $request->validate($validationRules);
+
+        // Auto-fill pickup location with admin's delivery address if not provided (for Cash method)
+        if ($request->payment_method === 'Cash' && empty($request->pickup_location)) {
+            // Get admin's delivery address
+            $adminUser = \App\Models\User::role('admin')->first();
+            $officeAddress = 'Main Office';
+            if ($adminUser) {
+                $addressParts = array_filter([
+                    $adminUser->address,
+                    $adminUser->address_2,
+                    $adminUser->city,
+                    $adminUser->state,
+                    $adminUser->zip,
+                ]);
+                $officeAddress = !empty($addressParts) ? implode(', ', $addressParts) : 'Main Office';
+            }
+            $request->merge([
+                'pickup_location' => $officeAddress
+            ]);
+        }
 
         $user = Auth::user();
         $wallet = $user->getOrCreateWallet();
@@ -404,11 +426,11 @@ class WalletController extends Controller
             ->where('status', 'pending')
             ->sum('amount');
 
-        // Check if user's wallet has sufficient balance including pending withdrawals
-        $availableBalance = $wallet->total_balance - $pendingWithdrawals;
+        // IMPORTANT: Check available MLM balance only (purchase balance cannot be withdrawn)
+        $availableBalance = $wallet->mlm_balance - $pendingWithdrawals;
 
         if ($availableBalance < $totalAmount) {
-            $errorMessage = 'Insufficient available balance. ';
+            $errorMessage = 'Insufficient MLM balance. Only MLM commission earnings can be withdrawn. ';
             if ($withdrawalFee > 0) {
                 $errorMessage .= 'Total required: ' . currency($totalAmount) . ' (Withdrawal: ' . currency($withdrawalAmount) . ' + Fee: ' . currency($withdrawalFee) . '). ';
             } else {
@@ -417,7 +439,7 @@ class WalletController extends Controller
             if ($pendingWithdrawals > 0) {
                 $errorMessage .= 'You have ' . currency($pendingWithdrawals) . ' in pending withdrawals. ';
             }
-            $errorMessage .= 'Available balance: ' . currency($availableBalance) . '. Wallet balance: ' . currency($wallet->total_balance) . '.';
+            $errorMessage .= 'Available MLM balance: ' . currency($availableBalance) . '. MLM Balance: ' . currency($wallet->mlm_balance) . ' | Purchase Balance: ' . currency($wallet->purchase_balance) . ' (cannot be withdrawn).';
 
             return redirect()->back()->withErrors(['amount' => $errorMessage]);
         }
@@ -491,8 +513,9 @@ class WalletController extends Controller
                         ]
                     ]);
 
-                    // Immediately deduct the fee from wallet balance (uses combined balance)
-                    $wallet->deductCombinedBalance($withdrawalFee);
+                    // Immediately deduct the fee from MLM balance only (purchase balance cannot be used for withdrawals)
+                    $wallet->decrement('mlm_balance', $withdrawalFee);
+                    $wallet->update(['last_transaction_at' => now()]);
                 }
 
                 // For manual processing, don't deduct withdrawal amount until approved
@@ -574,7 +597,7 @@ class WalletController extends Controller
         $chargeType = \App\Models\SystemSetting::get('transfer_charge_type', 'percentage');
         $chargeValue = \App\Models\SystemSetting::get('transfer_charge_value', 0);
         $minCharge = \App\Models\SystemSetting::get('transfer_minimum_charge', 0);
-        $maxCharge = \App\Models\SystemSetting::get('transfer_maximum_charge', 999999);
+        $maxCharge = \App\Models\SystemSetting::get('transfer_maximum_charge', 0);
 
         if ($chargeType === 'percentage') {
             $charge = ($amount * $chargeValue) / 100;
@@ -582,9 +605,13 @@ class WalletController extends Controller
             $charge = $chargeValue;
         }
 
-        // Apply min/max limits
+        // Apply minimum limit
         $charge = max($charge, $minCharge);
-        $charge = min($charge, $maxCharge);
+
+        // Apply maximum limit (0 means no limit)
+        if ($maxCharge > 0) {
+            $charge = min($charge, $maxCharge);
+        }
 
         return round($charge, 2);
     }
@@ -601,7 +628,7 @@ class WalletController extends Controller
         $feeType = \App\Models\SystemSetting::get('withdrawal_fee_type', 'percentage');
         $feeValue = \App\Models\SystemSetting::get('withdrawal_fee_value', 0);
         $minFee = \App\Models\SystemSetting::get('withdrawal_minimum_fee', 0);
-        $maxFee = \App\Models\SystemSetting::get('withdrawal_maximum_fee', 999999);
+        $maxFee = \App\Models\SystemSetting::get('withdrawal_maximum_fee', 0);
 
         if ($feeType === 'percentage') {
             $fee = ($amount * $feeValue) / 100;
@@ -609,26 +636,133 @@ class WalletController extends Controller
             $fee = $feeValue;
         }
 
-        // Apply min/max limits
+        // Apply minimum limit
         $fee = max($fee, $minFee);
-        $fee = min($fee, $maxFee);
+
+        // Apply maximum limit (0 means no limit)
+        if ($maxFee > 0) {
+            $fee = min($fee, $maxFee);
+        }
 
         return round($fee, 2);
+    }
+
+    public function convert()
+    {
+        $this->authorize('transfer_funds');
+
+        $user = Auth::user();
+        $wallet = $user->getOrCreateWallet();
+
+        return view('member.convert', compact('wallet'));
+    }
+
+    public function processConvert(Request $request)
+    {
+        $this->authorize('transfer_funds');
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1|max:10000',
+        ]);
+
+        $user = Auth::user();
+        $wallet = $user->getOrCreateWallet();
+        $convertAmount = $request->amount;
+
+        // Check if user has sufficient MLM balance
+        if ($wallet->mlm_balance < $convertAmount) {
+            return redirect()->back()->withErrors(['amount' => 'Insufficient MLM balance. You need ' . currency($convertAmount) . ' but you only have ' . currency($wallet->mlm_balance) . ' in your MLM balance.']);
+        }
+
+        // Check if wallet is active
+        if (!$wallet->is_active) {
+            return redirect()->back()->withErrors(['general' => 'Your wallet is currently frozen. Please contact support.']);
+        }
+
+        try {
+            \DB::transaction(function () use ($request, $user, $wallet, $convertAmount) {
+                // Lock wallet for update to prevent race conditions
+                $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+
+                // Re-check balance after locking
+                if ($wallet->mlm_balance < $convertAmount) {
+                    throw new \Exception('Insufficient MLM balance after lock');
+                }
+
+                // Create balance conversion transaction
+                $transaction = Transaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'balance_conversion',
+                    'amount' => $convertAmount,
+                    'status' => 'approved', // Conversions are instant
+                    'payment_method' => 'internal',
+                    'description' => 'Converted MLM balance to Purchase balance',
+                    'metadata' => [
+                        'from_balance' => 'mlm_balance',
+                        'to_balance' => 'purchase_balance',
+                        'mlm_balance_before' => $wallet->mlm_balance,
+                        'purchase_balance_before' => $wallet->purchase_balance,
+                        'mlm_balance_after' => $wallet->mlm_balance - $convertAmount,
+                        'purchase_balance_after' => $wallet->purchase_balance + $convertAmount,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                    ]
+                ]);
+
+                // Deduct from MLM balance
+                $wallet->decrement('mlm_balance', $convertAmount);
+
+                // Add to Purchase balance
+                $wallet->increment('purchase_balance', $convertAmount);
+
+                // Update last transaction time
+                $wallet->update(['last_transaction_at' => now()]);
+
+                // Log conversion operation
+                ActivityLog::logWalletTransaction(
+                    event: 'balance_converted',
+                    message: sprintf('%s converted ₱%s from MLM balance to Purchase balance',
+                        $user->username ?? $user->fullname ?? 'User',
+                        number_format($convertAmount, 2)
+                    ),
+                    transaction: $transaction,
+                    level: 'INFO'
+                );
+            });
+
+            session()->flash('success', 'Successfully converted ' . currency($convertAmount) . ' from MLM balance to Purchase balance. You can now transfer this amount to other users.');
+
+            return redirect()->route('wallet.transactions');
+
+        } catch (\Exception $e) {
+            \Log::error('Balance conversion failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['general' => 'Conversion failed. Please try again later.']);
+        }
     }
 
     public function transactions(Request $request)
     {
         $this->authorize('view_transactions');
 
-        $perPage = $request->get('per_page', 20);
-        $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
+        $perPage = $this->getPerPage($request, 20);
 
-        $transactions = Auth::user()->transactions()
+        // Refresh user to get latest data from database (prevents cache issues after transfers)
+        $user = Auth::user()->fresh();
+
+        $transactions = $user->transactions()
             ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->paginate($perPage)->appends($request->query());
 
-        $wallet = Auth::user()->getOrCreateWallet();
+        // Force reload wallet from database to get latest balance
+        $wallet = Wallet::where('user_id', $user->id)->first();
+        if (!$wallet) {
+            $wallet = $user->getOrCreateWallet();
+        }
 
-        return view('member.transactions', compact('transactions', 'wallet'));
+        return view('member.transactions', compact('transactions', 'wallet', 'perPage'));
     }
 }

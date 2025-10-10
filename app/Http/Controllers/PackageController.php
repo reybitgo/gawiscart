@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Cache;
 
 class PackageController extends Controller
 {
+    use \App\Http\Traits\HasPaginationLimit;
+
     public function index(Request $request)
     {
         $query = Package::active()->available()->ordered();
@@ -38,14 +40,15 @@ class PackageController extends Controller
             }
         }
 
-        $packages = $query->paginate(12);
+        $perPage = $this->getPerPage($request, 12);
+        $packages = $query->paginate($perPage)->appends($request->query());
 
         // Get cart items to check which packages are already in cart
         $cartService = app(CartService::class);
         $cartItems = $cartService->getItems();
         $cartPackageIds = array_keys($cartItems);
 
-        return view('packages.index', compact('packages', 'cartPackageIds'));
+        return view('packages.index', compact('packages', 'cartPackageIds', 'perPage'));
     }
 
     public function show(Package $package)

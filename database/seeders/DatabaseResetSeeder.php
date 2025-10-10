@@ -60,8 +60,8 @@ class DatabaseResetSeeder extends Seeder
         // Step 7: Update reset tracking
         $this->updateResetTracking();
 
-        // Step 8: Verify Phase 3 migration status
-        $this->verifyPhase3Migration();
+        // Step 8: Verify MLM commission migration status
+        $this->verifyMLMCommissionMigration();
 
         $this->command->info('✅ Database reset completed successfully!');
         $this->command->info('👤 Admin: admin@gawisherbal.com / Admin123!@#');
@@ -85,8 +85,8 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('  ✅ Package Management with Inventory Tracking');
         $this->command->info('  ✅ Order Analytics Dashboard');
         $this->command->info('');
-        $this->command->info('💰 MLM System Features (Phase 1, 2 & 3 Complete):');
-        $this->command->info('  ✅ Phase 1: Core MLM Package & Registration');
+        $this->command->info('💰 MLM System Features:');
+        $this->command->info('  ✅ Core MLM Package & Registration');
         $this->command->info('    • 5-Level Commission Structure (L1: ₱200, L2-L5: ₱50 each)');
         $this->command->info('    • MLM Package Configuration (toggleable per package)');
         $this->command->info('    • Active/Inactive Level Toggling with Real-time Calculations');
@@ -95,7 +95,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('    • Sponsor Relationship Validation');
         $this->command->info('    • Segregated Wallet Balances (MLM vs Purchase)');
         $this->command->info('    • Auto-generated Unique Referral Codes');
-        $this->command->info('  ✅ Phase 2: Referral Link System & Auto-Fill Sponsor');
+        $this->command->info('  ✅ Referral Link System & Auto-Fill Sponsor');
         $this->command->info('    • Shareable Referral Links with QR Codes');
         $this->command->info('    • Social Media Sharing (Facebook, WhatsApp, Messenger, Twitter)');
         $this->command->info('    • Referral Click Tracking (IP, User Agent, Timestamp)');
@@ -104,7 +104,7 @@ class DatabaseResetSeeder extends Seeder
         $this->command->info('    • Copy to Clipboard Functionality');
         $this->command->info('    • Session-based Referral Code Storage');
         $this->command->info('    • Registration Conversion Tracking');
-        $this->command->info('  ✅ Phase 3: Real-Time MLM Commission Distribution Engine');
+        $this->command->info('  ✅ Real-Time MLM Commission Distribution Engine');
         $this->command->info('    • Automatic Commission Distribution on Order Confirmation');
         $this->command->info('    • Upline Traversal (5 Levels: L1=₱200, L2-L5=₱50 each)');
         $this->command->info('    • Immediate Synchronous Processing (No Queue Required)');
@@ -660,20 +660,20 @@ class DatabaseResetSeeder extends Seeder
     }
 
     /**
-     * Verify Phase 3 MLM commission migration status
+     * Verify MLM commission migration status
      */
-    private function verifyPhase3Migration(): void
+    private function verifyMLMCommissionMigration(): void
     {
         $this->command->newLine();
-        $this->command->info('🔍 Verifying Phase 3: MLM Commission Distribution...');
+        $this->command->info('🔍 Verifying MLM Commission Distribution...');
 
-        // Check for Phase 3 migration
-        $phase3Migration = DB::table('migrations')
+        // Check for MLM commission migration
+        $mlmMigration = DB::table('migrations')
             ->where('migration', 'like', '%add_mlm_fields_to_transactions%')
             ->first();
 
-        if ($phase3Migration) {
-            $this->command->info('✅ Phase 3 migration applied: MLM fields added to transactions table');
+        if ($mlmMigration) {
+            $this->command->info('✅ MLM commission migration applied: MLM fields added to transactions table');
 
             // Verify the actual columns exist
             try {
@@ -682,20 +682,20 @@ class DatabaseResetSeeder extends Seeder
                 $hasSourceType = DB::getSchemaBuilder()->hasColumn('transactions', 'source_type');
 
                 if ($hasLevel && $hasSourceOrderId && $hasSourceType) {
-                    $this->command->info('✅ Verified: All Phase 3 transaction columns present');
+                    $this->command->info('✅ Verified: All MLM transaction columns present');
                     $this->command->info('  • level (MLM level tracking)');
                     $this->command->info('  • source_order_id (order linkage)');
                     $this->command->info('  • source_type (transaction categorization)');
                 } else {
-                    $this->command->warn('⚠️  Phase 3 migration exists but columns missing - run: php artisan migrate');
+                    $this->command->warn('⚠️  MLM migration exists but columns missing - run: php artisan migrate');
                 }
             } catch (\Exception $e) {
-                $this->command->warn('⚠️  Could not verify Phase 3 columns: ' . $e->getMessage());
+                $this->command->warn('⚠️  Could not verify MLM columns: ' . $e->getMessage());
             }
 
-            // Phase 3 Information
+            // MLM Commission Information
             $this->command->newLine();
-            $this->command->info('📌 Phase 3 MLM Commission System:');
+            $this->command->info('📌 MLM Commission System:');
             $this->command->info('  ✅  Commissions are processed IMMEDIATELY upon package purchase');
             $this->command->info('  ✅  No queue worker required - synchronous processing');
             $this->command->info('  ✅  Active users (who bought packages) earn from downline purchases');
@@ -703,7 +703,7 @@ class DatabaseResetSeeder extends Seeder
             $this->command->info('  ℹ️  Optional: Monitor application logs:');
             $this->command->info('     php artisan pail --timeout=0');
         } else {
-            $this->command->warn('⚠️  Phase 3 migration NOT found');
+            $this->command->warn('⚠️  MLM commission migration NOT found');
             $this->command->warn('     Run: php artisan migrate');
             $this->command->warn('     Expected migration: *_add_mlm_fields_to_transactions_table.php');
         }

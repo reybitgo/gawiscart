@@ -141,17 +141,22 @@
 <!-- Logs Display -->
 <div class="card">
     <div class="card-header">
-        <svg class="icon me-2">
-            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
-        </svg>
-        <strong>System Activity Log</strong>
-        <small class="text-body-secondary ms-auto">
-            @if($logs->count() > 0)
-                Showing {{ $logs->firstItem() }} to {{ $logs->lastItem() }} of {{ $logs->total() }} log entries
-            @else
-                No log entries found matching the current filters
-            @endif
-        </small>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <svg class="icon me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
+                </svg>
+                <strong>System Activity Log</strong>
+                <small class="text-body-secondary ms-2">
+                    @if($logs->count() > 0)
+                        Showing {{ $logs->firstItem() }} to {{ $logs->lastItem() }} of {{ $logs->total() }} log entries
+                    @else
+                        No log entries found matching the current filters
+                    @endif
+                </small>
+            </div>
+            <x-per-page-selector :perPage="$perPage" />
+        </div>
     </div>
 
     @if($logs->count() > 0)

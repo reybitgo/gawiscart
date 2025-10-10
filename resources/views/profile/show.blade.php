@@ -17,24 +17,6 @@
     </div>
 @endif
 
-<!-- Validation Error Messages -->
-@if ($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-        <svg class="icon me-3 flex-shrink-0" style="width: 2.5rem; height: 2.5rem;">
-            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-warning') }}"></use>
-        </svg>
-        <div class="flex-grow-1">
-            <strong>Please correct the following issues:</strong>
-            <div class="mt-2">
-                @foreach ($errors->all() as $error)
-                    <div class="mb-1">• {{ $error }}</div>
-                @endforeach
-            </div>
-        </div>
-        <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
 <div class="row g-4">
     <div class="col-lg-8">
         <!-- Profile Information Card -->
@@ -53,7 +35,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control @error('username') is-invalid @enderror"
-                                   id="username" name="username" value="{{ old('username', $user->username) }}" required>
+                                   id="username" name="username" value="{{ old('username', $user->username) }}" readonly>
                             @error('username')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -275,6 +257,142 @@
             </form>
         </div>
 
+        <!-- Payment Preferences Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center">
+                <svg class="icon icon-lg me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-credit-card') }}"></use>
+                </svg>
+                <strong>Payment Preferences</strong>
+                <small class="text-muted ms-2">Used for automatic withdrawal pre-filling</small>
+            </div>
+            <form method="POST" action="{{ route('profile.update') }}">
+                @csrf
+                @method('PATCH')
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Payment Preference Dropdown -->
+                        <div class="col-12">
+                            <label for="payment_preference" class="form-label">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-dollar') }}"></use>
+                                </svg>
+                                Payment Preference
+                            </label>
+                            <select id="payment_preference" name="payment_preference" class="form-select @error('payment_preference') is-invalid @enderror">
+                                <option value="">Select Payment Method</option>
+                                <option value="Gcash" {{ old('payment_preference', $user->payment_preference) == 'Gcash' ? 'selected' : '' }}>Gcash</option>
+                                <option value="Maya" {{ old('payment_preference', $user->payment_preference) == 'Maya' ? 'selected' : '' }}>Maya</option>
+                                <option value="Cash" {{ old('payment_preference', $user->payment_preference) == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                <option value="Others" {{ old('payment_preference', $user->payment_preference) == 'Others' ? 'selected' : '' }}>Others</option>
+                            </select>
+                            @error('payment_preference')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">This will be automatically pre-filled when you withdraw funds</div>
+                        </div>
+
+                        <!-- Gcash Number (shown when Gcash is selected) -->
+                        <div class="col-12 payment-field" id="gcash_field" style="display: none;">
+                            <label for="gcash_number" class="form-label">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-mobile') }}"></use>
+                                </svg>
+                                Gcash Number
+                            </label>
+                            <input type="text" class="form-control @error('gcash_number') is-invalid @enderror"
+                                   id="gcash_number" name="gcash_number" placeholder="09XXXXXXXXX" maxlength="11"
+                                   value="{{ old('gcash_number', $user->gcash_number) }}">
+                            @error('gcash_number')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Enter your 11-digit Gcash mobile number</div>
+                        </div>
+
+                        <!-- Maya Number (shown when Maya is selected) -->
+                        <div class="col-12 payment-field" id="maya_field" style="display: none;">
+                            <label for="maya_number" class="form-label">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-mobile') }}"></use>
+                                </svg>
+                                Maya Number
+                            </label>
+                            <input type="text" class="form-control @error('maya_number') is-invalid @enderror"
+                                   id="maya_number" name="maya_number" placeholder="09XXXXXXXXX" maxlength="11"
+                                   value="{{ old('maya_number', $user->maya_number) }}">
+                            @error('maya_number')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">Enter your 11-digit Maya mobile number</div>
+                        </div>
+
+                        <!-- Pickup Location (shown when Cash is selected) -->
+                        <div class="col-12 payment-field" id="cash_field" style="display: none;">
+                            <label for="pickup_location" class="form-label">
+                                <svg class="icon me-2">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
+                                </svg>
+                                Preferred Pickup Location <span class="text-muted">(Optional)</span>
+                            </label>
+                            <input type="text" class="form-control @error('pickup_location') is-invalid @enderror"
+                                   id="pickup_location" name="pickup_location" placeholder="Leave blank to use admin's office address"
+                                   value="{{ old('pickup_location', $user->pickup_location) }}">
+                            @error('pickup_location')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="form-text">
+                                <svg class="icon icon-sm me-1">
+                                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                                </svg>
+                                If left blank, the admin's office address will be used automatically for cash pickup
+                            </div>
+                        </div>
+
+                        <!-- Other Payment Method (shown when Others is selected) -->
+                        <div class="payment-field" id="others_field" style="display: none;">
+                            <div class="col-12 mb-3">
+                                <label for="other_payment_method" class="form-label">
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-wallet') }}"></use>
+                                    </svg>
+                                    Payment Method Name
+                                </label>
+                                <input type="text" class="form-control @error('other_payment_method') is-invalid @enderror"
+                                       id="other_payment_method" name="other_payment_method" placeholder="e.g., Bank Transfer, PayPal, etc."
+                                       value="{{ old('other_payment_method', $user->other_payment_method) }}">
+                                @error('other_payment_method')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-12">
+                                <label for="other_payment_details" class="form-label">
+                                    <svg class="icon me-2">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-notes') }}"></use>
+                                    </svg>
+                                    Payment Details
+                                </label>
+                                <textarea class="form-control @error('other_payment_details') is-invalid @enderror"
+                                          id="other_payment_details" name="other_payment_details" rows="3"
+                                          placeholder="Account number, bank name, or other relevant payment details...">{{ old('other_payment_details', $user->other_payment_details) }}</textarea>
+                                @error('other_payment_details')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">Provide complete payment details for this method</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-save') }}"></use>
+                        </svg>
+                        Save Payment Preferences
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Password Update Card -->
         <div class="card mb-4">
             <div class="card-header d-flex align-items-center">
@@ -461,6 +579,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Listen for checkbox changes
     showPasswordsCheckbox.addEventListener('change', togglePasswordVisibility);
+
+    // Payment preference handling
+    const paymentPreferenceSelect = document.getElementById('payment_preference');
+    const gcashField = document.getElementById('gcash_field');
+    const mayaField = document.getElementById('maya_field');
+    const cashField = document.getElementById('cash_field');
+    const othersField = document.getElementById('others_field');
+
+    function handlePaymentPreferenceChange() {
+        // Hide all fields
+        gcashField.style.display = 'none';
+        mayaField.style.display = 'none';
+        cashField.style.display = 'none';
+        othersField.style.display = 'none';
+
+        // Show the selected field
+        const selectedValue = paymentPreferenceSelect.value;
+        if (selectedValue === 'Gcash') {
+            gcashField.style.display = 'block';
+        } else if (selectedValue === 'Maya') {
+            mayaField.style.display = 'block';
+        } else if (selectedValue === 'Cash') {
+            cashField.style.display = 'block';
+        } else if (selectedValue === 'Others') {
+            othersField.style.display = 'block';
+        }
+    }
+
+    // Initial load - show the appropriate field based on saved preference
+    handlePaymentPreferenceChange();
+
+    // Listen for changes
+    paymentPreferenceSelect.addEventListener('change', handlePaymentPreferenceChange);
 });
 </script>
 

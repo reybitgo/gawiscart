@@ -10,14 +10,18 @@ use Illuminate\Support\Str;
 
 class AdminPackageController extends Controller
 {
-    public function index()
+    use \App\Http\Traits\HasPaginationLimit;
+
+    public function index(Request $request)
     {
+        $perPage = $this->getPerPage($request, 10);
+
         $packages = Package::withTrashed()
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->paginate(10);
+            ->paginate($perPage)->appends($request->query());
 
-        return view('admin.packages.index', compact('packages'));
+        return view('admin.packages.index', compact('packages', 'perPage'));
     }
 
     public function create()

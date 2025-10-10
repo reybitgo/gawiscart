@@ -29,12 +29,16 @@
                     {{ currency(auth()->user()->wallet->total_balance ?? 0) }}
                 </h4>
             </div>
-            <div class="text-end">
-                {{-- Withdrawal feature coming in Phase 4 --}}
-                <button class="btn btn-success btn-sm" disabled title="Withdrawal feature coming soon (Phase 4)">
-                    <i class="cil-bank"></i> Withdraw (Soon)
-                </button>
+            @can('transfer_funds')
+            <div>
+                <a href="{{ route('wallet.convert') }}" class="btn btn-sm btn-success">
+                    <svg class="icon me-1" style="width: 14px; height: 14px;">
+                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-vertical') }}"></use>
+                    </svg>
+                    Convert Balance
+                </a>
             </div>
+            @endcan
         </div>
     </div>
 </div>

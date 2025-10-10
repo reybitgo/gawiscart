@@ -307,8 +307,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <strong>Location:</strong><br>
-                                Main Office, 123 Business Street<br>
-                                Business District, City 12345
+                                {{ $officeAddress }}
                             </div>
                             <div class="col-md-6">
                                 <strong>Hours:</strong><br>

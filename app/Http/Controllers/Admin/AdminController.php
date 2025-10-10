@@ -19,7 +19,7 @@ use Spatie\Permission\Models\Role;
 
 class AdminController extends Controller
 {
-    use AuthorizesRequests;
+    use AuthorizesRequests, \App\Http\Traits\HasPaginationLimit;
 
     public function dashboard()
     {
@@ -74,11 +74,13 @@ class AdminController extends Controller
     {
         $this->authorize('wallet_management');
 
+        $perPage = $this->getPerPage($request, 20);
+
         $wallets = User::with(['wallet', 'transactions' => function($query) {
             $query->latest()->limit(5);
         }])->whereHas('roles', function($query) {
             $query->where('name', 'member');
-        })->paginate(20);
+        })->paginate($perPage)->appends($request->query());
 
         $totalBalance = Wallet::sum('mlm_balance') + Wallet::sum('purchase_balance');
         $totalWallets = Wallet::count();
@@ -115,7 +117,7 @@ class AdminController extends Controller
         }
 
         // Get paginated transactions
-        $allTransactions = $transactionsQuery->latest()->paginate(15)->appends($request->query());
+        $allTransactions = $transactionsQuery->latest()->paginate($perPage)->appends($request->query());
 
         return view('admin.wallet-management', compact(
             'wallets',
@@ -130,20 +132,23 @@ class AdminController extends Controller
             'rejectedTransactions',
             'allTransactions',
             'statusFilter',
-            'typeFilter'
+            'typeFilter',
+            'perPage'
         ));
     }
 
-    public function transactionApproval()
+    public function transactionApproval(Request $request)
     {
         $this->authorize('transaction_approval');
+
+        $perPage = $this->getPerPage($request, 20);
 
         $pendingTransactions = Transaction::with(['user', 'approver'])
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate($perPage)->appends($request->query());
 
-        return view('admin.transaction-approval', compact('pendingTransactions'));
+        return view('admin.transaction-approval', compact('pendingTransactions', 'perPage'));
     }
 
     public function systemSettings()
@@ -249,11 +254,12 @@ class AdminController extends Controller
         }
     }
 
-    public function users()
+    public function users(Request $request)
     {
-        $users = User::with(['roles', 'wallet'])->paginate(15);
+        $perPage = $this->getPerPage($request, 15);
+        $users = User::with(['roles', 'wallet'])->paginate($perPage)->appends($request->query());
 
-        return view('admin.users', compact('users'));
+        return view('admin.users', compact('users', 'perPage'));
     }
 
     public function editUser(User $user)
@@ -404,8 +410,10 @@ class AdminController extends Controller
             // Update wallet balance for approved withdrawals
             if ($transaction->type === 'withdrawal') {
                 $wallet = $transaction->user->getOrCreateWallet();
-                // Deduct the withdrawal amount (fee was already deducted upon submission)
-                $wallet->deductCombinedBalance($transaction->amount);
+                // Deduct the withdrawal amount from MLM balance only (fee was already deducted upon submission)
+                // IMPORTANT: Only MLM balance can be withdrawn (purchase balance from deposits/transfers cannot be withdrawn)
+                $wallet->decrement('mlm_balance', $transaction->amount);
+                $wallet->update(['last_transaction_at' => now()]);
             }
 
             // Note: For withdrawals, fee transactions are already auto-approved during request
@@ -502,12 +510,14 @@ class AdminController extends Controller
                 'admin_notes' => $request->reason
             ]);
 
-            // For withdrawals, return ONLY the withdrawal amount (fee is non-refundable)
+            // For withdrawals, return ONLY the withdrawal amount to MLM balance (fee is non-refundable)
             if ($transaction->type === 'withdrawal') {
                 $wallet = $transaction->user->getOrCreateWallet();
 
-                // Return only the withdrawal amount - fee is non-refundable
-                $wallet->addBalance($transaction->amount);
+                // Return only the withdrawal amount to MLM balance - fee is non-refundable
+                // IMPORTANT: Refund to MLM balance since withdrawal was requested from MLM balance
+                $wallet->increment('mlm_balance', $transaction->amount);
+                $wallet->update(['last_transaction_at' => now()]);
 
                 // Note: Withdrawal fee remains deducted as it's a processing fee (non-refundable)
                 // The fee transaction is already marked as 'approved' during withdrawal request
@@ -671,8 +681,9 @@ class AdminController extends Controller
             $query->search($search);
         }
 
-        // Get paginated logs (15 per page)
-        $activityLogs = $query->paginate(15)->appends($request->query());
+        // Get paginated logs
+        $perPage = $this->getPerPage($request, 15);
+        $activityLogs = $query->paginate($perPage)->appends($request->query());
 
         // Transform database records to match the view format
         $logs = $activityLogs->through(function($log) {
@@ -693,7 +704,7 @@ class AdminController extends Controller
             ];
         });
 
-        return view('admin.logs', compact('logs', 'logType', 'search', 'level'));
+        return view('admin.logs', compact('logs', 'logType', 'search', 'level', 'perPage'));
     }
 
     public function exportLogs(Request $request)

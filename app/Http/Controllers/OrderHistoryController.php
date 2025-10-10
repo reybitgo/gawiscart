@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 
 class OrderHistoryController extends Controller
 {
+    use \App\Http\Traits\HasPaginationLimit;
+
     protected WalletPaymentService $walletPaymentService;
     protected InputSanitizationService $sanitizationService;
 
@@ -67,12 +69,13 @@ class OrderHistoryController extends Controller
             $query->orderBy($sortBy, $sortDirection);
         }
 
-        $orders = $query->paginate(10)->withQueryString();
+        $perPage = $this->getPerPage($request, 10);
+        $orders = $query->paginate($perPage)->withQueryString();
 
         // Get summary statistics
         $stats = $this->getOrderStats();
 
-        return view('orders.index', compact('orders', 'stats'));
+        return view('orders.index', compact('orders', 'stats', 'perPage'));
     }
 
     /**
@@ -308,11 +311,12 @@ class OrderHistoryController extends Controller
             });
         }
 
-        $orders = $query->paginate(10)->withQueryString();
+        $perPage = $this->getPerPage($request, 10);
+        $orders = $query->paginate($perPage)->withQueryString();
 
         return response()->json([
             'success' => true,
-            'html' => view('orders.partials.order-list', compact('orders'))->render(),
+            'html' => view('orders.partials.order-list', compact('orders', 'perPage'))->render(),
             'pagination' => $orders->links()->render(),
         ]);
     }

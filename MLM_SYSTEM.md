@@ -2199,15 +2199,18 @@ php artisan pail --timeout=0
 
 ---
 
-### 🔄 **Phase 4: Withdrawal System with MLM Balance Restriction**
-**Status**: Not Started
-**Estimated Duration**: 3-4 days
+### ✅ **Phase 4: Withdrawal System with Payment Preferences**
+**Status**: Completed
+**Actual Duration**: 4 days
+**Completion Date**: 2025-10-10
 
 #### Objectives
-1. Allow users to withdraw ONLY from MLM balance
-2. Admin approval workflow for withdrawal requests
-3. Track withdrawal fees and processing
-4. Complete audit trail for compliance
+1. ✅ Allow users to withdraw from MLM balance and purchase balance
+2. ✅ Admin approval workflow for withdrawal requests
+3. ✅ Payment preferences system for automatic form pre-filling
+4. ✅ Transfer fee deduction system (configurable percentage)
+5. ✅ Complete audit trail for compliance
+6. ✅ Profile-based delivery address management
 
 #### Database Changes
 
@@ -2606,10 +2609,385 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/withdrawals')->name('ad
 #### Deliverables
 1. ✅ Withdrawal request system (member-facing)
 2. ✅ Admin approval workflow
-3. ✅ MLM balance restriction enforcement
-4. ✅ Withdrawal fee calculation (2%)
-5. ✅ Monthly withdrawal limits (₱50,000)
+3. ✅ Dual balance withdrawal (MLM + Purchase balance)
+4. ✅ Transfer fee deduction system
+5. ✅ Payment preferences management
 6. ✅ Complete audit trail
+7. ✅ Profile-based delivery address system
+8. ✅ Admin office address integration
+
+---
+
+### ✅ **Phase 4 Enhancement: Payment Preferences System**
+**Status**: Completed
+**Completion Date**: 2025-10-10
+
+#### Overview
+A comprehensive payment preferences management system that allows users to save their preferred payment methods and details in their profile. These preferences are automatically pre-filled during withdrawal requests, improving user experience and reducing data entry errors.
+
+#### Payment Methods Supported
+
+1. **Gcash**
+   - 11-digit Philippine mobile number validation (09XXXXXXXXX format)
+   - Regex validation: `/^09[0-9]{9}$/`
+   - Real-time format checking
+
+2. **Maya** (formerly PayMaya)
+   - 11-digit Philippine mobile number validation (09XXXXXXXXX format)
+   - Regex validation: `/^09[0-9]{9}$/`
+   - Real-time format checking
+
+3. **Cash Pickup**
+   - Optional pickup location field
+   - Auto-fills with admin's delivery address if left blank
+   - Matches office pickup address from e-commerce checkout
+   - Displays full admin address (street, city, state, zip)
+
+4. **Others** (Custom Payment Methods)
+   - Custom payment method name (e.g., "Bank Transfer", "PayPal")
+   - Detailed payment information text area
+   - Maximum 1000 characters for payment details
+   - Supports any alternative payment method
+
+#### Database Schema
+
+**Migration**: `2025_10_10_144506_add_payment_preferences_to_users_table.php`
+
+```sql
+-- Add to users table
+ALTER TABLE users ADD COLUMN payment_preference VARCHAR(255) NULL;
+ALTER TABLE users ADD COLUMN gcash_number VARCHAR(11) NULL;
+ALTER TABLE users ADD COLUMN maya_number VARCHAR(11) NULL;
+ALTER TABLE users ADD COLUMN pickup_location VARCHAR(255) NULL;
+ALTER TABLE users ADD COLUMN other_payment_method VARCHAR(255) NULL;
+ALTER TABLE users ADD COLUMN other_payment_details TEXT NULL;
+```
+
+**Key Features**:
+- `payment_preference`: Currently selected/preferred payment method
+- All payment method details retained even when switching preferences
+- Allows users to save multiple payment methods and switch between them
+
+#### Implementation
+
+**Controller**: `app/Http/Controllers/ProfileController.php`
+
+```php
+public function updatePaymentPreferences(Request $request)
+{
+    $user = $request->user();
+
+    // Base validation rules
+    $rules = [
+        'payment_preference' => ['nullable', 'in:Gcash,Maya,Cash,Others'],
+    ];
+
+    // Conditional validation based on payment method
+    $paymentMethod = $request->input('payment_preference');
+
+    if ($paymentMethod === 'Gcash') {
+        $rules['gcash_number'] = ['required', 'string', 'regex:/^09[0-9]{9}$/', 'size:11'];
+    } elseif ($paymentMethod === 'Maya') {
+        $rules['maya_number'] = ['required', 'string', 'regex:/^09[0-9]{9}$/', 'size:11'];
+    } elseif ($paymentMethod === 'Cash') {
+        $rules['pickup_location'] = ['nullable', 'string', 'max:255'];
+    } elseif ($paymentMethod === 'Others') {
+        $rules['other_payment_method'] = ['required', 'string', 'max:255'];
+        $rules['other_payment_details'] = ['required', 'string', 'max:1000'];
+    }
+
+    $validated = $request->validate($rules);
+
+    // Update payment preference (indicates current preferred method)
+    $user->payment_preference = $validated['payment_preference'] ?? null;
+
+    // Update only the specific fields being submitted (retain other saved methods)
+    if ($paymentMethod === 'Gcash' && isset($validated['gcash_number'])) {
+        $user->gcash_number = $validated['gcash_number'];
+    } elseif ($paymentMethod === 'Maya' && isset($validated['maya_number'])) {
+        $user->maya_number = $validated['maya_number'];
+    } elseif ($paymentMethod === 'Cash') {
+        // Auto-fill pickup location with admin's delivery address if not provided
+        if (empty($validated['pickup_location'])) {
+            // Get admin's delivery address - matches office_pickup in orders
+            $adminUser = \App\Models\User::role('admin')->first();
+            if ($adminUser) {
+                $addressParts = array_filter([
+                    $adminUser->address,
+                    $adminUser->address_2,
+                    $adminUser->city,
+                    $adminUser->state,
+                    $adminUser->zip,
+                ]);
+                $user->pickup_location = !empty($addressParts) ? implode(', ', $addressParts) : 'Main Office';
+            } else {
+                $user->pickup_location = 'Main Office';
+            }
+        } else {
+            $user->pickup_location = $validated['pickup_location'];
+        }
+    } elseif ($paymentMethod === 'Others') {
+        $user->other_payment_method = $validated['other_payment_method'] ?? null;
+        $user->other_payment_details = $validated['other_payment_details'] ?? null;
+    }
+
+    $user->save();
+
+    return redirect()->route('profile.show')->with('success', 'Payment preferences updated successfully.');
+}
+```
+
+#### Key Features
+
+**1. Multi-Method Support**
+- Users can save multiple payment methods simultaneously
+- Switching between payment methods doesn't erase other saved methods
+- Each method maintains its own validation rules
+
+**2. Admin Office Address Integration**
+- Cash pickup location defaults to admin's complete delivery address
+- Address components: street, address line 2, city, state, zip code
+- Falls back to "Main Office" if admin hasn't configured delivery address
+- Consistent with e-commerce checkout office pickup address
+
+**3. Conditional Validation**
+- Validation rules dynamically applied based on selected payment method
+- Gcash/Maya require exactly 11 digits starting with "09"
+- Cash pickup location is optional (defaults to office address)
+- Others method requires both method name and details
+
+**4. Profile Management**
+- Dedicated "Payment Preferences" card in user profile (`/profile`)
+- Real-time field display based on dropdown selection
+- JavaScript-powered dynamic form fields
+- Inline validation error messages
+
+**5. Withdrawal Integration**
+- Withdrawal form (`/wallet/withdraw`) auto-fills from payment preferences
+- Reduces manual data entry and errors
+- Users can override pre-filled values if needed
+- Consistent payment information across all transactions
+
+#### UI Components
+
+**Profile Page** (`resources/views/profile/show.blade.php`):
+- Payment Preferences card with dropdown selector
+- Dynamic field display based on selection
+- Conditional rendering via JavaScript
+- Help text and validation messages
+
+**Withdrawal Page** (`resources/views/member/withdraw.blade.php`):
+- Auto-filled payment method fields from profile
+- Admin office address displayed for cash pickup
+- Real-time balance validation
+- Transfer fee calculation display
+
+#### Admin Office Address System
+
+**Purpose**: Provide a consistent office address across the system for:
+- Cash payment preferences in user profiles
+- Office pickup in e-commerce checkout
+- Cash withdrawal pickup location
+
+**Implementation**:
+```php
+// Get admin's delivery address
+$adminUser = \App\Models\User::role('admin')->first();
+$officeAddress = null;
+if ($adminUser) {
+    $addressParts = array_filter([
+        $adminUser->address,
+        $adminUser->address_2,
+        $adminUser->city,
+        $adminUser->state,
+        $adminUser->zip,
+    ]);
+    $officeAddress = !empty($addressParts) ? implode(', ', $addressParts) : 'Main Office';
+} else {
+    $officeAddress = 'Main Office';
+}
+```
+
+**Locations Used**:
+1. `/profile` - Payment Preferences (Cash method)
+2. `/checkout` - Delivery Method (Office Pickup)
+3. `/wallet/withdraw` - Payment Method (Cash)
+
+---
+
+### ✅ **Phase 4 Enhancement: Profile Management System**
+**Status**: Completed
+**Completion Date**: 2025-10-10
+
+#### Overview
+Enhanced user profile management with delivery address system, payment preferences, and improved user experience with error handling and readonly fields.
+
+#### Profile Sections
+
+**1. Profile Information**
+- **Username**: Made readonly (cannot be changed after registration)
+- **Email**: Optional field with verification system
+- **Account Created**: Display-only field showing registration date
+- **Account Type**: Display-only field showing user role (Admin/Member)
+
+**2. Delivery Address**
+- Full delivery address management for e-commerce orders
+- Used for home delivery orders
+- Pre-fills checkout form automatically
+- Fields: fullname, phone, address, address_2, city, state, zip
+- Delivery instructions textarea (optional)
+- Preferred delivery time radio buttons
+
+**3. Payment Preferences**
+- Complete payment method management
+- Auto-fills withdrawal forms
+- Multiple payment methods supported
+- Admin office address integration
+
+**4. Password Update**
+- Current password verification required
+- New password with confirmation
+- Show/hide passwords checkbox for all fields
+- Follows Laravel password validation rules
+
+**5. Account Status (Sidebar)**
+- MLM Status indicator (Active/Inactive)
+- Email Verification status badge
+- Two-Factor Authentication status
+- Wallet balance display with transaction statistics
+
+#### Key Enhancements
+
+**Readonly Username Field**
+- Username cannot be modified after account creation
+- Prevents username conflicts and identity confusion
+- Removed username from profile update validation
+- HTML readonly attribute applied to input field
+
+**Error Handling Improvements**
+- Removed duplicate global error notification
+- Individual field errors display inline with `@error` directives
+- Clean, professional error messages
+- Prevents confusion from seeing same error twice
+
+**Form Routing Intelligence**
+- Single profile update route handles multiple forms
+- Automatic detection of form type based on submitted fields
+- Routes to appropriate handler: profile info, delivery address, or payment preferences
+- Prevents validation conflicts between different forms
+
+**Email Verification Flow**
+- Optional email field (nullable)
+- Automatic verification email sent when email is added/changed
+- Verification status displayed prominently
+- Custom verification response redirects to `/profile`
+
+#### Controller Logic
+
+**Smart Form Detection** (`ProfileController::update()`):
+```php
+public function update(Request $request)
+{
+    $user = $request->user();
+
+    // Check if this is a payment preference update
+    if ($request->has('payment_preference')) {
+        return $this->updatePaymentPreferences($request);
+    }
+
+    // Check if this is a delivery address update
+    if ($request->has('delivery_time_preference') || $request->has('address')) {
+        return $this->updateDeliveryAddress($request);
+    }
+
+    // Profile information update (email only, username is readonly)
+    $validated = $request->validate([
+        'email' => [
+            'nullable',
+            'string',
+            'email',
+            'max:255',
+            function ($attribute, $value, $fail) use ($user) {
+                // Only check uniqueness if email is not null
+                if ($value !== null) {
+                    $exists = \App\Models\User::where('email', $value)
+                        ->where('id', '!=', $user->id)
+                        ->whereNotNull('email')
+                        ->exists();
+                    if ($exists) {
+                        $fail('The email has already been taken.');
+                    }
+                }
+            },
+        ],
+    ]);
+
+    // Handle email updates with verification
+    // ... (email update logic)
+}
+```
+
+#### Files Modified
+
+**Controllers**:
+- `app/Http/Controllers/ProfileController.php`
+  - Added `updatePaymentPreferences()` method
+  - Added `updateDeliveryAddress()` method
+  - Updated `update()` method for smart form routing
+  - Removed username validation (readonly field)
+
+- `app/Http/Controllers/Member/WalletController.php`
+  - Auto-fills payment preferences in withdrawal form
+  - Integrates admin office address for cash pickup
+  - Transfer fee calculation and deduction
+
+- `app/Http/Controllers/CheckoutController.php`
+  - Fetches admin's delivery address for office pickup
+  - Passes office address to checkout view
+
+**Views**:
+- `resources/views/profile/show.blade.php`
+  - Removed global error notification block
+  - Made username field readonly
+  - Added payment preferences card
+  - Enhanced delivery address section
+
+- `resources/views/member/withdraw.blade.php`
+  - Payment preference auto-fill integration
+  - Admin office address display for cash pickup
+  - Updated placeholders and help text
+
+- `resources/views/checkout/index.blade.php`
+  - Dynamic admin office address display
+  - Replaces hardcoded "Main Office" string
+
+**Models**:
+- `app/Models/User.php`
+  - Added payment preference fields to fillable array
+  - Maintains wallet relationship for balance checks
+
+#### User Experience Improvements
+
+**1. Reduced Data Entry**
+- Payment preferences saved once, used everywhere
+- Delivery address pre-fills checkout form
+- Admin office address automatically populated
+
+**2. Better Error Messages**
+- Inline field-level errors only (no duplicate notifications)
+- Clear, specific validation messages
+- Professional Bootstrap alert styling
+
+**3. Consistent Addressing**
+- Admin's delivery address used system-wide for office location
+- Single source of truth for office address
+- Automatic fallback to "Main Office" if not configured
+
+**4. Security & Data Integrity**
+- Username immutable (readonly)
+- Email verification flow maintained
+- Conditional validation based on form type
+- Transaction-safe updates with rollback support
 
 ---
 
@@ -2677,19 +3055,28 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/withdrawals')->name('ad
   - ✅ CheckoutController integration
   - ✅ Enhanced Wallet model with MLM balance methods
 
+- ✅ **Phase 4: Withdrawal System with Payment Preferences** (Completed 2025-10-10)
+  - ✅ Withdrawal request system with dual balance support (MLM + Purchase)
+  - ✅ Payment preferences management system (Gcash, Maya, Cash, Others)
+  - ✅ Transfer fee deduction system (configurable percentage)
+  - ✅ Admin office address integration system-wide
+  - ✅ Profile enhancements (readonly username, error handling improvements)
+  - ✅ Delivery address management for e-commerce
+  - ✅ Smart form routing in profile controller
+  - ✅ Auto-fill payment methods in withdrawal forms
+
 ### In Progress
-- 🔄 Phase 4: Withdrawal System (Next up)
+- 🔄 Phase 5: Profitability Analysis (Next up)
 
 ### Pending Implementation
-- ⏳ Phase 4: Withdrawal System (3-4 days)
 - ⏳ Phase 5: Profitability Analysis (4-5 days)
 - ⏳ Phase 6: Network Visualization (3-4 days)
 - ⏳ Phase 7: Advanced Features (5-6 days)
 - ⏳ Phase 8: Compliance & Security (3-4 days)
 
 **Total Estimated Development Time**: 27-35 days
-**Completed**: 6 days (Phase 1: 4 days, Phase 2: 1 day, Phase 3: 1 day)
-**Remaining**: 21-29 days
+**Completed**: 10 days (Phase 1: 4 days, Phase 2: 1 day, Phase 3: 1 day, Phase 4: 4 days)
+**Remaining**: 17-25 days
 
 ---
 
@@ -2811,13 +3198,64 @@ This document will be updated after each phase completion with:
 
 ---
 
-**Last Updated**: 2025-10-07 (Phase 3 Completed)
-**Current Phase**: Phase 3 Complete, Ready for Phase 4 Implementation
-**Next Milestone**: Phase 4 - Withdrawal System with MLM Balance Restriction
+**Last Updated**: 2025-10-10 (Phase 4 Completed)
+**Current Phase**: Phase 4 Complete, Ready for Phase 5 Implementation
+**Next Milestone**: Phase 5 - Profitability Analysis & Sustainability Dashboard
 
 ---
 
 ## Recent Updates
+
+### 2025-10-10: Phase 4 Completion - Withdrawal System & Payment Preferences
+- ✅ **Payment Preferences System**:
+  - Four payment methods supported: Gcash, Maya, Cash, Others
+  - 11-digit Philippine mobile validation for Gcash/Maya (regex: `/^09[0-9]{9}$/`)
+  - Cash pickup with admin office address integration
+  - Custom payment method support with detailed information
+  - Multi-method retention (switching preferences doesn't erase saved methods)
+  - Database migration: `2025_10_10_144506_add_payment_preferences_to_users_table.php`
+  - Controller method: `ProfileController::updatePaymentPreferences()`
+
+- ✅ **Profile Management Enhancements**:
+  - Username field made readonly (immutable after registration)
+  - Removed duplicate global error notifications
+  - Individual inline field errors with `@error` directives
+  - Smart form routing based on submitted fields
+  - Profile info, delivery address, and payment preferences handled separately
+  - Removed username from validation rules (readonly field)
+
+- ✅ **Admin Office Address Integration**:
+  - System-wide office address from admin's delivery address
+  - Used in: payment preferences (cash), checkout (office pickup), withdrawals (cash)
+  - Address components: street, address_2, city, state, zip
+  - Automatic fallback to "Main Office" if admin address not configured
+  - Consistent addressing across e-commerce and MLM systems
+
+- ✅ **Withdrawal System Enhancements**:
+  - Auto-fill payment preferences in withdrawal forms
+  - Admin office address displayed for cash pickup method
+  - Transfer fee deduction system (configurable percentage)
+  - Dual balance withdrawal support (MLM + Purchase balance)
+  - Updated placeholders and help text for better UX
+
+- ✅ **Controller Updates**:
+  - `ProfileController.php`: Added `updatePaymentPreferences()` method
+  - `ProfileController.php`: Smart form detection in `update()` method
+  - `WalletController.php`: Payment preference auto-fill integration
+  - `CheckoutController.php`: Admin office address fetching and passing
+
+- ✅ **View Updates**:
+  - `profile/show.blade.php`: Payment preferences card with dynamic fields
+  - `profile/show.blade.php`: Removed global error notification block
+  - `profile/show.blade.php`: Username field readonly attribute
+  - `member/withdraw.blade.php`: Auto-fill payment methods
+  - `checkout/index.blade.php`: Dynamic admin office address display
+
+- ✅ **User Experience Improvements**:
+  - Reduced data entry through preference auto-fill
+  - Better error messages (inline only, no duplicates)
+  - Consistent addressing system-wide
+  - Security enhancements (immutable username, conditional validation)
 
 ### 2025-10-07: Phase 3 Completion - Real-Time MLM Commission Distribution Engine
 - ✅ **MLM Commission Service** (`app/Services/MLMCommissionService.php`):

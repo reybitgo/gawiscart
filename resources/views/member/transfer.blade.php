@@ -33,8 +33,8 @@
     <div class="col-md-6 mx-auto">
         <div class="card bg-success-gradient text-white">
             <div class="card-body text-center">
-                <h5 class="card-title">Available Balance</h5>
-                <h2 class="display-4 fw-bold">{{ currency($wallet->balance) }}</h2>
+                <h5 class="card-title">Available Balance (Transferable)</h5>
+                <h2 class="display-4 fw-bold">{{ currency($wallet->purchase_balance) }}</h2>
                 <p class="mb-0">
                     <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-danger' }}">
                         {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}
@@ -93,7 +93,7 @@
             <div class="card-body">
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
                     @foreach([10, 25, 50, 100, 250, 500] as $quickAmount)
-                        @if($wallet->balance >= $quickAmount)
+                        @if($wallet->purchase_balance >= $quickAmount)
                             <button type="button" class="btn btn-outline-primary" onclick="setAmount({{ $quickAmount }})">
                                 {{ currency_symbol() }}{{ $quickAmount }}
                             </button>
@@ -172,12 +172,12 @@
                                 <div class="input-group">
                                     <span class="input-group-text">{{ currency_symbol() }}</span>
                                     <input type="number" name="amount" id="amount" class="form-control"
-                                           placeholder="0.00" min="1" max="{{ min($wallet->balance, 10000) }}" step="0.01" required
+                                           placeholder="0.00" min="1" max="{{ min($wallet->purchase_balance, 10000) }}" step="0.01" required
                                            value="{{ old('amount') }}">
                                     <span class="input-group-text">{{ currency_code() }}</span>
                                 </div>
                                 <div class="form-text">
-                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->balance, 10000)) }}
+                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->purchase_balance, 10000)) }}
                                 </div>
                             </div>
                         </div>
@@ -248,7 +248,7 @@
 
                     <div class="d-grid gap-2 d-md-flex">
                         <button type="submit" class="btn btn-success btn-lg flex-md-fill"
-                                {{ !$wallet->is_active || $wallet->balance <= 0 ? 'disabled' : '' }}>
+                                {{ !$wallet->is_active || $wallet->purchase_balance <= 0 ? 'disabled' : '' }}>
                             <svg class="icon me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-send') }}"></use>
                             </svg>

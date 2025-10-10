@@ -245,6 +245,13 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa'])->prefix('wall
         ->middleware('ewallet.security:withdraw_funds')
         ->name('withdraw.process');
 
+    Route::get('/convert', [WalletController::class, 'convert'])
+        ->middleware('ewallet.security:transfer_funds')
+        ->name('convert');
+    Route::post('/convert', [WalletController::class, 'processConvert'])
+        ->middleware('ewallet.security:transfer_funds')
+        ->name('convert.process');
+
     Route::get('/transactions', [WalletController::class, 'transactions'])
         ->middleware('ewallet.security:view_transactions')
         ->name('transactions');

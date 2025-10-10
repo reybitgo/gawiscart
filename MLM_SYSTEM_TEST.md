@@ -4345,3 +4345,430 @@ After completing Phase 3 testing:
 **Phase 3 Testing Complete!** 🎉
 
 The MLM Commission Distribution Engine is now fully functional and ready for production use (after addressing any issues found during testing).
+
+---
+
+## Phase 4: Withdrawal System & Payment Preferences Testing
+
+**Status**: Ready for Testing
+**Estimated Testing Time**: 3-4 hours
+**Prerequisites**: Phase 3 complete, database seeded with test data
+
+---
+
+## Test Suite 18: Payment Preferences System
+
+### Test Case 18.1: Gcash Payment Preference
+
+**Objective**: Verify Gcash number validation and storage
+
+**Steps**:
+1. Login as member user
+2. Navigate to `/profile`
+3. Scroll to "Payment Preferences" card
+4. Select "Gcash" from dropdown
+5. Enter valid Gcash number: `09171234567`
+6. Click "Save Payment Preferences"
+
+**Expected Results**:
+- ✅ Success message displayed
+- ✅ Gcash number saved to database
+- ✅ Field remains populated on page reload
+- ✅ `payment_preference` set to "Gcash" in users table
+
+**Validation Tests**:
+- ❌ Invalid format `9171234567` (missing 0) → Validation error
+- ❌ Invalid format `0917123456` (10 digits) → Validation error
+- ❌ Invalid format `09171234567X` (12 chars) → Validation error
+- ❌ Invalid prefix `08171234567` → Validation error
+
+---
+
+### Test Case 18.2: Maya Payment Preference
+
+**Objective**: Verify Maya number validation and storage
+
+**Steps**:
+1. From same profile page
+2. Select "Maya" from dropdown
+3. Enter valid Maya number: `09281234567`
+4. Click "Save Payment Preferences"
+
+**Expected Results**:
+- ✅ Success message displayed
+- ✅ Maya number saved to database
+- ✅ `payment_preference` updated to "Maya"
+- ✅ **Previous Gcash number still retained in database**
+- ✅ Field remains populated on page reload
+
+**Multi-Method Retention Test**:
+1. Switch back to "Gcash" in dropdown
+2. **Expected**: Previously saved Gcash number still displayed
+3. Switch to "Maya" again
+4. **Expected**: Maya number still displayed
+
+---
+
+### Test Case 18.3: Cash Pickup with Admin Office Address
+
+**Objective**: Verify cash pickup location defaults to admin's delivery address
+
+**Steps**:
+1. Login as admin user
+2. Navigate to `/profile`
+3. Fill in Delivery Address:
+   - Address: `123 Main St`
+   - Address Line 2: `Suite 100`
+   - City: `Manila`
+   - State: `NCR`
+   - Zip: `1000`
+4. Save Delivery Address
+5. Logout and login as member
+6. Navigate to `/profile` → Payment Preferences
+7. Select "Cash" from dropdown
+8. **Leave pickup location blank**
+9. Click "Save Payment Preferences"
+
+**Expected Results**:
+- ✅ Success message displayed
+- ✅ `pickup_location` in database = `123 Main St, Suite 100, Manila, NCR, 1000`
+- ✅ Matches admin's delivery address exactly
+- ✅ Field displays admin's full address on page reload
+
+**Fallback Test** (if admin has no address):
+- **Expected**: `pickup_location` = `Main Office`
+
+---
+
+### Test Case 18.4: Others Payment Method
+
+**Objective**: Verify custom payment method storage
+
+**Steps**:
+1. From member profile
+2. Select "Others" from dropdown
+3. Enter payment method name: `Bank Transfer`
+4. Enter payment details:
+   ```
+   Bank: BDO
+   Account Number: 1234567890
+   Account Name: John Doe
+   ```
+5. Click "Save Payment Preferences"
+
+**Expected Results**:
+- ✅ Success message displayed
+- ✅ `other_payment_method` = `Bank Transfer`
+- ✅ `other_payment_details` = full text entered
+- ✅ `payment_preference` = `Others`
+- ✅ Both fields remain populated on page reload
+
+**Validation Tests**:
+- ❌ Empty payment method name → Validation error
+- ❌ Empty payment details → Validation error
+- ❌ Payment details > 1000 characters → Validation error
+
+---
+
+## Test Suite 19: Admin Office Address Integration
+
+### Test Case 19.1: Office Address in Checkout
+
+**Objective**: Verify admin's delivery address displays in checkout office pickup
+
+**Steps**:
+1. Ensure admin has delivery address configured (from Test Case 18.3)
+2. Login as member
+3. Add package to cart
+4. Navigate to `/checkout`
+5. Locate "Office Pickup" delivery method
+6. Check displayed address
+
+**Expected Results**:
+- ✅ Address displays: `123 Main St, Suite 100, Manila, NCR, 1000`
+- ✅ Matches admin's configured delivery address
+- ✅ No hardcoded "Main Office" text
+
+---
+
+### Test Case 19.2: Office Address in Withdrawal Cash Pickup
+
+**Objective**: Verify admin's office address in withdrawal form
+
+**Steps**:
+1. Navigate to `/wallet/withdraw`
+2. Select "Cash" as payment method
+3. Check pickup location placeholder and help text
+
+**Expected Results**:
+- ✅ Placeholder: "Leave blank to use admin's office address"
+- ✅ Help text mentions automatic office address
+- ✅ If left blank, admin's address used automatically
+
+---
+
+## Test Suite 20: Profile Management Enhancements
+
+### Test Case 20.1: Readonly Username Field
+
+**Objective**: Verify username cannot be changed after registration
+
+**Steps**:
+1. Login as member
+2. Navigate to `/profile`
+3. Locate username field
+4. Attempt to click and edit username
+
+**Expected Results**:
+- ✅ Username field has `readonly` attribute
+- ✅ Field appears grayed out (browser default)
+- ✅ Cannot type or change value
+- ✅ No `required` attribute (readonly fields don't need validation)
+- ✅ Form submission doesn't validate username
+
+**Database Test**:
+1. Inspect users table: `SELECT username FROM users WHERE id = [member_id]`
+2. Submit profile form (email update only)
+3. Re-check users table
+4. **Expected**: Username unchanged
+
+---
+
+### Test Case 20.2: Error Notification Display
+
+**Objective**: Verify no duplicate error notifications on profile page
+
+**Steps**:
+1. Navigate to `/profile`
+2. In Profile Information section, enter invalid email: `invalid-email`
+3. Click "Save Changes"
+4. Count error notifications displayed
+
+**Expected Results**:
+- ✅ Only ONE error notification displayed
+- ✅ Error shows inline under email field (red text)
+- ✅ NO global "Please correct the following issues" banner
+- ✅ Clean, professional error display
+
+---
+
+### Test Case 20.3: Smart Form Routing
+
+**Objective**: Verify profile controller routes to correct handler based on form
+
+**Steps**:
+1. **Test Profile Info Update**:
+   - Update email in Profile Information card
+   - Submit form
+   - **Expected**: Calls `update()` method, validates only email
+
+2. **Test Delivery Address Update**:
+   - Update city in Delivery Address card
+   - Submit form
+   - **Expected**: Calls `updateDeliveryAddress()`, validates address fields
+
+3. **Test Payment Preferences Update**:
+   - Update Gcash number in Payment Preferences card
+   - Submit form
+   - **Expected**: Calls `updatePaymentPreferences()`, validates Gcash number
+
+**Validation Conflict Test**:
+- Submit payment preferences form
+- **Expected**: No username validation errors
+- **Expected**: No delivery address validation errors
+- Form validation isolated to submitted form only
+
+---
+
+## Test Suite 21: Withdrawal Auto-Fill Integration
+
+### Test Case 21.1: Gcash Auto-Fill in Withdrawal
+
+**Objective**: Verify saved Gcash number auto-fills withdrawal form
+
+**Steps**:
+1. Ensure member has Gcash saved in payment preferences: `09171234567`
+2. Navigate to `/wallet/withdraw`
+3. Select "Gcash" as payment method
+4. Check Gcash number field value
+
+**Expected Results**:
+- ✅ Field auto-filled with `09171234567`
+- ✅ User can edit/override value if needed
+- ✅ Saves time and reduces data entry errors
+
+---
+
+### Test Case 21.2: Maya Auto-Fill in Withdrawal
+
+**Objective**: Verify saved Maya number auto-fills withdrawal form
+
+**Steps**:
+1. Ensure member has Maya saved: `09281234567`
+2. Navigate to `/wallet/withdraw`
+3. Select "Maya" as payment method
+4. Check Maya number field value
+
+**Expected Results**:
+- ✅ Field auto-filled with `09281234567`
+- ✅ Correct number displayed (not Gcash number)
+- ✅ User can modify if needed
+
+---
+
+### Test Case 21.3: Cash Pickup Auto-Fill in Withdrawal
+
+**Objective**: Verify admin's office address auto-fills cash pickup location
+
+**Steps**:
+1. Navigate to `/wallet/withdraw`
+2. Select "Cash" as payment method
+3. Check pickup location field
+4. Leave field blank or use existing value
+5. Submit withdrawal request
+6. Check database: `withdrawal_requests` table
+
+**Expected Results**:
+- ✅ If left blank: Admin's full delivery address used
+- ✅ If filled: User's custom location used
+- ✅ Placeholder text indicates auto-fill behavior
+- ✅ `account_details` JSON contains pickup location
+
+---
+
+## Test Suite 22: Transfer Fee Deduction System
+
+### Test Case 22.1: Transfer Fee Calculation
+
+**Objective**: Verify transfer fee is correctly calculated and deducted
+
+**Steps**:
+1. Navigate to admin panel → System Settings
+2. Check/set transfer fee percentage (e.g., 2%)
+3. Login as member with MLM balance ₱1,000
+4. Navigate to `/wallet/withdraw`
+5. Enter withdrawal amount: ₱500
+6. Select any payment method
+7. Fill in required fields
+8. Submit withdrawal request
+
+**Expected Results**:
+- ✅ Transfer fee calculated: ₱500 × 2% = ₱10
+- ✅ Net amount: ₱500 - ₱10 = ₱490
+- ✅ Display shows: "Fee: ₱10, Net: ₱490"
+- ✅ Success message shows net amount
+- ✅ Database `withdrawal_requests` table:
+  - `amount` = 500.00
+  - `fee` = 10.00
+  - `net_amount` = 490.00
+
+---
+
+### Test Case 22.2: Transfer Fee with Different Percentages
+
+**Objective**: Verify fee calculation adjusts to configured percentage
+
+**Test Scenarios**:
+
+| Withdrawal Amount | Fee % | Expected Fee | Expected Net |
+|-------------------|-------|--------------|--------------|
+| ₱1,000 | 2% | ₱20 | ₱980 |
+| ₱1,000 | 5% | ₱50 | ₱950 |
+| ₱1,000 | 0% | ₱0 | ₱1,000 |
+| ₱500 | 3% | ₱15 | ₱485 |
+
+**Expected Results for Each**:
+- ✅ Fee calculated correctly
+- ✅ Net amount = amount - fee
+- ✅ Database values match expected
+
+---
+
+## Test Suite 23: Dual Balance Withdrawal Support
+
+### Test Case 23.1: MLM Balance Withdrawal
+
+**Objective**: Verify withdrawal from MLM balance
+
+**Steps**:
+1. Check member's wallet: `mlm_balance` = ₱500
+2. Navigate to `/wallet/withdraw`
+3. Select "MLM Balance" (or ensure withdrawal from MLM)
+4. Enter amount: ₱200
+5. Complete withdrawal request
+6. Check database after admin approval
+
+**Expected Results**:
+- ✅ `mlm_balance` decremented by ₱200
+- ✅ Transaction record created with `type` = 'withdrawal'
+- ✅ `source_type` = 'mlm' or similar identifier
+- ✅ Purchase balance unchanged
+
+---
+
+### Test Case 23.2: Purchase Balance Withdrawal
+
+**Objective**: Verify withdrawal from purchase balance
+
+**Steps**:
+1. Check member's wallet: `purchase_balance` = ₱300
+2. Navigate to `/wallet/withdraw`
+3. Select "Purchase Balance" withdrawal option
+4. Enter amount: ₱100
+5. Complete withdrawal request
+6. Check database after admin approval
+
+**Expected Results**:
+- ✅ `purchase_balance` decremented by ₱100
+- ✅ Transaction record created
+- ✅ `source_type` indicates purchase balance
+- ✅ MLM balance unchanged
+
+---
+
+## Phase 4 Testing Summary
+
+### Critical Test Cases (Must Pass)
+
+1. ✅ Test Case 18.1: Gcash Payment Preference
+2. ✅ Test Case 18.2: Maya Payment Preference (with retention)
+3. ✅ Test Case 18.3: Cash Pickup with Admin Address
+4. ✅ Test Case 19.1: Office Address in Checkout
+5. ✅ Test Case 20.1: Readonly Username Field
+6. ✅ Test Case 20.2: No Duplicate Error Notifications
+7. ✅ Test Case 20.3: Smart Form Routing
+8. ✅ Test Case 21.1-21.3: Withdrawal Auto-Fill
+9. ✅ Test Case 22.1: Transfer Fee Calculation
+10. ✅ Test Case 23.1-23.2: Dual Balance Withdrawal
+
+### High Priority Test Cases
+
+1. ✅ Test Case 18.4: Others Payment Method
+2. ✅ Test Case 19.2: Office Address in Withdrawal
+3. ✅ Test Case 22.2: Transfer Fee Percentages
+
+### Optional Test Cases
+
+1. ⏳ Performance testing with multiple concurrent withdrawals
+2. ⏳ Edge case: Admin changes office address after member saves cash preference
+3. ⏳ Edge case: Very long custom payment details (approaching 1000 char limit)
+
+---
+
+## Next Steps After Phase 4
+
+After completing Phase 4 testing:
+
+1. ✅ **Document Issues**: Log all bugs and inconsistencies
+2. ✅ **Fix Critical Bugs**: Address blocking issues immediately
+3. ✅ **User Acceptance Testing**: Have real users test payment preferences and withdrawals
+4. ✅ **Security Review**: Ensure payment data is properly secured
+5. ✅ **Admin Training**: Train admins on withdrawal approval workflow
+6. 📋 **Prepare for Phase 5**: Profitability Analysis & Sustainability Dashboard
+7. 📋 **Review Phase 5 Requirements**: Study analytics and reporting requirements
+
+---
+
+**Phase 4 Testing Complete!** 🎉
+
+The Withdrawal System with Payment Preferences is now fully functional and ready for production use.

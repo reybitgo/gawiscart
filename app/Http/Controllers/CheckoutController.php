@@ -59,7 +59,23 @@ class CheckoutController extends Controller
             $cartSummary['total']
         );
 
-        return view('checkout.index', compact('cartSummary', 'walletSummary'));
+        // Get admin's delivery address for office pickup
+        $adminUser = \App\Models\User::role('admin')->first();
+        $officeAddress = null;
+        if ($adminUser) {
+            $addressParts = array_filter([
+                $adminUser->address,
+                $adminUser->address_2,
+                $adminUser->city,
+                $adminUser->state,
+                $adminUser->zip,
+            ]);
+            $officeAddress = !empty($addressParts) ? implode(', ', $addressParts) : 'Main Office';
+        } else {
+            $officeAddress = 'Main Office';
+        }
+
+        return view('checkout.index', compact('cartSummary', 'walletSummary', 'officeAddress'));
     }
 
     /**

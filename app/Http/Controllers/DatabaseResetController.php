@@ -110,9 +110,8 @@ class DatabaseResetController extends Controller
 
             // Store additional info for display
             $resetInfo = [
-                'message' => 'Database reset completed successfully! All caches cleared, Phase 3 verified, and default users restored.',
-                'credentials' => true,
-                'phase3_status' => 'MLM commissions are processed immediately upon package purchase (synchronous processing).'
+                'message' => 'Database reset completed successfully! All caches cleared and default users restored.',
+                'credentials' => true
             ];
 
             return redirect()->route('login')

@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 
 class AdminOrderController extends Controller
 {
+    use \App\Http\Traits\HasPaginationLimit;
+
     protected OrderStatusService $orderStatusService;
     protected InputSanitizationService $sanitizationService;
 
@@ -81,7 +83,8 @@ class AdminOrderController extends Controller
         $ordersRequiringAttention = $this->orderStatusService->getOrdersRequiringAttention();
 
         // Paginate results
-        $orders = $query->paginate(15)->withQueryString();
+        $perPage = $this->getPerPage($request, 15);
+        $orders = $query->paginate($perPage)->withQueryString();
 
         // Add filtered statuses for each order for Quick Actions
         $orders->getCollection()->transform(function ($order) {
@@ -100,7 +103,8 @@ class AdminOrderController extends Controller
             'orders',
             'statusStats',
             'ordersRequiringAttention',
-            'adminAllowedStatusLabels'
+            'adminAllowedStatusLabels',
+            'perPage'
         ));
     }
 

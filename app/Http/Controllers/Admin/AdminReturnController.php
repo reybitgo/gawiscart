@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class AdminReturnController extends Controller
 {
+    use \App\Http\Traits\HasPaginationLimit;
+
     /**
      * Display list of all return requests
      */
@@ -33,12 +35,13 @@ class AdminReturnController extends Controller
             });
         }
 
-        $returnRequests = $query->paginate(20);
+        $perPage = $this->getPerPage($request, 20);
+        $returnRequests = $query->paginate($perPage)->appends($request->query());
 
         // Count pending returns for sidebar badge
         $pendingCount = ReturnRequest::where('status', ReturnRequest::STATUS_PENDING)->count();
 
-        return view('admin.returns.index', compact('returnRequests', 'pendingCount'));
+        return view('admin.returns.index', compact('returnRequests', 'pendingCount', 'perPage'));
     }
 
     /**

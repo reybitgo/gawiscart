@@ -30,21 +30,34 @@
 
 <!-- Balance Information Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="card bg-primary-gradient text-white">
+    <div class="col-md-4">
+        <div class="card bg-success-gradient text-white">
             <div class="card-body text-center">
-                <h5 class="card-title">Wallet Balance</h5>
-                <h2 class="display-5 fw-bold">{{ currency($wallet->balance) }}</h2>
-                <p class="mb-0">
-                    <span class="badge {{ $wallet->is_active ? 'bg-light text-success' : 'bg-warning text-dark' }}">
-                        {{ $wallet->is_active ? 'Account Active' : 'Account Frozen' }}
+                <h5 class="card-title">MLM Balance (Withdrawable)</h5>
+                <h2 class="display-5 fw-bold">{{ currency($wallet->mlm_balance) }}</h2>
+                <p class="mb-0 small">
+                    <span class="badge bg-light text-success">
+                        <i class="icon-check me-1"></i>Can be withdrawn
                     </span>
                 </p>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card {{ $availableBalance > 0 ? 'bg-success-gradient' : 'bg-warning-gradient' }} text-white">
+    <div class="col-md-4">
+        <div class="card bg-info-gradient text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">Purchase Balance</h5>
+                <h2 class="display-5 fw-bold">{{ currency($wallet->purchase_balance) }}</h2>
+                <p class="mb-0 small">
+                    <span class="badge bg-light text-dark">
+                        <i class="icon-lock me-1"></i>Cannot be withdrawn
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card {{ $availableBalance > 0 ? 'bg-primary-gradient' : 'bg-warning-gradient' }} text-white">
             <div class="card-body text-center">
                 <h5 class="card-title">Available for Withdrawal</h5>
                 <h2 class="display-5 fw-bold">{{ currency($availableBalance) }}</h2>
@@ -137,17 +150,17 @@
                                     <svg class="icon me-2">
                                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-thick-top') }}"></use>
                                     </svg>
-                                    Withdrawal Amount
+                                    Withdrawal Amount (from MLM Balance)
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text">{{ currency_symbol() }}</span>
                                     <input type="number" name="amount" id="amount" class="form-control"
-                                           placeholder="0.00" min="1" max="{{ min($wallet->balance, 10000) }}" step="0.01" required
+                                           placeholder="0.00" min="1" max="{{ min($wallet->mlm_balance, 10000) }}" step="0.01" required
                                            value="{{ old('amount') }}">
                                     <span class="input-group-text">{{ currency_code() }}</span>
                                 </div>
                                 <div class="form-text">
-                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->balance, 10000)) }}
+                                    Minimum: {{ currency(1) }} | Maximum: {{ currency(min($wallet->mlm_balance, 10000)) }}
                                 </div>
                             </div>
                         </div>
@@ -163,20 +176,20 @@
                                 <select id="payment_method" name="payment_method" class="form-select" required>
                                     <option value="">Select payment method</option>
                                     @if($paymentSettings['gcash_enabled'])
-                                        <option value="Gcash" {{ old('payment_method') == 'Gcash' ? 'selected' : '' }}>Gcash</option>
+                                        <option value="Gcash" {{ old('payment_method', auth()->user()->payment_preference) == 'Gcash' ? 'selected' : '' }}>Gcash</option>
                                     @endif
                                     @if($paymentSettings['maya_enabled'])
-                                        <option value="Maya" {{ old('payment_method') == 'Maya' ? 'selected' : '' }}>Maya</option>
+                                        <option value="Maya" {{ old('payment_method', auth()->user()->payment_preference) == 'Maya' ? 'selected' : '' }}>Maya</option>
                                     @endif
                                     @if($paymentSettings['cash_enabled'])
-                                        <option value="Cash" {{ old('payment_method') == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                        <option value="Cash" {{ old('payment_method', auth()->user()->payment_preference) == 'Cash' ? 'selected' : '' }}>Cash</option>
                                     @endif
                                     @if($paymentSettings['allow_others'])
-                                        <option value="Others" {{ old('payment_method') == 'Others' ? 'selected' : '' }}>Others</option>
+                                        <option value="Others" {{ old('payment_method', auth()->user()->payment_preference) == 'Others' ? 'selected' : '' }}>Others</option>
                                     @endif
                                 </select>
                                 <input type="text" id="custom_payment_method" name="custom_payment_method" class="form-control d-none mt-2"
-                                       placeholder="Please type payment method" value="{{ old('custom_payment_method') }}">
+                                       placeholder="Please type payment method" value="{{ old('custom_payment_method', auth()->user()->other_payment_method) }}">
                                 <div class="form-text">
                                     Select your preferred withdrawal method
                                 </div>
@@ -269,7 +282,7 @@
                                 </label>
                                 <input type="text" name="gcash_number" id="gcash_number" class="form-control"
                                        placeholder="09171234567" maxlength="11"
-                                       value="{{ old('gcash_number') }}">
+                                       value="{{ old('gcash_number', auth()->user()->gcash_number) }}">
                                 <div class="form-text">
                                     Enter your Gcash mobile number where you want to receive the funds
                                 </div>
@@ -289,7 +302,7 @@
                                 </label>
                                 <input type="text" name="maya_number" id="maya_number" class="form-control"
                                        placeholder="09171234567" maxlength="11"
-                                       value="{{ old('maya_number') }}">
+                                       value="{{ old('maya_number', auth()->user()->maya_number) }}">
                                 <div class="form-text">
                                     Enter your Maya mobile number where you want to receive the funds
                                 </div>
@@ -305,13 +318,16 @@
                                     <svg class="icon me-2">
                                         <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-location-pin') }}"></use>
                                     </svg>
-                                    Preferred Pickup Location
+                                    Preferred Pickup Location <span class="text-muted">(Optional)</span>
                                 </label>
                                 <input type="text" name="pickup_location" id="pickup_location" class="form-control"
-                                       placeholder="Enter your preferred cash pickup location"
-                                       value="{{ old('pickup_location') }}">
+                                       placeholder="Leave blank to use admin's office address"
+                                       value="{{ old('pickup_location', auth()->user()->pickup_location) }}">
                                 <div class="form-text">
-                                    Specify where you'd like to pick up your cash withdrawal
+                                    <svg class="icon icon-sm me-1">
+                                        <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                                    </svg>
+                                    If left blank, the admin's office address will be used automatically for cash pickup
                                 </div>
                             </div>
                         </div>
@@ -328,7 +344,7 @@
                                     Payment Details
                                 </label>
                                 <textarea name="payment_details" id="payment_details" class="form-control" rows="3"
-                                          placeholder="Enter your payment method details (account numbers, instructions, etc.)">{{ old('payment_details') }}</textarea>
+                                          placeholder="Enter your payment method details (account numbers, instructions, etc.)">{{ old('payment_details', auth()->user()->other_payment_details) }}</textarea>
                                 <div class="form-text">
                                     Provide detailed information about your payment method and account details
                                 </div>
@@ -336,6 +352,20 @@
                         </div>
                     </div>
 
+
+                    <!-- MLM Balance Restriction Notice -->
+                    <div class="alert alert-info mt-4">
+                        <h6 class="alert-heading">
+                            <svg class="icon me-2">
+                                <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-info') }}"></use>
+                            </svg>
+                            Withdrawal Balance Restriction
+                        </h6>
+                        <p class="mb-0">
+                            <strong>Only MLM commission earnings can be withdrawn.</strong>
+                            Purchase balance (from deposits and transfers) cannot be withdrawn and can only be used for package purchases within the system.
+                        </p>
+                    </div>
 
                     <!-- Important Information -->
                     <div class="alert alert-warning mt-4">
@@ -349,7 +379,7 @@
                             <li>All withdrawals require admin approval and are processed manually</li>
                             @if($withdrawalFeeSettings['fee_enabled'])
                                 <li><strong>Processing fees are deducted immediately upon submission and are non-refundable</strong></li>
-                                <li>If your withdrawal is rejected, only the withdrawal amount will be returned to your wallet</li>
+                                <li>If your withdrawal is rejected, only the withdrawal amount will be returned to your MLM balance</li>
                             @endif
                             <li>Please verify your payment method details are correct to avoid delays</li>
                             <li>Processing typically takes 1-3 business days depending on your chosen method</li>
@@ -374,7 +404,7 @@
 
                     <div class="d-grid gap-2 d-md-flex">
                         <button type="submit" id="submit-withdrawal-btn" class="btn btn-danger btn-lg flex-md-fill" disabled
-                                {{ !$wallet->is_active || $wallet->balance <= 0 ? 'data-wallet-disabled="true"' : '' }}>
+                                {{ !$wallet->is_active || $wallet->mlm_balance <= 0 ? 'data-wallet-disabled="true"' : '' }}>
                             <svg class="icon me-2">
                                 <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-minus') }}"></use>
                             </svg>
@@ -482,7 +512,7 @@
             document.getElementById('maya_number').setAttribute('required', 'required');
         } else if (paymentMethod === 'Cash') {
             cashDetails.classList.remove('d-none');
-            document.getElementById('pickup_location').setAttribute('required', 'required');
+            // pickup_location is optional - will auto-fill with Main Office if left blank
         } else if (paymentMethod === 'Others') {
             customPaymentMethod.classList.remove('d-none');
             otherDetails.classList.remove('d-none');
@@ -521,7 +551,7 @@
 
         agreeTermsCheckbox.addEventListener('change', updateSubmitButton);
 
-        // Initialize on page load if there's an old value
+        // Initialize on page load if there's an old value or saved preference
         if (paymentMethodSelect.value) {
             togglePaymentDetails();
         }

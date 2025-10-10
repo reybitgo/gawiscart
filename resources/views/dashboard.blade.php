@@ -29,7 +29,7 @@
         <div class="card text-white bg-success-gradient">
             <div class="card-body pb-0 d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="fs-4 fw-semibold">{{ currency($wallet->balance) }}</div>
+                    <div class="fs-4 fw-semibold">{{ currency($wallet->total_balance) }}</div>
                     <div>Current Balance</div>
                 </div>
                 <svg class="icon icon-3xl">
@@ -194,6 +194,16 @@
                             <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-arrow-right') }}"></use>
                         </svg>
                         Transfer Funds
+                    </a>
+                </div>
+                @endcan
+                @can('transfer_funds')
+                <div class="col-md-3 col-sm-6">
+                    <a href="{{ route('wallet.convert') }}" class="btn btn-purple w-100">
+                        <svg class="icon me-2">
+                            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-swap-vertical') }}"></use>
+                        </svg>
+                        Convert Balance
                     </a>
                 </div>
                 @endcan

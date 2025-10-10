@@ -131,11 +131,16 @@
 <!-- Pending Transactions -->
 <div class="card">
     <div class="card-header">
-        <svg class="icon me-2">
-            <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
-        </svg>
-        <strong>Pending Transactions</strong>
-        <small class="text-body-secondary ms-auto">Transactions awaiting administrative approval.</small>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <svg class="icon me-2">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
+                </svg>
+                <strong>Pending Transactions</strong>
+                <small class="text-body-secondary ms-2">Transactions awaiting administrative approval.</small>
+            </div>
+            <x-per-page-selector :perPage="$perPage" />
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
