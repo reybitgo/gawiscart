@@ -79,6 +79,14 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link{{ Request::routeIs('admin.products.*') ? ' active' : '' }}" href="{{ route('admin.products.index') }}">
+                            <span class="nav-icon">
+                                <span class="nav-icon-bullet"></span>
+                            </span>
+                            Product Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link{{ Request::routeIs('admin.orders.*') ? ' active' : '' }}" href="{{ route('admin.orders.index') }}">
                             <span class="nav-icon">
                                 <span class="nav-icon-bullet"></span>

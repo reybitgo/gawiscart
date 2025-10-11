@@ -3,9 +3,11 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminPackageController;
+use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminMlmSettingsController;
+use App\Http\Controllers\Admin\AdminUnilevelSettingsController;
 use App\Http\Controllers\Member\WalletController;
 use App\Http\Controllers\Member\UserActivityController;
 use App\Http\Controllers\PackageController;
@@ -186,6 +188,16 @@ Route::middleware(['auth', 'conditional.verified', 'enforce.2fa', 'role:admin'])
     // MLM Settings Routes
     Route::get('/packages/{package}/mlm-settings', [AdminMlmSettingsController::class, 'edit'])->name('packages.mlm.edit');
     Route::put('/packages/{package}/mlm-settings', [AdminMlmSettingsController::class, 'update'])->name('packages.mlm.update');
+
+    // Admin Product Management Routes (Unilevel System)
+    Route::resource('products', AdminProductController::class);
+    Route::post('/products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('products.toggle-status');
+
+    // Unilevel Settings Routes
+    Route::get('/products/{product}/unilevel-settings', [AdminUnilevelSettingsController::class, 'edit'])->name('products.unilevel-settings.edit');
+    Route::put('/products/{product}/unilevel-settings', [AdminUnilevelSettingsController::class, 'update'])->name('products.unilevel-settings.update');
+    Route::get('/products/{product}/unilevel-settings/preview', [AdminUnilevelSettingsController::class, 'preview'])->name('products.unilevel-settings.preview');
+    Route::post('/products/unilevel-settings/apply-defaults', [AdminUnilevelSettingsController::class, 'applyDefaults'])->name('products.unilevel-settings.apply-defaults');
 
     // Admin Settings Routes
     Route::get('/application-settings', [AdminSettingsController::class, 'index'])->name('settings.index');

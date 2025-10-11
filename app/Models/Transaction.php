@@ -68,6 +68,22 @@ class Transaction extends Model
         return $this->type === 'mlm_commission' && $this->source_type === 'mlm';
     }
 
+    /**
+     * Check if this is a Unilevel bonus transaction
+     */
+    public function isUnilevelBonus(): bool
+    {
+        return $this->type === 'unilevel_bonus' && $this->source_type === 'unilevel';
+    }
+
+    /**
+     * Check if this is any type of earning (MLM commission or Unilevel bonus)
+     */
+    public function isEarning(): bool
+    {
+        return $this->isMLMCommission() || $this->isUnilevelBonus();
+    }
+
     protected static function boot()
     {
         parent::boot();

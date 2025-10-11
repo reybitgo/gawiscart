@@ -11,6 +11,7 @@ class Wallet extends Model
         'is_active',
         'last_transaction_at',
         'mlm_balance',
+        'unilevel_balance',
         'withdrawable_balance',
         'purchase_balance',
     ];
@@ -19,6 +20,7 @@ class Wallet extends Model
         'is_active' => 'boolean',
         'last_transaction_at' => 'datetime',
         'mlm_balance' => 'decimal:2',
+        'unilevel_balance' => 'decimal:2',
         'withdrawable_balance' => 'decimal:2',
         'purchase_balance' => 'decimal:2',
     ];
@@ -71,6 +73,24 @@ class Wallet extends Model
     }
 
     /**
+     * Get total lifetime Unilevel earnings (Unilevel tracker only)
+     * For display purposes - shows total Unilevel bonuses ever earned
+     */
+    public function getLifetimeUnilevelEarningsAttribute(): float
+    {
+        return (float) $this->unilevel_balance;
+    }
+
+    /**
+     * Get total lifetime earnings (MLM + Unilevel trackers combined)
+     * For display purposes - shows all earnings from both compensation plans
+     */
+    public function getLifetimeEarningsAttribute(): float
+    {
+        return (float) ($this->mlm_balance + $this->unilevel_balance);
+    }
+
+    /**
      * Get available for withdrawal (withdrawable_balance only)
      * ONLY this balance can be withdrawn to bank
      */
@@ -86,10 +106,10 @@ class Wallet extends Model
      * @param float $amount Commission amount
      * @param string $description Transaction description
      * @param int $level Commission level (1-5)
-     * @param int $sourceOrderId Source order ID that triggered the commission
+     * @param int|null $sourceOrderId Source order ID that triggered the commission (nullable for tests)
      * @return bool Success status
      */
-    public function addMLMCommission(float $amount, string $description, int $level, int $sourceOrderId): bool
+    public function addMLMCommission(float $amount, string $description, int $level, ?int $sourceOrderId = null): bool
     {
         \DB::beginTransaction();
         try {
@@ -139,9 +159,63 @@ class Wallet extends Model
      *
      * @deprecated Use addMLMCommission() instead
      */
-    public function addMLMIncome(float $amount, string $description, int $level, int $sourceOrderId): bool
+    public function addMLMIncome(float $amount, string $description, int $level, ?int $sourceOrderId = null): bool
     {
         return $this->addMLMCommission($amount, $description, $level, $sourceOrderId);
+    }
+
+    /**
+     * Add Unilevel bonus (AUTOMATIC DUAL-CREDITING)
+     * Credits BOTH unilevel_balance (tracker) AND withdrawable_balance (withdrawable)
+     *
+     * @param float $amount Bonus amount
+     * @param string $description Transaction description
+     * @param int $level Unilevel level (1-5)
+     * @param int|null $sourceOrderId Source order ID that triggered the bonus (nullable for tests)
+     * @return bool Success status
+     */
+    public function addUnilevelBonus(float $amount, string $description, int $level, ?int $sourceOrderId = null): bool
+    {
+        \DB::beginTransaction();
+        try {
+            // AUTOMATIC DUAL-CREDITING:
+            // 1. Credit unilevel_balance (lifetime earnings tracker)
+            $this->increment('unilevel_balance', $amount);
+
+            // 2. Credit withdrawable_balance (instantly withdrawable!)
+            $this->increment('withdrawable_balance', $amount);
+
+            $this->update(['last_transaction_at' => now()]);
+
+            // Create transaction record
+            Transaction::create([
+                'user_id' => $this->user_id,
+                'type' => 'unilevel_bonus',
+                'amount' => $amount,
+                'description' => $description,
+                'status' => 'completed',
+                'level' => $level,
+                'source_order_id' => $sourceOrderId,
+                'source_type' => 'unilevel',
+                'metadata' => json_encode([
+                    'level' => $level,
+                    'source_order_id' => $sourceOrderId,
+                    'credited_to' => 'unilevel_balance+withdrawable_balance',
+                    'auto_credited' => true
+                ])
+            ]);
+
+            \DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Failed to add Unilevel bonus', [
+                'wallet_id' => $this->id,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -222,10 +296,13 @@ class Wallet extends Model
     {
         return [
             'mlm_balance' => (float) $this->mlm_balance,
+            'unilevel_balance' => (float) $this->unilevel_balance,
             'withdrawable_balance' => (float) $this->withdrawable_balance,
             'purchase_balance' => (float) $this->purchase_balance,
             'total_balance' => $this->total_balance,
             'lifetime_mlm_earnings' => $this->lifetime_mlm_earnings,
+            'lifetime_unilevel_earnings' => $this->lifetime_unilevel_earnings,
+            'lifetime_earnings' => $this->lifetime_earnings,
             'available_for_withdrawal' => $this->available_for_withdrawal
         ];
     }
