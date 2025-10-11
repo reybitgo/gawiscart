@@ -213,7 +213,7 @@
     </div>
     @if($users->hasPages())
         <div class="card-footer">
-            {{ $users->links() }}
+            {{ $users->appends(request()->query())->links() }}
         </div>
     @endif
 </div>

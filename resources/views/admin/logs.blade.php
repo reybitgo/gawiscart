@@ -250,7 +250,7 @@
                         Showing {{ $logs->firstItem() }} to {{ $logs->lastItem() }} of {{ $logs->total() }} results
                     </div>
                     <div>
-                        {{ $logs->links() }}
+                        {{ $logs->appends(request()->query())->links() }}
                     </div>
                 </div>
             </div>

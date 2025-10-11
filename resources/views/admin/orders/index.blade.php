@@ -295,7 +295,7 @@
 
                 <!-- Pagination -->
                 <div class="card-footer">
-                    {{ $orders->links() }}
+                    {{ $orders->appends(request()->query())->links() }}
                 </div>
             @else
                 <div class="card-body text-center py-5">

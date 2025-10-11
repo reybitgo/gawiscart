@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminMlmSettingsController;
 use App\Http\Controllers\Member\WalletController;
+use App\Http\Controllers\Member\UserActivityController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -98,6 +99,12 @@ Route::middleware(['auth', 'enforce.2fa'])->group(function () {
     // Referral Routes (MLM System)
     Route::prefix('referral')->name('referral.')->group(function () {
         Route::get('/', [ReferralController::class, 'index'])->name('index');
+    });
+
+    // User Activity Logs Routes (Member's own activity tracking)
+    Route::prefix('my-activities')->name('activities.')->group(function () {
+        Route::get('/', [UserActivityController::class, 'index'])->name('index');
+        Route::post('/export', [UserActivityController::class, 'export'])->name('export');
     });
 });
 

@@ -151,7 +151,7 @@
 
             <!-- Pagination -->
             <div class="mt-4">
-                {{ $returnRequests->links() }}
+                {{ $returnRequests->appends(request()->query())->links() }}
             </div>
 
             <!-- Modals (outside table structure) -->

@@ -52,11 +52,13 @@ Commissions are distributed **immediately** upon successful purchase of the Star
 5. System traverses upline (up to 5 levels)
 6. For each upline member:
    - Calculate commission based on level (₱200 for L1, ₱50 for L2-L5)
-   - Credit to upline's `mlm_balance` (withdrawable)
-   - Create transaction record with type `mlm_commission`
+   - **AUTOMATICALLY credit to upline's wallet:**
+     - `mlm_balance` += commission amount (lifetime earnings tracker)
+     - `withdrawable_balance` += commission amount (instantly withdrawable!)
+   - Create transaction record with type `commission`
    - Send real-time notification to upline member (database + broadcast)
    - **Send email notification ONLY if upline member has verified email**
-7. Dashboard updates instantly showing new MLM income
+7. Dashboard updates instantly showing new MLM income and withdrawable balance
 
 ### Notification Strategy
 
@@ -102,45 +104,160 @@ if ($user->hasVerifiedEmail()) {
 
 ## Fund Segregation Strategy
 
-### Two-Wallet System
+### Four-Wallet Balance System (Updated 2025-10-10)
 
-#### 1. **MLM Balance** (Withdrawable)
-**Source of Funds**:
-- MLM commissions from downline purchases (₱200 or ₱50 per transaction)
-- Package re-entry bonuses (if implemented later)
+The wallet now uses a **4-balance architecture** for comprehensive fund tracking and withdrawal management:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        USER WALLET                          │
+├─────────────────────────────────────────────────────────────┤
+│  1. mlm_balance           (MLM Earnings Tracker)           │
+│     └─ Lifetime total of all MLM commissions earned        │
+│     └─ For display/reporting purposes only                 │
+│     └─ Auto-incremented when commission earned             │
+│                                                             │
+│  2. unilevel_balance      (Unilevel Earnings Tracker)      │
+│     └─ Lifetime total of all Unilevel bonuses earned       │
+│     └─ For display/reporting purposes only                 │
+│     └─ Auto-incremented when bonus earned                  │
+│                                                             │
+│  3. withdrawable_balance  (Withdrawable Funds)             │
+│     └─ AUTOMATICALLY credited when MLM/Unilevel earned     │
+│     └─ ONLY balance that can be withdrawn                  │
+│     └─ Can be used for purchases                           │
+│                                                             │
+│  4. purchase_balance      (Non-Withdrawable Funds)         │
+│     └─ From deposits, refunds, transfers received          │
+│     └─ Cannot be withdrawn (anti-money laundering)         │
+│     └─ Can only be used for purchases                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Balance Flow on Commission Earned
+
+```
+WHEN PACKAGE PURCHASED → MLM COMMISSION TRIGGERED:
+
+  Upline Member Receives:
+  ┌─────────────────────────────────────────┐
+  │  mlm_balance += ₱200                    │  (Tracking only)
+  │  withdrawable_balance += ₱200           │  (Withdrawable!)
+  └─────────────────────────────────────────┘
+
+  Result: Commission is IMMEDIATELY withdrawable
+```
+
+**Key Benefit**: No manual transfer needed! Earnings are instantly available for withdrawal.
+
+#### 1. **MLM Balance** (Tracking Only - Display Purposes)
+**Purpose**: Track lifetime MLM commission earnings
+
+**Auto-Incremented When**:
+- Package purchased by downline → commission earned
+- Each commission automatically increments this balance
 
 **Usage**:
-- ✅ Can be withdrawn to bank/e-wallet
-- ✅ Can be used to purchase Starter Package
+- 📊 **Display purposes ONLY** (shows total MLM earnings ever)
+- ❌ **NOT used for purchases** (actual funds are in withdrawable_balance)
+- ❌ **NOT directly withdrawable** (actual funds are in withdrawable_balance)
+- ❌ **NEVER deducted** - remains as lifetime earnings tracker
+
+**Displayed As**: "Total MLM Commissions" or "MLM Earnings (Lifetime)"
+
+**Implementation Note**: This balance is purely for tracking/display. The actual spendable/withdrawable amount from MLM commissions is automatically credited to `withdrawable_balance`.
+
+#### 2. **Unilevel Balance** (Tracking Only - Display Purposes)
+**Purpose**: Track lifetime Unilevel bonus earnings from product purchases
+
+**Auto-Incremented When**:
+- Product purchased by downline → bonus earned
+- Each bonus automatically increments this balance
+
+**Usage**:
+- 📊 **Display purposes ONLY** (shows total Unilevel earnings ever)
+- ❌ **NOT used for purchases** (actual funds are in withdrawable_balance)
+- ❌ **NOT directly withdrawable** (actual funds are in withdrawable_balance)
+- ❌ **NEVER deducted** - remains as lifetime earnings tracker
+
+**Displayed As**: "Total Unilevel Bonuses" or "Unilevel Earnings (Lifetime)"
+
+**Implementation Note**: This balance is purely for tracking/display. The actual spendable/withdrawable amount from Unilevel bonuses is automatically credited to `withdrawable_balance`.
+
+#### 3. **Withdrawable Balance** (Withdrawable Funds)
+**Purpose**: The ONLY balance that can be withdrawn to bank/e-wallet
+
+**Auto-Credited When**:
+- ✅ MLM commission earned → instantly added here
+- ✅ Unilevel bonus earned → instantly added here
+
+**Other Sources**:
+- Manual admin adjustments (rare)
+
+**Usage**:
+- ✅ **CAN be withdrawn** to bank/e-wallet
+- ✅ Can be used to purchase packages/products
 - ✅ Can be transferred to other members (optional feature)
 
-**Displayed As**: "Withdrawable Balance" or "MLM Earnings"
+**Displayed As**: "Withdrawable Balance" or "Available for Withdrawal"
 
-#### 2. **Purchase Balance** (Non-Withdrawable)
+#### 4. **Purchase Balance** (Non-Withdrawable)
+**Purpose**: Non-withdrawable deposit funds (anti-money laundering)
+
 **Source of Funds**:
 - Direct deposits (bank transfer, GCash, PayMaya, etc.)
-- Wallet transfers from other members
+- Wallet transfers received from other members
+- Refunds from cancelled orders
 - Admin credits/adjustments
 
 **Usage**:
-- ✅ Can be used to purchase Starter Package
+- ✅ Can be used to purchase packages/products
 - ❌ **Cannot be withdrawn** (prevents money laundering)
 - ✅ Can be transferred to other members (optional)
 
 **Displayed As**: "Purchase Balance" or "Deposit Funds"
 
+---
+
 ### Withdrawal Rules
-1. Only **MLM Balance** can be withdrawn
+1. Only **Withdrawable Balance** can be withdrawn
 2. Minimum withdrawal: ₱500
 3. Maximum withdrawal per month: ₱50,000 (configurable)
 4. Withdrawal processing fee: 2-5% (configurable)
-5. Cooling-off period: 7 days after commission earned
+5. Cooling-off period: 7 days after commission earned (optional)
 6. Requires admin approval
 
 ### Purchase Rules
-1. Package purchase deducts from **combined balance** (MLM + Purchase)
-2. Priority deduction: Purchase Balance first, then MLM Balance
-3. Maintains withdrawable funds for users
+1. Package/product purchase deducts from **combined balance** (withdrawable + purchase balances only)
+2. **Deduction Priority**:
+   - **Purchase Balance** (first) - Use deposits first
+   - **Withdrawable Balance** (second) - Use MLM/Unilevel earnings if deposits insufficient
+3. **MLM Balance and Unilevel Balance are NEVER deducted** - they are lifetime trackers only
+4. Total available for purchases = `withdrawable_balance + purchase_balance`
+5. This priority uses non-withdrawable deposits first before touching withdrawable earnings
+
+### Display Strategy
+
+**Member Dashboard Should Show**:
+```
+┌─────────────────────────────────────────────┐
+│         YOUR WALLET BALANCES                │
+├─────────────────────────────────────────────┤
+│  💰 Withdrawable Balance:     ₱3,500.00    │  ← Can withdraw this
+│     (Available for withdrawal)              │
+│                                             │
+│  📦 Purchase Balance:         ₱500.00      │
+│     (Can use for purchases only)            │
+│                                             │
+│  ──────────────────────────────────────     │
+│  Total Available:             ₱4,000.00    │
+│  ──────────────────────────────────────     │
+│                                             │
+│  📊 LIFETIME EARNINGS:                      │
+│  MLM Commissions (Total):     ₱12,250.00   │  ← Lifetime tracker
+│  Unilevel Bonuses (Total):    ₱5,800.00    │  ← Lifetime tracker
+└─────────────────────────────────────────────┘
+```
 
 ### E-Commerce Payment Integration (Updated 2025-10-09)
 
@@ -153,12 +270,15 @@ public function processPayment(Order $order): array
 {
     $wallet = $order->user->wallet;
 
-    // Check total balance (mlm_balance + purchase_balance)
+    // Check total balance (withdrawable_balance + purchase_balance)
+    // Note: mlm_balance and unilevel_balance are NOT included (display only)
     if ($wallet->total_balance < $order->total_amount) {
         throw new \Exception('Insufficient wallet balance');
     }
 
-    // Deduct using combined balance (purchase first, then MLM)
+    // Deduct using combined balance
+    // Priority: purchase_balance first, then withdrawable_balance
+    // mlm_balance and unilevel_balance are NEVER deducted
     if (!$wallet->deductCombinedBalance($order->total_amount)) {
         throw new \Exception('Failed to deduct wallet balance');
     }
@@ -171,7 +291,7 @@ public function processPayment(Order $order): array
         'status' => 'completed',
         'metadata' => [
             'order_id' => $order->id,
-            'mlm_balance_before' => $wallet->mlm_balance,
+            'withdrawable_balance_before' => $wallet->withdrawable_balance,
             'purchase_balance_before' => $wallet->purchase_balance,
         ]
     ]);
@@ -312,25 +432,30 @@ DROP COLUMN balance,
 DROP COLUMN reserved_balance;
 ```
 
-**Final Wallet Structure** (As of 2025-10-09):
+**Final Wallet Structure** (As of 2025-10-11):
 ```sql
--- Wallets table now only uses dual-balance system
+-- Wallets table uses 4-balance system with automatic dual-crediting
 CREATE TABLE wallets (
     id BIGINT UNSIGNED PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL UNIQUE,
-    mlm_balance DECIMAL(10,2) DEFAULT 0.00,      -- MLM commission earnings (withdrawable)
-    purchase_balance DECIMAL(10,2) DEFAULT 0.00, -- Deposit funds (for purchases only)
+    mlm_balance DECIMAL(10,2) DEFAULT 0.00,           -- MLM lifetime tracker (display only, never deducted)
+    withdrawable_balance DECIMAL(10,2) DEFAULT 0.00,  -- Withdrawable funds (auto-credited from MLM/Unilevel)
+    purchase_balance DECIMAL(10,2) DEFAULT 0.00,      -- Deposit funds (non-withdrawable, for purchases only)
     is_active BOOLEAN DEFAULT TRUE,
     last_transaction_at TIMESTAMP NULL,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    KEY `wallets_withdrawable_balance_index` (withdrawable_balance)
 );
 ```
+
+**Total Balance Calculation**: `withdrawable_balance + purchase_balance` (mlm_balance excluded to prevent double-counting)
 
 #### Migration Files (All Created ✅)
 - ✅ `2025_10_04_135212_add_segregated_balances_to_wallets_table.php` - Added mlm_balance and purchase_balance columns
 - ✅ `2025_10_09_090034_migrate_old_balance_to_purchase_balance.php` - Migrated legacy balance data
 - ✅ `2025_10_09_090518_drop_old_balance_columns_from_wallets_table.php` - Removed balance and reserved_balance columns
+- ✅ `2025_10_10_215547_add_withdrawable_balance_to_wallets_table.php` - Added withdrawable_balance column for automatic dual-crediting
 - ✅ `YYYY_MM_DD_create_mlm_settings_table.php` - Created mlm_settings table
 - ✅ `YYYY_MM_DD_add_mlm_fields_to_users_table.php` - Added sponsor_id and referral_code
 - ✅ `YYYY_MM_DD_add_mlm_fields_to_packages_table.php` - Added is_mlm_package and max_mlm_levels
@@ -395,52 +520,73 @@ public static function generateReferralCode(): string
 
 **Modify Model**: `app/Models/Wallet.php`
 ```php
-// Fillable attributes (UPDATED - 2025-10-09: Removed balance, reserved_balance)
+// Fillable attributes (UPDATED - 2025-10-11: Added withdrawable_balance)
 protected $fillable = [
     'user_id',
     'is_active',
     'last_transaction_at',
     'mlm_balance',
+    'withdrawable_balance',
     'purchase_balance',
 ];
 
-// Casts (UPDATED - 2025-10-09: Removed balance, reserved_balance)
+// Casts (UPDATED - 2025-10-11: Added withdrawable_balance)
 protected $casts = [
     'is_active' => 'boolean',
     'last_transaction_at' => 'datetime',
     'mlm_balance' => 'decimal:2',
+    'withdrawable_balance' => 'decimal:2',
     'purchase_balance' => 'decimal:2',
 ];
 
-// Get total available balance (MLM + Purchase)
+// Get total available balance (Withdrawable + Purchase)
+// Note: mlm_balance excluded to prevent double-counting
 public function getTotalBalanceAttribute(): float
 {
-    return (float) ($this->mlm_balance + $this->purchase_balance);
+    return (float) ($this->withdrawable_balance + $this->purchase_balance);
 }
 
-// Get withdrawable balance (MLM only)
-public function getWithdrawableBalanceAttribute(): float
+// Get lifetime MLM earnings (display only)
+public function getLifetimeMLMEarningsAttribute(): float
 {
     return (float) $this->mlm_balance;
 }
 
-// Add MLM income to wallet
-public function addMLMIncome(float $amount, string $description, int $level, int $sourceOrderId): bool
+// Get available for withdrawal (withdrawable_balance only)
+public function getAvailableForWithdrawalAttribute(): float
+{
+    return (float) $this->withdrawable_balance;
+}
+
+// Add MLM commission (AUTOMATIC DUAL-CREDITING)
+// Credits BOTH mlm_balance (tracker) AND withdrawable_balance (withdrawable)
+public function addMLMCommission(float $amount, string $description, int $level, int $sourceOrderId): bool
 {
     DB::beginTransaction();
     try {
+        // AUTOMATIC DUAL-CREDITING:
+        // 1. Credit mlm_balance (lifetime earnings tracker)
         $this->increment('mlm_balance', $amount);
+
+        // 2. Credit withdrawable_balance (instantly withdrawable!)
+        $this->increment('withdrawable_balance', $amount);
+
         $this->update(['last_transaction_at' => now()]);
 
         Transaction::create([
-            'wallet_id' => $this->id,
+            'user_id' => $this->user_id,
             'type' => 'mlm_commission',
             'amount' => $amount,
             'description' => $description,
             'status' => 'completed',
+            'level' => $level,
+            'source_order_id' => $sourceOrderId,
+            'source_type' => 'mlm',
             'metadata' => json_encode([
                 'level' => $level,
-                'source_order_id' => $sourceOrderId
+                'source_order_id' => $sourceOrderId,
+                'credited_to' => 'mlm_balance+withdrawable_balance',
+                'auto_credited' => true
             ])
         ]);
 
@@ -448,7 +594,7 @@ public function addMLMIncome(float $amount, string $description, int $level, int
         return true;
     } catch (\Exception $e) {
         DB::rollBack();
-        Log::error('Failed to add MLM income', [
+        Log::error('Failed to add MLM commission', [
             'wallet_id' => $this->id,
             'amount' => $amount,
             'error' => $e->getMessage()
@@ -464,8 +610,9 @@ public function addPurchaseBalance(float $amount): void
     $this->update(['last_transaction_at' => now()]);
 }
 
-// Deduct from combined balance (purchase first, then MLM)
-// Used for package purchases
+// Deduct from combined balance with priority system
+// Priority: purchase_balance → withdrawable_balance
+// Note: mlm_balance is NEVER deducted (lifetime tracker only)
 public function deductCombinedBalance(float $amount): bool
 {
     if ($this->total_balance < $amount) {
@@ -3065,6 +3212,18 @@ public function update(Request $request)
   - ✅ Smart form routing in profile controller
   - ✅ Auto-fill payment methods in withdrawal forms
 
+- ✅ **Phase 4.5: Automatic Dual-Crediting System** (Completed 2025-10-11)
+  - ✅ Added `withdrawable_balance` column to wallets table
+  - ✅ Implemented automatic dual-crediting: `mlm_balance` + `withdrawable_balance` credited simultaneously
+  - ✅ Converted `mlm_balance` to display-only lifetime tracker (never deducted)
+  - ✅ Fixed `getTotalBalanceAttribute()` to exclude `mlm_balance` (prevents double-counting)
+  - ✅ Updated `deductCombinedBalance()` to use only `purchase_balance` → `withdrawable_balance` priority
+  - ✅ Created `addMLMCommission()` method in Wallet model for automatic dual-crediting
+  - ✅ Updated `MLMCommissionService` to use automatic crediting system
+  - ✅ Fixed dashboard balance display issue (was showing double the actual balance)
+  - ✅ All tests passing: commission earns RM 50 → both balances increase by RM 50
+  - ✅ Transaction records created with type `mlm_commission` and proper metadata
+
 ### In Progress
 - 🔄 Phase 5: Profitability Analysis (Next up)
 
@@ -3075,8 +3234,8 @@ public function update(Request $request)
 - ⏳ Phase 8: Compliance & Security (3-4 days)
 
 **Total Estimated Development Time**: 27-35 days
-**Completed**: 10 days (Phase 1: 4 days, Phase 2: 1 day, Phase 3: 1 day, Phase 4: 4 days)
-**Remaining**: 17-25 days
+**Completed**: 11 days (Phase 1: 4 days, Phase 2: 1 day, Phase 3: 1 day, Phase 4: 4 days, Phase 4.5: 1 day)
+**Remaining**: 16-24 days
 
 ---
 

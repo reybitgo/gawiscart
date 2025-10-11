@@ -131,7 +131,7 @@
                             </table>
                         </div>
 
-                        {{ $packages->links() }}
+                        {{ $packages->appends(request()->query())->links() }}
                     @else
                         <div class="text-center py-5">
                             <svg class="icon icon-xxl text-muted mb-3">

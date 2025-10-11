@@ -118,7 +118,8 @@ class MLMCommissionService
     }
 
     /**
-     * Credit commission to user's MLM balance
+     * Credit commission to user's wallet (AUTOMATIC DUAL-CREDITING)
+     * Credits BOTH mlm_balance (tracker) AND withdrawable_balance (withdrawable)
      *
      * @param User $user
      * @param float $amount
@@ -148,33 +149,25 @@ class MLMCommissionService
                 return false;
             }
 
-            // Increment MLM balance
-            $wallet->increment('mlm_balance', $amount);
+            // AUTOMATIC DUAL-CREDITING using Wallet model method
+            // This will credit BOTH mlm_balance (tracker) AND withdrawable_balance (withdrawable)
+            $description = sprintf(
+                'Level %d MLM Commission from %s (Order #%s)',
+                $level,
+                $buyer->username ?? $buyer->fullname ?? 'Unknown',
+                $order->order_number
+            );
 
-            // Create transaction record
-            Transaction::create([
-                'user_id' => $user->id,
-                'type' => 'mlm_commission',
-                'source_type' => 'mlm',
-                'level' => $level,
-                'source_order_id' => $order->id,
-                'amount' => $amount,
-                'description' => sprintf(
-                    'Level %d MLM Commission from %s (Order #%s)',
-                    $level,
-                    $buyer->username ?? $buyer->fullname ?? 'Unknown',
-                    $order->order_number
-                ),
-                'status' => 'completed',
-                'metadata' => [
-                    'buyer_id' => $buyer->id,
-                    'buyer_name' => $buyer->username ?? $buyer->fullname ?? 'Unknown',
-                    'package_id' => $package ? $package->id : null,
-                    'package_name' => $package ? $package->name : 'N/A',
-                    'order_number' => $order->order_number,
-                    'commission_level' => $level
-                ]
-            ]);
+            $success = $wallet->addMLMCommission($amount, $description, $level, $order->id);
+
+            if (!$success) {
+                Log::error('Failed to add MLM commission via wallet method', [
+                    'user_id' => $user->id,
+                    'amount' => $amount,
+                    'level' => $level
+                ]);
+                return false;
+            }
 
             // Log commission to activity log (database)
             ActivityLog::logMLMCommission(
@@ -187,13 +180,14 @@ class MLMCommissionService
                 packageName: $package ? $package->name : null
             );
 
-            Log::info('MLM Commission Credited', [
+            Log::info('MLM Commission Credited (Automatic Dual-Crediting)', [
                 'recipient_id' => $user->id,
                 'recipient_name' => $user->username ?? $user->fullname ?? 'Unknown',
                 'amount' => $amount,
                 'level' => $level,
                 'order_id' => $order->id,
-                'package_name' => $package ? $package->name : 'N/A'
+                'package_name' => $package ? $package->name : 'N/A',
+                'credited_to' => 'mlm_balance+withdrawable_balance'
             ]);
 
             return true;

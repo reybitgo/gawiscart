@@ -1,10 +1,11 @@
 <?php
+
 /**
  * Fix SQL dump for Hostinger import
  * Removes DEFINER clauses that cause permission errors
  */
 
-$inputFile = __DIR__ . '/public/deploy_coreui_laravel_db (9).sql';
+$inputFile = __DIR__ . '/public/deploy_coreui_laravel_db (11).sql';
 $outputFile = __DIR__ . '/public/deploy_coreui_laravel_db_hostinger.sql';
 
 echo "Reading SQL file...\n";

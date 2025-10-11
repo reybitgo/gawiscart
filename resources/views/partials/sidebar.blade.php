@@ -215,6 +215,14 @@
                 <span>My Referral Link</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{{ Request::routeIs('activities.*') ? ' active' : '' }}" href="{{ route('activities.index') }}">
+                <svg class="nav-icon">
+                    <use xlink:href="{{ asset('coreui-template/vendors/@coreui/icons/svg/free.svg#cil-list') }}"></use>
+                </svg>
+                <span>My Activity Logs</span>
+            </a>
+        </li>
 
         <!-- E-commerce Section -->
         <li class="nav-title">E-commerce</li>

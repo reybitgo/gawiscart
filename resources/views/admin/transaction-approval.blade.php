@@ -244,7 +244,7 @@
     </div>
     @if($pendingTransactions->hasPages())
         <div class="card-footer">
-            {{ $pendingTransactions->links() }}
+            {{ $pendingTransactions->appends(request()->query())->links() }}
         </div>
     @endif
 </div>
